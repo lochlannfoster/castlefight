@@ -1,0 +1,127 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=4
+
+_global_script_classes=[ {
+"base": "StaticBody2D",
+"class": "Building",
+"language": "GDScript",
+"path": "res://scripts/building/building_base.gd"
+}, {
+"base": "Node",
+"class": "BuildingManager",
+"language": "GDScript",
+"path": "res://scripts/building/building_manager.gd"
+}, {
+"base": "Node",
+"class": "CombatSystem",
+"language": "GDScript",
+"path": "res://scripts/combat/combat_system.gd"
+}, {
+"base": "Node",
+"class": "EconomyManager",
+"language": "GDScript",
+"path": "res://scripts/economy/economy_manager.gd"
+}, {
+"base": "Node2D",
+"class": "FogOfWar",
+"language": "GDScript",
+"path": "res://scripts/core/fog_of_war.gd"
+}, {
+"base": "Node",
+"class": "GameManager",
+"language": "GDScript",
+"path": "res://scripts/core/game_manager.gd"
+}, {
+"base": "Node2D",
+"class": "GridSystem",
+"language": "GDScript",
+"path": "res://scripts/core/grid_system.gd"
+}, {
+"base": "Building",
+"class": "HQBuilding",
+"language": "GDScript",
+"path": "res://scripts/building/hq_building.gd"
+}, {
+"base": "Node2D",
+"class": "MapManager",
+"language": "GDScript",
+"path": "res://scripts/core/map_manager.gd"
+}, {
+"base": "Node",
+"class": "NetworkManager",
+"language": "GDScript",
+"path": "res://scripts/networking/network_manager.gd"
+}, {
+"base": "Node",
+"class": "TechTreeManager",
+"language": "GDScript",
+"path": "res://scripts/core/tech_tree_manager.gd"
+}, {
+"base": "CanvasLayer",
+"class": "UIManager",
+"language": "GDScript",
+"path": "res://scripts/ui/ui_manager.gd"
+}, {
+"base": "KinematicBody2D",
+"class": "Unit",
+"language": "GDScript",
+"path": "res://scripts/unit/unit_base.gd"
+}, {
+"base": "Node",
+"class": "UnitFactory",
+"language": "GDScript",
+"path": "res://scripts/unit/unit_factory.gd"
+}, {
+"base": "KinematicBody2D",
+"class": "Worker",
+"language": "GDScript",
+"path": "res://scripts/worker/worker.gd"
+} ]
+_global_script_class_icons={
+"Building": "",
+"BuildingManager": "",
+"CombatSystem": "",
+"EconomyManager": "",
+"FogOfWar": "",
+"GameManager": "",
+"GridSystem": "",
+"HQBuilding": "",
+"MapManager": "",
+"NetworkManager": "",
+"TechTreeManager": "",
+"UIManager": "",
+"Unit": "",
+"UnitFactory": "",
+"Worker": ""
+}
+
+[application]
+
+config/name="CastleFight"
+config/icon="res://icon.png"
+
+[editor_plugins]
+
+enabled=PoolStringArray(  )
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
+
+[physics]
+
+common/enable_pause_aware_picking=true
+
+[rendering]
+
+quality/driver/driver_name="GLES2"
+vram_compression/import_etc=true
+vram_compression/import_etc2=false
+environment/default_environment="res://default_env.tres"

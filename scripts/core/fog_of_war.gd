@@ -3,6 +3,10 @@
 class_name FogOfWar
 extends Node2D
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 96ca7c9 (added missing files)
 # Fog of War signals
 signal visibility_changed(position, team, is_visible)
 signal unit_revealed(unit, team)

@@ -5,10 +5,17 @@ extends Control
 # Ready function
 func _ready() -> void:
 	# Connect button signals
+<<<<<<< HEAD
 	$VBoxContainer/MultiplayerButton.connect("pressed", self, "_on_multiplayer_button_pressed")
 	$VBoxContainer/VSingleplayerButton.connect("pressed", self, "_on_singleplayer_button_pressed")
 	$VBoxContainer/OptionsButton.connect("pressed", self, "_on_options_button_pressed")
 	$VBoxContainer/QuitButton.connect("pressed", self, "_on_quit_button_pressed")
+=======
+	$VBoxContainer/MultiplayerButton.connect("pressed", _on_multiplayer_button_pressed)
+	$VBoxContainer/VSingleplayerButton.connect("pressed", _on_singleplayer_button_pressed)
+	$VBoxContainer/OptionsButton.connect("pressed", _on_options_button_pressed)
+	$VBoxContainer/QuitButton.connect("pressed", _on_quit_button_pressed)
+>>>>>>> 96ca7c9 (added missing files)
 	
 	# Set version text
 	$VersionLabel.text = "Version 0.1.0"

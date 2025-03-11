@@ -1,7 +1,13 @@
 # Combat System - Handles damage calculations, attack types, and armor types
 # Path: scripts/combat/combat_system.gd
+<<<<<<< HEAD
 class_name CombatSystem
 extends Node
+=======
+extends Node
+class_name CombatSystem
+
+>>>>>>> 96ca7c9 (added missing files)
 
 # Signal for when combat events occur
 signal combat_event(attacker, target, damage, attack_type)

@@ -3,6 +3,11 @@
 class_name BuildingManager
 extends Node
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 96ca7c9 (added missing files)
 # Building signals
 signal building_placed(building_type, position, team)
 signal building_constructed(building_reference)
