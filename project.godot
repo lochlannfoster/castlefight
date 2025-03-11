@@ -14,7 +14,7 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/building/building_base.gd"
 }, {
-"base": "Node",
+"base": "Node2D",
 "class": "BuildingManager",
 "language": "GDScript",
 "path": "res://scripts/building/building_manager.gd"
@@ -24,25 +24,10 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/combat/combat_system.gd"
 }, {
-"base": "Node",
-"class": "EconomyManager",
-"language": "GDScript",
-"path": "res://scripts/economy/economy_manager.gd"
-}, {
 "base": "Node2D",
 "class": "FogOfWar",
 "language": "GDScript",
 "path": "res://scripts/core/fog_of_war.gd"
-}, {
-"base": "Node",
-"class": "GameManager",
-"language": "GDScript",
-"path": "res://scripts/core/game_manager.gd"
-}, {
-"base": "Node2D",
-"class": "GridSystem",
-"language": "GDScript",
-"path": "res://scripts/core/grid_system.gd"
 }, {
 "base": "Building",
 "class": "HQBuilding",
@@ -74,11 +59,6 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/unit/unit_base.gd"
 }, {
-"base": "Node",
-"class": "UnitFactory",
-"language": "GDScript",
-"path": "res://scripts/unit/unit_factory.gd"
-}, {
 "base": "KinematicBody2D",
 "class": "Worker",
 "language": "GDScript",
@@ -88,24 +68,28 @@ _global_script_class_icons={
 "Building": "",
 "BuildingManager": "",
 "CombatSystem": "",
-"EconomyManager": "",
 "FogOfWar": "",
-"GameManager": "",
-"GridSystem": "",
 "HQBuilding": "",
 "MapManager": "",
 "NetworkManager": "",
 "TechTreeManager": "",
 "UIManager": "",
 "Unit": "",
-"UnitFactory": "",
 "Worker": ""
 }
 
 [application]
 
 config/name="CastleFight"
+run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+GameManager="*res://scripts/core/game_manager.gd"
+GridSystem="*res://scripts/core/grid_system.gd"
+EconomyManager="*res://scripts/economy/economy_manager.gd"
+UnitFactory="*res://scripts/unit/unit_factory.gd"
 
 [editor_plugins]
 

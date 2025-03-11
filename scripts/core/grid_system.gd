@@ -1,6 +1,5 @@
 # Grid System for building placement and unit movement
 # Path: scripts/core/grid_system.gd
-class_name GridSystem
 extends Node2D
 
 signal cell_highlighted(grid_pos, is_valid)

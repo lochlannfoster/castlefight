@@ -298,7 +298,7 @@ func find_target() -> Object:
 		# Check if it's an enemy
 		if collider.has_method("get_team") and collider.get_team() != team:
 			# Check if it's not dead
-			if collider is Unit and collider.current_state == UnitState.DEAD:
+			if collider.has("current_state") and collider.current_state == UnitState.DEAD:
 				continue
 			
 			# Calculate distance

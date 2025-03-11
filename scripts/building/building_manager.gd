@@ -1,13 +1,8 @@
 # Building Manager - Handles building creation, placement, and management
 # Path: scripts/building/building_manager.gd
 class_name BuildingManager
-extends Node
+extends Node2D
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 96ca7c9 (added missing files)
 # Building signals
 signal building_placed(building_type, position, team)
 signal building_constructed(building_reference)

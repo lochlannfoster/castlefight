@@ -1,6 +1,5 @@
 # Economy Manager - Handles resources, income, and purchases
 # Path: scripts/economy/economy_manager.gd
-class_name EconomyManager
 extends Node
 
 # Economy signals

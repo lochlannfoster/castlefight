@@ -3,10 +3,6 @@
 class_name Building
 extends StaticBody2D
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 96ca7c9 (added missing files)
 # Building signals
 signal unit_spawned(unit_reference)
 signal building_destroyed

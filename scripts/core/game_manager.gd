@@ -1,6 +1,5 @@
 # Game Manager - Coordinates all game systems
 # Path: scripts/core/game_manager.gd
-class_name GameManager
 extends Node
 
 # Game signals
@@ -111,7 +110,7 @@ func _initialize_systems() -> void:
 	
 	# Initialize Unit Factory
 	if not has_node("UnitFactory"):
-		unit_factory = preload("res://scripts/unit/unit_factory.gd").new()
+		unit_factory = get_node("/root/UnitFactory")
 		unit_factory.name = "UnitFactory"
 		add_child(unit_factory)
 	else:

@@ -1,6 +1,5 @@
 # Unit Factory - Handles creation of unit instances from data
 # Path: scripts/unit/unit_factory.gd
-class_name UnitFactory
 extends Node
 
 # Unit creation signals

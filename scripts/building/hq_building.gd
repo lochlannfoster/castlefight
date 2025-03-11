@@ -3,11 +3,8 @@
 class_name HQBuilding
 extends Building
 
-<<<<<<< HEAD
-=======
 
 
->>>>>>> 96ca7c9 (added missing files)
 # HQ signals
 signal income_bonus_changed(new_bonus)
 
