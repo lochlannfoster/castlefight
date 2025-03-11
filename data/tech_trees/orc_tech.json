@@ -1,0 +1,268 @@
+{
+    "race_id": "orc",
+    "race_name": "Orc Horde",
+    "description": "Aggressive race with strong offensive capabilities and high damage output",
+    
+    "starting_buildings": ["great_hall"],
+    
+    "buildings": [
+      {
+        "id": "great_hall",
+        "name": "Great Hall",
+        "tier": 0,
+        "description": "Main base structure. Destruction results in defeat.",
+        "requirements": [],
+        "unlocks": ["barracks", "war_mill", "burrow"]
+      },
+      {
+        "id": "barracks",
+        "name": "Barracks",
+        "tier": 1,
+        "description": "Trains basic infantry units",
+        "requirements": ["great_hall"],
+        "unlocks": ["grunt", "headhunter", "beast_pen"]
+      },
+      {
+        "id": "war_mill",
+        "name": "War Mill",
+        "tier": 1,
+        "description": "Provides weapon and armor upgrades and allows building advanced structures",
+        "requirements": ["great_hall"],
+        "unlocks": ["trading_post", "forge"]
+      },
+      {
+        "id": "burrow",
+        "name": "Burrow",
+        "tier": 1,
+        "description": "Increases maximum supply limit and can defend against enemies",
+        "requirements": ["great_hall"],
+        "unlocks": []
+      },
+      {
+        "id": "beast_pen",
+        "name": "Beast Pen",
+        "tier": 2,
+        "description": "Trains beast units and allows beast upgrades",
+        "requirements": ["barracks"],
+        "unlocks": ["raider", "wolf_rider", "battle_harness"]
+      },
+      {
+        "id": "trading_post",
+        "name": "Trading Post",
+        "tier": 2,
+        "description": "Allows resource trading and increases income",
+        "requirements": ["war_mill"],
+        "unlocks": ["treasure_vault"]
+      },
+      {
+        "id": "forge",
+        "name": "Forge",
+        "tier": 2,
+        "description": "Produces siege weapons and demolition units",
+        "requirements": ["war_mill"],
+        "unlocks": ["demolisher", "sappers"]
+      },
+      {
+        "id": "spirit_lodge",
+        "name": "Spirit Lodge",
+        "tier": 3,
+        "description": "Trains shaman and witch doctor units with powerful spells",
+        "requirements": ["beast_pen", "trading_post"],
+        "unlocks": ["shaman", "witch_doctor", "spirit_link"]
+      },
+      {
+        "id": "treasure_vault",
+        "name": "Treasure Vault",
+        "tier": 3,
+        "description": "Significantly increases gold income",
+        "requirements": ["trading_post"],
+        "unlocks": []
+      },
+      {
+        "id": "stronghold",
+        "name": "Stronghold",
+        "tier": 4,
+        "description": "Unlocks powerful hero units and ultimate technologies",
+        "requirements": ["spirit_lodge", "treasure_vault"],
+        "unlocks": ["blademaster", "tauren_chieftain", "far_seer", "bloodlust"]
+      }
+    ],
+    
+    "units": [
+      {
+        "id": "grunt",
+        "name": "Grunt",
+        "tier": 1,
+        "building": "barracks",
+        "description": "Basic melee infantry with high health",
+        "abilities": ["bloodrage"]
+      },
+      {
+        "id": "headhunter",
+        "name": "Headhunter",
+        "tier": 1,
+        "building": "barracks",
+        "description": "Ranged unit with spears effective against air units",
+        "abilities": ["berserker_strength"]
+      },
+      {
+        "id": "raider",
+        "name": "Raider",
+        "tier": 2,
+        "building": "beast_pen",
+        "description": "Fast cavalry unit that can ensnare enemies",
+        "abilities": ["ensnare"]
+      },
+      {
+        "id": "wolf_rider",
+        "name": "Wolf Rider",
+        "tier": 2,
+        "building": "beast_pen",
+        "description": "Fast unit with high damage output",
+        "abilities": ["feral_lunge"]
+      },
+      {
+        "id": "demolisher",
+        "name": "Demolisher",
+        "tier": 2,
+        "building": "forge",
+        "description": "Siege unit with high damage against buildings",
+        "abilities": ["demolish"]
+      },
+      {
+        "id": "shaman",
+        "name": "Shaman",
+        "tier": 3,
+        "building": "spirit_lodge",
+        "description": "Spellcaster with purge and lightning shield abilities",
+        "abilities": ["purge", "lightning_shield"]
+      },
+      {
+        "id": "witch_doctor",
+        "name": "Witch Doctor",
+        "tier": 3,
+        "building": "spirit_lodge",
+        "description": "Support spellcaster with healing wards and hexes",
+        "abilities": ["healing_ward", "hex"]
+      },
+      {
+        "id": "tauren",
+        "name": "Tauren",
+        "tier": 3,
+        "building": "beast_pen",
+        "description": "Heavy melee unit with high health and damage",
+        "abilities": ["war_stomp"]
+      },
+      {
+        "id": "blademaster",
+        "name": "Blademaster",
+        "tier": 4,
+        "building": "stronghold",
+        "description": "Hero unit with exceptional melee abilities",
+        "abilities": ["wind_walk", "critical_strike", "mirror_image"]
+      },
+      {
+        "id": "tauren_chieftain",
+        "name": "Tauren Chieftain",
+        "tier": 4,
+        "building": "stronghold",
+        "description": "Powerful hero unit with area of effect abilities",
+        "abilities": ["shock_wave", "war_stomp", "reincarnation"]
+      },
+      {
+        "id": "far_seer",
+        "name": "Far Seer",
+        "tier": 4,
+        "building": "stronghold",
+        "description": "Shaman hero with powerful elemental abilities",
+        "abilities": ["chain_lightning", "far_sight", "earthquake"]
+      }
+    ],
+    
+    "upgrades": [
+      {
+        "id": "sharpened_tusks",
+        "name": "Sharpened Tusks",
+        "tier": 2,
+        "building": "war_mill",
+        "description": "Increases attack damage of all infantry units by 20%",
+        "effects": [
+          {
+            "type": "attack_damage",
+            "value": 0.2,
+            "target": ["grunt", "headhunter", "raider"]
+          }
+        ]
+      },
+      {
+        "id": "hardened_hide",
+        "name": "Hardened Hide",
+        "tier": 2,
+        "building": "war_mill",
+        "description": "Increases armor of all infantry units by 3",
+        "effects": [
+          {
+            "type": "armor",
+            "value": 3,
+            "target": ["grunt", "raider", "tauren"]
+          }
+        ]
+      },
+      {
+        "id": "battle_harness",
+        "name": "Battle Harness",
+        "tier": 2,
+        "building": "beast_pen",
+        "description": "Increases movement speed of all beast riders by 15%",
+        "effects": [
+          {
+            "type": "movement_speed",
+            "value": 0.15,
+            "target": ["raider", "wolf_rider"]
+          }
+        ]
+      },
+      {
+        "id": "sappers",
+        "name": "Sappers",
+        "tier": 2,
+        "building": "forge",
+        "description": "Allows grunts to carry explosives for bonus damage to buildings",
+        "effects": [
+          {
+            "type": "special_ability",
+            "value": "demolition_charge",
+            "target": ["grunt"]
+          }
+        ]
+      },
+      {
+        "id": "spirit_link",
+        "name": "Spirit Link",
+        "tier": 3,
+        "building": "spirit_lodge",
+        "description": "Allows shamans to distribute damage among nearby friendly units",
+        "effects": [
+          {
+            "type": "special_ability",
+            "value": "spirit_link",
+            "target": ["shaman"]
+          }
+        ]
+      },
+      {
+        "id": "bloodlust",
+        "name": "Bloodlust",
+        "tier": 4,
+        "building": "stronghold",
+        "description": "Ultimate upgrade that increases attack speed of all units by 25%",
+        "effects": [
+          {
+            "type": "attack_speed",
+            "value": 0.25,
+            "target": ["all"]
+          }
+        ]
+      }
+    ]
+  }

@@ -1,0 +1,68 @@
+{
+    "unit_id": "footman",
+    "display_name": "Footman",
+    "description": "Basic melee infantry unit with balanced stats",
+    "race": "human",
+    "scene_path": "res://scenes/units/human/footman.tscn",
+    
+    "stats": {
+      "health": 100,
+      "armor": 2,
+      "armor_type": "medium",
+      "attack_damage": 10,
+      "attack_type": "normal",
+      "attack_range": 60,
+      "attack_speed": 1.2,
+      "movement_speed": 90,
+      "collision_radius": 16,
+      "vision_range": 250,
+      "health_regen": 0.25
+    },
+    
+    "abilities": [
+      {
+        "name": "defend",
+        "display_name": "Defend",
+        "description": "Reduces damage taken by 20% for 5 seconds",
+        "cooldown": 10,
+        "effects": [
+          {
+            "type": "damage_reduction",
+            "value": 0.2,
+            "duration": 5
+          }
+        ],
+        "visual_effect": "res://assets/effects/defend_effect.tscn"
+      }
+    ],
+    
+    "animations": {
+      "idle": {
+        "frames": 1,
+        "path": "res://assets/units/human/footman/idle"
+      },
+      "move": {
+        "frames": 8,
+        "path": "res://assets/units/human/footman/move"
+      },
+      "attack": {
+        "frames": 5,
+        "path": "res://assets/units/human/footman/attack"
+      },
+      "death": {
+        "frames": 3,
+        "path": "res://assets/units/human/footman/death"
+      },
+      "hurt": {
+        "frames": 2,
+        "path": "res://assets/units/human/footman/hurt"
+      }
+    },
+    
+    "sounds": {
+      "attack": "res://assets/audio/sfx/units/footman/attack.ogg",
+      "death": "res://assets/audio/sfx/units/footman/death.ogg",
+      "select": "res://assets/audio/sfx/units/footman/select.ogg",
+      "acknowledge": "res://assets/audio/sfx/units/footman/acknowledge.ogg"
+    }
+  }

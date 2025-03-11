@@ -1,0 +1,100 @@
+{
+    "building_id": "barracks",
+    "display_name": "Barracks",
+    "description": "Trains basic infantry units",
+    "race": "human",
+    "scene_path": "res://scenes/buildings/human/barracks.tscn",
+    
+    "stats": {
+      "health": 500,
+      "armor": 5,
+      "armor_type": "fortified",
+      "vision_range": 300
+    },
+    
+    "construction": {
+      "time": 30,
+      "gold_cost": 120,
+      "wood_cost": 80,
+      "supply_cost": 0,
+      "size_x": 2,
+      "size_y": 2
+    },
+    
+    "spawning": {
+      "can_spawn_units": true,
+      "spawn_interval": 12,
+      "spawn_offset_x": 0,
+      "spawn_offset_y": 48,
+      "unit_types": ["footman", "rifleman", "knight"],
+      "queue_size": 5
+    },
+    
+    "upgrades": [
+      {
+        "id": "improved_armor",
+        "display_name": "Improved Armor",
+        "description": "Increases armor of all infantry by 2",
+        "gold_cost": 150,
+        "wood_cost": 50,
+        "research_time": 45,
+        "effects": [
+          {
+            "target": "unit_type",
+            "unit_types": ["footman", "rifleman"],
+            "stat": "armor",
+            "value": 2,
+            "operation": "add"
+          }
+        ]
+      },
+      {
+        "id": "sharpened_blades",
+        "display_name": "Sharpened Blades",
+        "description": "Increases attack damage of all infantry by 15%",
+        "gold_cost": 200,
+        "wood_cost": 100,
+        "research_time": 60,
+        "effects": [
+          {
+            "target": "unit_type",
+            "unit_types": ["footman", "rifleman", "knight"],
+            "stat": "attack_damage",
+            "value": 0.15,
+            "operation": "multiply"
+          }
+        ]
+      }
+    ],
+    
+    "animations": {
+      "construction": {
+        "frames": 3,
+        "path": "res://assets/buildings/human/barracks/construction"
+      },
+      "idle": {
+        "frames": 1,
+        "path": "res://assets/buildings/human/barracks/idle"
+      },
+      "training": {
+        "frames": 4,
+        "path": "res://assets/buildings/human/barracks/training"
+      },
+      "damaged": {
+        "frames": 1,
+        "path": "res://assets/buildings/human/barracks/damaged"
+      },
+      "destroyed": {
+        "frames": 1,
+        "path": "res://assets/buildings/human/barracks/destroyed"
+      }
+    },
+    
+    "sounds": {
+      "construction_start": "res://assets/audio/sfx/buildings/construction_start.ogg",
+      "construction_complete": "res://assets/audio/sfx/buildings/construction_complete.ogg",
+      "training_start": "res://assets/audio/sfx/buildings/training_start.ogg",
+      "damaged": "res://assets/audio/sfx/buildings/building_damaged.ogg",
+      "destroyed": "res://assets/audio/sfx/buildings/building_destroyed.ogg"
+    }
+  }

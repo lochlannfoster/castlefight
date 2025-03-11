@@ -1,0 +1,237 @@
+{
+    "race_id": "human",
+    "race_name": "Human Alliance",
+    "description": "Balanced race with versatile units and strong defensive capabilities",
+    
+    "starting_buildings": ["headquarters"],
+    
+    "buildings": [
+      {
+        "id": "headquarters",
+        "name": "Headquarters",
+        "tier": 0,
+        "description": "Main base structure. Destruction results in defeat.",
+        "requirements": [],
+        "unlocks": ["barracks", "lumber_mill", "farm"]
+      },
+      {
+        "id": "barracks",
+        "name": "Barracks",
+        "tier": 1,
+        "description": "Trains basic infantry units",
+        "requirements": ["headquarters"],
+        "unlocks": ["footman", "rifleman", "blacksmith"]
+      },
+      {
+        "id": "lumber_mill",
+        "name": "Lumber Mill",
+        "tier": 1,
+        "description": "Provides wood resources and allows building advanced structures",
+        "requirements": ["headquarters"],
+        "unlocks": ["marketplace", "workshop"]
+      },
+      {
+        "id": "farm",
+        "name": "Farm",
+        "tier": 1,
+        "description": "Increases maximum supply limit",
+        "requirements": ["headquarters"],
+        "unlocks": []
+      },
+      {
+        "id": "blacksmith",
+        "name": "Blacksmith",
+        "tier": 2,
+        "description": "Allows weapon and armor upgrades for units",
+        "requirements": ["barracks"],
+        "unlocks": ["improved_armor", "sharpened_blades", "knight"]
+      },
+      {
+        "id": "marketplace",
+        "name": "Marketplace",
+        "tier": 2,
+        "description": "Allows trading resources and increases income",
+        "requirements": ["lumber_mill"],
+        "unlocks": ["bank_vault"]
+      },
+      {
+        "id": "workshop",
+        "name": "Workshop",
+        "tier": 2,
+        "description": "Produces siege engines and mechanical units",
+        "requirements": ["lumber_mill"],
+        "unlocks": ["siege_engine", "steam_tank"]
+      },
+      {
+        "id": "arcane_sanctum",
+        "name": "Arcane Sanctum",
+        "tier": 3,
+        "description": "Trains spellcaster units and researches magic upgrades",
+        "requirements": ["blacksmith", "marketplace"],
+        "unlocks": ["sorceress", "priest", "arcane_brilliance"]
+      },
+      {
+        "id": "bank_vault",
+        "name": "Bank Vault",
+        "tier": 3,
+        "description": "Significantly increases gold income",
+        "requirements": ["marketplace"],
+        "unlocks": []
+      },
+      {
+        "id": "castle",
+        "name": "Castle",
+        "tier": 4,
+        "description": "Unlocks powerful hero units and ultimate technologies",
+        "requirements": ["arcane_sanctum", "bank_vault"],
+        "unlocks": ["paladin", "archmage", "mountain_king", "call_to_arms"]
+      }
+    ],
+    
+    "units": [
+      {
+        "id": "footman",
+        "name": "Footman",
+        "tier": 1,
+        "building": "barracks",
+        "description": "Basic melee infantry with balanced stats",
+        "abilities": ["defend"]
+      },
+      {
+        "id": "rifleman",
+        "name": "Rifleman",
+        "tier": 1,
+        "building": "barracks",
+        "description": "Ranged unit effective against air and light units",
+        "abilities": ["long_rifle"]
+      },
+      {
+        "id": "knight",
+        "name": "Knight",
+        "tier": 2,
+        "building": "barracks",
+        "description": "Heavy cavalry with high health and damage",
+        "abilities": ["charge"]
+      },
+      {
+        "id": "siege_engine",
+        "name": "Siege Engine",
+        "tier": 2,
+        "building": "workshop",
+        "description": "Long-range siege weapon that deals high damage to buildings",
+        "abilities": ["barrage"]
+      },
+      {
+        "id": "steam_tank",
+        "name": "Steam Tank",
+        "tier": 3,
+        "building": "workshop",
+        "description": "Heavy mechanical unit with high armor and health",
+        "abilities": ["steam_blast"]
+      },
+      {
+        "id": "sorceress",
+        "name": "Sorceress",
+        "tier": 3,
+        "building": "arcane_sanctum",
+        "description": "Spellcaster with crowd control abilities",
+        "abilities": ["slow", "polymorph"]
+      },
+      {
+        "id": "priest",
+        "name": "Priest",
+        "tier": 3,
+        "building": "arcane_sanctum",
+        "description": "Support spellcaster with healing and buffs",
+        "abilities": ["heal", "divine_shield"]
+      },
+      {
+        "id": "paladin",
+        "name": "Paladin",
+        "tier": 4,
+        "building": "castle",
+        "description": "Powerful hero unit with holy abilities",
+        "abilities": ["holy_light", "devotion_aura", "resurrection"]
+      },
+      {
+        "id": "archmage",
+        "name": "Archmage",
+        "tier": 4,
+        "building": "castle",
+        "description": "Powerful mage hero with devastating spells",
+        "abilities": ["blizzard", "water_elemental", "mass_teleport"]
+      },
+      {
+        "id": "mountain_king",
+        "name": "Mountain King",
+        "tier": 4,
+        "building": "castle",
+        "description": "Dwarven hero with powerful physical attacks",
+        "abilities": ["storm_bolt", "thunder_clap", "avatar"]
+      }
+    ],
+    
+    "upgrades": [
+      {
+        "id": "improved_armor",
+        "name": "Improved Armor",
+        "tier": 2,
+        "building": "blacksmith",
+        "description": "Increases armor of all infantry units by 2",
+        "effects": [
+          {
+            "type": "armor",
+            "value": 2,
+            "target": ["footman", "rifleman", "knight"]
+          }
+        ]
+      },
+      {
+        "id": "sharpened_blades",
+        "name": "Sharpened Blades",
+        "tier": 2,
+        "building": "blacksmith",
+        "description": "Increases attack damage of all infantry units by 15%",
+        "effects": [
+          {
+            "type": "attack_damage",
+            "value": 0.15,
+            "target": ["footman", "rifleman", "knight"]
+          }
+        ]
+      },
+      {
+        "id": "arcane_brilliance",
+        "name": "Arcane Brilliance",
+        "tier": 3,
+        "building": "arcane_sanctum",
+        "description": "Increases mana pool and regeneration for all spellcasters",
+        "effects": [
+          {
+            "type": "max_mana",
+            "value": 50,
+            "target": ["sorceress", "priest", "archmage"]
+          },
+          {
+            "type": "mana_regen",
+            "value": 0.5,
+            "target": ["sorceress", "priest", "archmage"]
+          }
+        ]
+      },
+      {
+        "id": "call_to_arms",
+        "name": "Call to Arms",
+        "tier": 4,
+        "building": "castle",
+        "description": "Ultimate upgrade that increases attack speed of all units by 20%",
+        "effects": [
+          {
+            "type": "attack_speed",
+            "value": 0.2,
+            "target": ["all"]
+          }
+        ]
+      }
+    ]
+  }
