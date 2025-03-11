@@ -39,15 +39,21 @@ var headquarters: Dictionary = {
 }
 
 # System references (will be initialized in _ready)
-var grid_system: GridSystem
+var grid_system
 var building_manager
-var combat_system: CombatSystem
+var combat_system
 var economy_manager
 var unit_factory
 var ui_manager
 var fog_of_war_manager
 var network_manager
 var map_manager
+
+# Script references for instantiation
+var GridSystemScript = preload("res://scripts/core/grid_system.gd")
+var CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
+var EconomyManagerScript = preload("res://scripts/economy/economy_manager.gd")
+var BuildingManagerScript = preload("res://scripts/building/building_manager.gd")
 
 # Ready function
 func _ready() -> void:
@@ -78,7 +84,8 @@ func _process(delta: float) -> void:
 func _initialize_systems() -> void:
 	# Initialize Grid System if not already in scene
 	if not has_node("GridSystem"):
-		grid_system = GridSystem.new()
+		# Use the preloaded script to instantiate
+		grid_system = GridSystemScript.new()
 		grid_system.name = "GridSystem"
 		add_child(grid_system)
 	else:
@@ -86,7 +93,8 @@ func _initialize_systems() -> void:
 	
 	# Initialize Combat System
 	if not has_node("CombatSystem"):
-		combat_system = CombatSystem.new()
+		# Use the preloaded script to instantiate
+		combat_system = CombatSystemScript.new()
 		combat_system.name = "CombatSystem"
 		add_child(combat_system)
 	else:
@@ -94,7 +102,8 @@ func _initialize_systems() -> void:
 	
 	# Initialize Economy Manager
 	if not has_node("EconomyManager"):
-		economy_manager = EconomyManager.new()
+		# Use the preloaded script to instantiate
+		economy_manager = EconomyManagerScript.new()
 		economy_manager.name = "EconomyManager"
 		add_child(economy_manager)
 	else:
@@ -102,19 +111,15 @@ func _initialize_systems() -> void:
 	
 	# Initialize Building Manager
 	if not has_node("BuildingManager"):
-		building_manager = BuildingManager.new()
+		# Use the preloaded script to instantiate
+		building_manager = BuildingManagerScript.new()
 		building_manager.name = "BuildingManager"
 		add_child(building_manager)
 	else:
 		building_manager = $BuildingManager
 	
-	# Initialize Unit Factory
-	if not has_node("UnitFactory"):
-		unit_factory = get_node("/root/UnitFactory")
-		unit_factory.name = "UnitFactory"
-		add_child(unit_factory)
-	else:
-		unit_factory = $UnitFactory
+	# Initialize Unit Factory (already a singleton)
+	unit_factory = get_node_or_null("/root/UnitFactory")
 	
 	# Initialize UI Manager if available
 	ui_manager = get_node_or_null("UIManager")

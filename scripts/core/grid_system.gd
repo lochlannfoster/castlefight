@@ -17,20 +17,12 @@ var team_a_cells: Array = []  # Cells in Team A's territory
 var team_b_cells: Array = []  # Cells in Team B's territory
 var lane_cells: Dictionary = {}  # Cells organized by lanes
 
-# Visual debugging
-var debug_mode: bool = false
-var debug_grid: Node2D
-
 # Team constants
 enum Team {TEAM_A, TEAM_B}
 
 func _ready():
 	# Initialize the grid when the node enters the scene tree
 	initialize_grid()
-	
-	# Setup debug visualization if enabled
-	if debug_mode:
-		create_debug_grid()
 
 # Initialize the grid with all cells and their properties
 func initialize_grid() -> void:
@@ -201,36 +193,3 @@ func highlight_valid_cells(size: Vector2, team: int) -> Array:
 # Clear all highlights
 func clear_highlights() -> void:
 	emit_signal("cell_highlighted", Vector2.ZERO, false)
-
-# Create visual debug grid
-func create_debug_grid() -> void:
-	debug_grid = Node2D.new()
-	debug_grid.name = "DebugGrid"
-	add_child(debug_grid)
-	
-	for grid_pos in grid_cells.keys():
-		var cell = grid_cells[grid_pos]
-		var world_pos = cell.world_position
-		
-		var rect = ColorRect.new()
-		rect.rect_size = Vector2(5, 5)
-		rect.rect_position = world_pos - Vector2(2.5, 2.5)
-		
-		if cell.team_territory == Team.TEAM_A:
-			rect.color = Color(0, 0, 1, 0.5)  # Blue for Team A
-		elif cell.team_territory == Team.TEAM_B:
-			rect.color = Color(1, 0, 0, 0.5)  # Red for Team B
-		else:
-			rect.color = Color(0.5, 0.5, 0.5, 0.5)  # Gray for neutral
-			
-		debug_grid.add_child(rect)
-
-# Updates the visual debugging when grid changes
-func update_debug_grid() -> void:
-	if not debug_mode or not is_instance_valid(debug_grid):
-		return
-		
-	for child in debug_grid.get_children():
-		child.queue_free()
-		
-	create_debug_grid()
