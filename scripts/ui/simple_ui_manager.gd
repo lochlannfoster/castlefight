@@ -127,22 +127,90 @@ func _create_building_menu() -> void:
 		panel.add_child(title_label)
 		
 		# Create grid container for building buttons
-		var grid = GridContainer.new()
-		grid.name = "BuildingGrid"
-		grid.columns = 3
-		grid.rect_position = Vector2(10, 50)
-		grid.rect_size = Vector2(380, 230)
-		panel.add_child(grid)
+		# Create building menu
+func _create_building_menu() -> void:
+	print("Creating building menu...")
+	
+	# First create the scene file if it doesn't exist
+	var dir = Directory.new()
+	if not dir.dir_exists("res://scenes/ui"):
+		dir.make_dir_recursive("res://scenes/ui")
+	
+	var file = File.new()
+	var scene_path = BUILDING_MENU_SCENE
+	var should_save_scene = false
+	
+	if not file.file_exists(scene_path):
+		print("Building menu scene not found at path: " + scene_path)
+		should_save_scene = true
+	
+	# Create building menu directly
+	building_menu = Control.new()
+	building_menu.name = "BuildingMenu"
+	building_menu.anchor_right = 1.0
+	building_menu.anchor_bottom = 1.0
+	building_menu.margin_right = -800  # Leave space on the right
+	building_menu.margin_bottom = -500  # Leave space at the bottom
+	building_menu.visible = false
+	
+	# Load or create script
+	var script = load("res://scripts/ui/building_menu.gd")
+	if script:
+		building_menu.set_script(script)
+	else:
+		print("Warning: Could not load building_menu.gd script")
+	
+	add_child(building_menu)
+	
+	# Create panel
+	var panel = Panel.new()
+	panel.name = "Panel"
+	panel.rect_position = Vector2(10, 10)
+	panel.rect_size = Vector2(400, 300)
+	building_menu.add_child(panel)
+	
+	# Create title label
+	var title_label = Label.new()
+	title_label.name = "TitleLabel"
+	title_label.rect_position = Vector2(10, 10)
+	title_label.rect_size = Vector2(380, 30)
+	title_label.text = "Available Buildings"
+	title_label.align = Label.ALIGN_CENTER
+	panel.add_child(title_label)
+	
+	# Create grid container for building buttons
+	var grid = GridContainer.new()
+	grid.name = "BuildingGrid"
+	grid.columns = 3
+	grid.rect_position = Vector2(10, 50)
+	grid.rect_size = Vector2(380, 230)
+	panel.add_child(grid)
+	
+	# Create close button
+	var close_button = Button.new()
+	close_button.name = "CloseButton"
+	close_button.text = "X"
+	close_button.rect_position = Vector2(370, 10)
+	close_button.rect_size = Vector2(20, 20)
+	panel.add_child(close_button)
+	
+	# If we needed to create the scene, save it for future use
+	if should_save_scene and OS.has_feature("editor"):
+		print("Attempting to save building menu scene for future use")
+		var packed_scene = PackedScene.new()
+		packed_scene.pack(building_menu)
 		
-		# Create close button
-		var close_button = Button.new()
-		close_button.name = "CloseButton"
-		close_button.text = "X"
-		close_button.rect_position = Vector2(370, 10)
-		close_button.rect_size = Vector2(20, 20)
-		panel.add_child(close_button)
-		
-		print("Building menu created dynamically")
+		var save_result = ResourceSaver.save(scene_path, packed_scene)
+		if save_result == OK:
+			print("Successfully saved building menu scene to: " + scene_path)
+		else:
+			print("Failed to save building menu scene with error: " + str(save_result))
+	
+	# Now explicitly make sure the script's _ready function is called
+	if building_menu.has_method("_ready"):
+		building_menu._ready()
+	
+	print("Building menu created successfully")
 
 # Create resource display
 func _create_resource_display() -> void:

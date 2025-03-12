@@ -165,7 +165,7 @@ func _handle_input() -> void:
 		cancel_building_placement()
 
 # Handle movement
-func _handle_movement(delta: float) -> void:
+func _handle_movement(_delta: float) -> void:
 	if is_moving_to_target:
 		# Move towards target position
 		var direction = global_position.direction_to(target_position)

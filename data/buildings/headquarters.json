@@ -1,0 +1,53 @@
+{
+    "building_id": "hq",
+    "display_name": "Headquarters",
+    "description": "Main base structure. Destruction results in defeat.",
+    "race": "common",
+    "scene_path": "res://scenes/buildings/hq_building.tscn",
+    
+    "stats": {
+      "health": 2000,
+      "armor": 5,
+      "armor_type": "fortified",
+      "vision_range": 400
+    },
+    
+    "construction": {
+      "time": 0,
+      "gold_cost": 0,
+      "wood_cost": 0,
+      "supply_cost": 0,
+      "size_x": 3,
+      "size_y": 3
+    },
+    
+    "spawning": {
+      "can_spawn_units": false
+    },
+    
+    "animations": {
+      "construction": {
+        "frames": 1,
+        "path": "res://assets/buildings/common/hq/construction"
+      },
+      "idle": {
+        "frames": 1,
+        "path": "res://assets/buildings/common/hq/idle"
+      },
+      "damaged": {
+        "frames": 1,
+        "path": "res://assets/buildings/common/hq/damaged"
+      },
+      "destroyed": {
+        "frames": 1,
+        "path": "res://assets/buildings/common/hq/destroyed"
+      }
+    },
+    
+    "sounds": {
+      "construction_start": "res://assets/audio/sfx/buildings/construction_start.ogg",
+      "construction_complete": "res://assets/audio/sfx/buildings/construction_complete.ogg",
+      "damaged": "res://assets/audio/sfx/buildings/building_damaged.ogg",
+      "destroyed": "res://assets/audio/sfx/buildings/building_destroyed.ogg"
+    }
+  }

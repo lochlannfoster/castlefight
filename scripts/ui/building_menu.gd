@@ -11,9 +11,9 @@ var visible_buildings: Array = []
 var current_team: int = 0
 
 # Node references
-onready var building_grid = $Panel/BuildingGrid
-onready var close_button = $Panel/CloseButton
-onready var title_label = $Panel/TitleLabel
+var building_grid
+var close_button
+var title_label
 
 # External references
 var economy_manager
@@ -22,8 +22,54 @@ var tech_tree_manager
 
 # Ready function
 func _ready() -> void:
+	# Get node references
+	building_grid = get_node_or_null("Panel/BuildingGrid")
+	close_button = get_node_or_null("Panel/CloseButton")
+	title_label = get_node_or_null("Panel/TitleLabel")
+	
+	# Create nodes if they don't exist
+	if not building_grid:
+		print("BuildingGrid not found, creating it")
+		var panel = get_node_or_null("Panel")
+		if not panel:
+			panel = Panel.new()
+			panel.name = "Panel"
+			panel.rect_position = Vector2(10, 10)
+			panel.rect_size = Vector2(400, 300)
+			add_child(panel)
+		
+		building_grid = GridContainer.new()
+		building_grid.name = "BuildingGrid"
+		building_grid.columns = 3
+		building_grid.rect_position = Vector2(10, 50)
+		building_grid.rect_size = Vector2(380, 230)
+		panel.add_child(building_grid)
+	
+	if not close_button:
+		print("CloseButton not found, creating it")
+		var panel = get_node_or_null("Panel")
+		close_button = Button.new()
+		close_button.name = "CloseButton"
+		close_button.text = "X"
+		close_button.rect_position = Vector2(370, 10)
+		close_button.rect_size = Vector2(20, 20)
+		panel.add_child(close_button)
+	
+	if not title_label:
+		print("TitleLabel not found, creating it")
+		var panel = get_node_or_null("Panel")
+		title_label = Label.new()
+		title_label.name = "TitleLabel"
+		title_label.rect_position = Vector2(10, 10)
+		title_label.rect_size = Vector2(380, 30)
+		title_label.text = "Available Buildings"
+		title_label.align = Label.ALIGN_CENTER
+		panel.add_child(title_label)
+	
 	# Connect button signals
-	close_button.connect("pressed", self, "_on_close_button_pressed")
+	if close_button:
+		if not close_button.is_connected("pressed", self, "_on_close_button_pressed"):
+			close_button.connect("pressed", self, "_on_close_button_pressed")
 	
 	# Get references to managers
 	var game_manager = get_node_or_null("/root/GameManager")
@@ -38,6 +84,35 @@ func _ready() -> void:
 # Populate the menu with available buildings
 func populate_buildings(team: int) -> void:
 	current_team = team
+	
+	# Make sure the building grid exists
+	if not building_grid:
+		print("Building grid not found, creating it")
+		var panel = get_node_or_null("Panel")
+		if not panel:
+			panel = Panel.new()
+			panel.name = "Panel"
+			panel.rect_position = Vector2(10, 10)
+			panel.rect_size = Vector2(400, 300)
+			add_child(panel)
+		
+		building_grid = GridContainer.new()
+		building_grid.name = "BuildingGrid"
+		building_grid.columns = 3
+		building_grid.rect_position = Vector2(10, 50)
+		building_grid.rect_size = Vector2(380, 230)
+		panel.add_child(building_grid)
+	
+	# Make sure title label exists
+	if not title_label:
+		var panel = get_node_or_null("Panel")
+		title_label = Label.new()
+		title_label.name = "TitleLabel"
+		title_label.rect_position = Vector2(10, 10)
+		title_label.rect_size = Vector2(380, 30)
+		title_label.text = "Available Buildings"
+		title_label.align = Label.ALIGN_CENTER
+		panel.add_child(title_label)
 	
 	# Clear existing buttons
 	for child in building_grid.get_children():
@@ -73,6 +148,13 @@ func populate_buildings(team: int) -> void:
 				"cost": 50,
 				"size": Vector2(1, 1),
 				"description": "Increases supply limit"
+			},
+			{
+				"id": "hq",
+				"name": "Headquarters",
+				"cost": 0,
+				"size": Vector2(3, 3),
+				"description": "Main base structure"
 			}
 		]
 	
@@ -83,12 +165,17 @@ func populate_buildings(team: int) -> void:
 		
 		var button = Button.new()
 		button.text = building_data.name
-		button.hint_tooltip = "%s\nCost: %d gold\nSize: %dx%d" % [
-			building_data.description, 
-			building_data.cost,
-			building_data.size.x, 
-			building_data.size.y
-		]
+		
+		# Format tooltip, handling cases where properties might be missing
+		var tooltip = building_data.description if building_data.has("description") else ""
+		var cost = building_data.cost if building_data.has("cost") else 0
+		var size_x = building_data.size.x if building_data.has("size") else 1
+		var size_y = building_data.size.y if building_data.has("size") else 1
+		
+		tooltip += "\nCost: " + str(cost) + " gold"
+		tooltip += "\nSize: " + str(size_x) + "x" + str(size_y)
+		
+		button.hint_tooltip = tooltip
 		
 		# Add cost indicator if economy manager is available
 		if economy_manager:

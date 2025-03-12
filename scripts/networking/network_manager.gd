@@ -394,7 +394,7 @@ func _send_ping(player_id: int) -> void:
 		if player_id == 1:  # Server
 			rpc_id(1, "_ping", OS.get_ticks_msec())
 
-# Start game locally
+# Start game locally# Start game locally
 func _start_game_locally() -> void:
 	print("Starting game locally")
 	
@@ -402,11 +402,18 @@ func _start_game_locally() -> void:
 	get_tree().change_scene("res://scenes/game/game.tscn")
 	
 	# The GameManager is an autoload, so it will persist across scene changes
-	# Give it a moment to initialize with the new scene
-	yield(get_tree().create_timer(0.1), "timeout")
-	
+	# Wait a short time to ensure the scene is fully loaded
+	var safe_timer = Timer.new()
+	add_child(safe_timer)
+	safe_timer.one_shot = true
+	safe_timer.wait_time = 0.2
+	safe_timer.start()
+	safe_timer.connect("timeout", self, "_finish_game_start")
+
+# Finish game start after scene change 
+func _finish_game_start() -> void:
 	# Now set up the game with GameManager
-	var game_manager = get_node("/root/GameManager")
+	var game_manager = get_node_or_null("/root/GameManager")
 	if game_manager:
 		# Set player teams
 		for player_id in player_info.keys():
@@ -416,6 +423,8 @@ func _start_game_locally() -> void:
 		
 		# Start the game
 		game_manager.start_game()
+	else:
+		push_error("Could not find GameManager after scene change")
 
 # Generate a unique match ID
 func _generate_match_id() -> String:
@@ -441,26 +450,6 @@ func _check_all_ready() -> void:
 	
 	if all_ready:
 		emit_signal("match_ready")
-
-# Handle reconnection of a player
-func _handle_reconnection(player_id: int) -> void:
-	if not is_server or not disconnected_players.has(player_id):
-		return
-	
-	# Restore player info
-	player_info[player_id] = disconnected_players[player_id].info
-	
-	# Remove from disconnected players
-	disconnected_players.erase(player_id)
-	
-	# Send current game state to reconnected player
-	_send_game_state_to_player(player_id)
-	
-	# Broadcast updated player list
-	emit_signal("player_list_changed", player_info)
-	rpc("_update_player_list", player_info)
-	
-	print("Player reconnected: ", player_id)
 
 # Send current game state to a player
 func _send_game_state_to_player(player_id: int) -> void:
@@ -743,6 +732,7 @@ func _on_player_connected(player_id: int) -> void:
 		if game_started:
 			_send_game_state_to_player(player_id)
 
+# Handle player disconnection
 func _on_player_disconnected(player_id: int) -> void:
 	print("Player disconnected: ", player_id)
 	
@@ -769,7 +759,7 @@ func _on_player_disconnected(player_id: int) -> void:
 				
 				if disconnected_players.has(player_id):
 					# Player didn't reconnect within timeout
-					disconnected_players.erase(player_id)
+					var _removed = disconnected_players.erase(player_id)  # Use _removed to acknowledge return value
 					player_info.erase(player_id)
 					
 					# Broadcast updated player list
@@ -786,6 +776,26 @@ func _on_player_disconnected(player_id: int) -> void:
 			
 			if network:  # Make sure we're still connected
 				rpc("_update_player_list", player_info)
+
+# Handle reconnection of a player
+func _handle_reconnection(player_id: int) -> void:
+	if not is_server or not disconnected_players.has(player_id):
+		return
+	
+	# Restore player info
+	player_info[player_id] = disconnected_players[player_id].info
+	
+	# Remove from disconnected players
+	var _removed = disconnected_players.erase(player_id)  # Use _removed to acknowledge return value
+	
+	# Send current game state to reconnected player
+	_send_game_state_to_player(player_id)
+	
+	# Broadcast updated player list
+	emit_signal("player_list_changed", player_info)
+	rpc("_update_player_list", player_info)
+	
+	print("Player reconnected: ", player_id)
 
 func _on_connected_to_server() -> void:
 	print("Connected to server")

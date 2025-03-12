@@ -74,11 +74,17 @@ func _load_building_file(building_id: String, file_path: String) -> void:
 		push_error("Error opening building file: " + file_path)
 
 # Place a new building at the given position
+# Place a new building at the given position
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
 	# Check if building type exists
 	if not building_data.has(building_type):
-		push_error("Unknown building type: " + building_type)
-		return null
+		# Special case for "hq" - we'll create it even if not in data yet
+		if building_type == "hq" or building_type == "headquarters":
+			print("Creating HQ building (not found in building data)")
+			return _create_headquarters_building(position, team)
+		else:
+			push_error("Unknown building type: " + building_type)
+			return null
 	
 	# Get building data
 	var data = building_data[building_type]
@@ -87,7 +93,8 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 	var grid_pos = grid_system.world_to_grid(position)
 	
 	# Get building size
-	var size = Vector2(data.size_x, data.size_y) if data.has("size_x") and data.has("size_y") else Vector2.ONE
+	var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1, 
+					   data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
 	
 	# Check if placement is valid
 	if not grid_system.can_place_building(grid_pos, size, team):
@@ -129,6 +136,56 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 	emit_signal("building_placed", building_type, position, team)
 	
 	return building_instance
+
+# Create a headquarters building (fallback method)
+func _create_headquarters_building(position: Vector2, team: int) -> Building:
+	# Use the HQ building scene directly
+	var hq_scene = load("res://scenes/buildings/hq_building.tscn")
+	if not hq_scene:
+		push_error("Could not load HQ building scene")
+		return null
+	
+	var hq_instance = hq_scene.instance()
+	
+	# Set up basic HQ properties
+	hq_instance.building_id = "hq"
+	hq_instance.display_name = "Headquarters"
+	hq_instance.team = team
+	hq_instance.max_health = 2000
+	hq_instance.health = 2000
+	hq_instance.armor = 5
+	hq_instance.armor_type = "fortified"
+	hq_instance.size = Vector2(3, 3)
+	
+	# Convert position to grid position
+	var grid_pos = grid_system.world_to_grid(position)
+	
+	# Set building position
+	hq_instance.position = grid_system.grid_to_world(grid_pos)
+	hq_instance.set_grid_position(grid_pos)
+	
+	# Mark grid cells as occupied
+	for x in range(3):
+		for y in range(3):
+			var cell_pos = grid_pos + Vector2(x, y)
+			grid_system.occupy_cell(cell_pos, hq_instance)
+	
+	# Add building to scene
+	get_parent().add_child(hq_instance)
+	
+	# Connect signals
+	hq_instance.connect("building_destroyed", self, "_on_building_destroyed", [hq_instance])
+	
+	# Mark as constructed immediately
+	hq_instance.complete_construction()
+	
+	# Track the building
+	var building_id = "hq_" + str(team) + "_" + str(OS.get_ticks_msec())
+	buildings[building_id] = hq_instance
+	
+	emit_signal("building_placed", "hq", position, team)
+	
+	return hq_instance
 
 # Configure a building instance with data
 func _configure_building(building: Building, building_type: String, data: Dictionary, team: int) -> void:

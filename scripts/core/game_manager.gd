@@ -60,6 +60,9 @@ func _ready() -> void:
 	# Initialize match ID
 	match_id = "match_" + str(OS.get_unix_time())
 	
+	# Run scene creator to ensure all required scenes exist
+	_create_required_scenes()
+	
 	# Initialize and add subsystems as needed
 	_initialize_systems()
 	
@@ -68,6 +71,23 @@ func _ready() -> void:
 	
 	# Start in setup state
 	change_game_state(GameState.SETUP)
+
+# Create required scenes if they don't exist yet
+func _create_required_scenes() -> void:
+	print("Checking for required scenes...")
+	
+	# Check if scene_creator.gd exists
+	var scene_creator_path = "res://scripts/core/scene_creator.gd"
+	var file = File.new()
+	
+	if file.file_exists(scene_creator_path):
+		var SceneCreator = load(scene_creator_path)
+		if SceneCreator:
+			var creator = SceneCreator.new()
+			add_child(creator)
+			print("Scene creator is running...")
+	else:
+		print("Scene creator script not found at: " + scene_creator_path)
 
 # Process function
 func _process(delta: float) -> void:
