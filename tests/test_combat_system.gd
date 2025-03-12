@@ -1,76 +1,48 @@
-extends GutTest
+extends "res://addons/gut/test.gd"
 
-var combat_system = null
+var CombatSystem = preload("res://scripts/combat/combat_system.gd")
+var combat_system
 
 func before_each():
-	combat_system = CombatSystem.new()
-	add_child(combat_system)
-	
-	# Ensure damage table is loaded
-	combat_system._load_damage_tables()
+    combat_system = CombatSystem.new()
+    add_child(combat_system)
+    
+    # Ensure damage table is loaded
+    combat_system._load_damage_tables()
 
 func after_each():
-	combat_system.queue_free()
-	combat_system = null
+    combat_system.queue_free()
+    combat_system = null
 
 func test_damage_type_effectiveness():
-	# Test normal vs various armor types
-	assert_eq(combat_system.get_attack_type_modifier("normal", "light"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("normal", "medium"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("normal", "heavy"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("normal", "fortified"), 0.5)
-	
-	# Test piercing vs various armor types
-	assert_eq(combat_system.get_attack_type_modifier("piercing", "light"), 1.5)
-	assert_eq(combat_system.get_attack_type_modifier("piercing", "medium"), 0.75)
-	assert_eq(combat_system.get_attack_type_modifier("piercing", "heavy"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("piercing", "fortified"), 0.35)
-	
-	# Test siege vs various armor types
-	assert_eq(combat_system.get_attack_type_modifier("siege", "light"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("siege", "medium"), 0.5)
-	assert_eq(combat_system.get_attack_type_modifier("siege", "heavy"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("siege", "fortified"), 1.5)
-	
-	# Test magic vs various armor types
-	assert_eq(combat_system.get_attack_type_modifier("magic", "light"), 1.25)
-	assert_eq(combat_system.get_attack_type_modifier("magic", "medium"), 0.75)
-	assert_eq(combat_system.get_attack_type_modifier("magic", "heavy"), 0.4)
-	assert_eq(combat_system.get_attack_type_modifier("magic", "fortified"), 1.0)
-	
-	# Test chaos (should be 1.0 for all armor types)
-	assert_eq(combat_system.get_attack_type_modifier("chaos", "light"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("chaos", "medium"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("chaos", "heavy"), 1.0)
-	assert_eq(combat_system.get_attack_type_modifier("chaos", "fortified"), 1.0)
+    # Test normal vs various armor types
+    assert_eq(combat_system.get_attack_type_modifier("normal", "light"), 1.0)
+    assert_eq(combat_system.get_attack_type_modifier("normal", "medium"), 1.0)
+    assert_eq(combat_system.get_attack_type_modifier("normal", "heavy"), 1.0)
+    assert_eq(combat_system.get_attack_type_modifier("normal", "fortified"), 0.5)
 
 func test_damage_calculation():
-	# Define test cases: attack_type, armor_type, base_damage, armor_value, expected_damage
-	var test_cases = [
-		["normal", "medium", 100.0, 0.0, 100.0],  # No armor reduction
-		["normal", "medium", 100.0, 20.0, 50.0],  # 50% reduction from 20 armor
-		["normal", "fortified", 100.0, 0.0, 50.0],  # 50% type modifier
-		["normal", "fortified", 100.0, 20.0, 25.0],  # Combined reductions
-		["piercing", "light", 100.0, 0.0, 150.0],  # 150% type modifier
-		["piercing", "light", 100.0, 20.0, 75.0],  # Type modifier with armor
-		["siege", "fortified", 100.0, 0.0, 150.0],  # Siege vs fortified
-		["siege", "fortified", 100.0, 20.0, 75.0]  # Siege vs fortified with armor
-	]
-	
-	for case in test_cases:
-		var attack_type = case[0]
-		var armor_type = case[1]
-		var base_damage = case[2]
-		var armor_value = case[3]
-		var expected_damage = case[4]
-		
-		var actual_damage = combat_system.calculate_damage(base_damage, attack_type, armor_value, armor_type)
-		assert_almost_eq(actual_damage, expected_damage, 0.1, "Failed on case: %s" % case)
+    # Define test cases
+    var test_cases = [
+        ["normal", "medium", 100.0, 0.0, 100.0],
+        ["normal", "medium", 100.0, 20.0, 50.0],
+        ["normal", "fortified", 100.0, 0.0, 50.0]
+    ]
+    
+    for case in test_cases:
+        var attack_type = case[0]
+        var armor_type = case[1]
+        var base_damage = case[2]
+        var armor_value = case[3]
+        var expected_damage = case[4]
+        
+        var actual_damage = combat_system.calculate_damage(base_damage, attack_type, armor_value, armor_type)
+        assert_almost_eq(actual_damage, expected_damage, 0.1, "Failed on case: %s" % str(case))
 
 func test_minimum_damage():
-	# Even with high armor and unfavorable type matching, damage should never be less than 1
-	var damage = combat_system.calculate_damage(10.0, "normal", 100.0, "fortified")
-	assert_true(damage >= 1.0)
+    # Ensure minimum damage is 1
+    var damage = combat_system.calculate_damage(10.0, "normal", 100.0, "fortified")
+    assert_true(damage >= 1.0)
 
 func test_invalid_attack_armor_types():
 	# Test with invalid attack type

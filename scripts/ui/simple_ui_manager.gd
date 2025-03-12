@@ -43,91 +43,7 @@ func _ready() -> void:
 	
 	print("Simple UI Manager initialized")
 
-# Input handling
-func _input(event: InputEvent) -> void:
-	# Toggle building menu with 'B' key
-	if event is InputEventKey and event.pressed and event.scancode == KEY_B:
-		if building_menu and not building_menu.visible and selected_worker:
-			var team = selected_worker.team if selected_worker else 0
-			building_menu.show_menu(team)
-		elif building_menu and building_menu.visible:
-			building_menu.hide_menu()
-	
-	# Toggle auto-repair with 'R' key
-	if event is InputEventKey and event.pressed and event.scancode == KEY_R:
-		if selected_worker and selected_worker.has_method("toggle_auto_repair"):
-			selected_worker.toggle_auto_repair()
-	
-	# Select unit with left mouse button
-	if event is InputEventMouseButton and event.pressed and event.button_index == BUTTON_LEFT:
-		if building_menu and building_menu.visible:
-			# Ignore clicks while building menu is open
-			return
-			
-		# Check if we clicked on a worker
-		var units = get_tree().get_nodes_in_group("workers")
-		var mouse_pos = event.global_position
-		
-		var found_worker = false
-		for unit in units:
-			var unit_pos = unit.global_position
-			var unit_rect = Rect2(unit_pos - Vector2(16, 16), Vector2(32, 32))
-			
-			if unit_rect.has_point(mouse_pos):
-				select_worker(unit)
-				found_worker = true
-				break
-		
-		# If not clicking a worker, deselect current worker
-		if not found_worker and selected_worker:
-			deselect_worker()
-
-# Create building menu
-func _create_building_menu() -> void:
-	# Try to load the building menu scene
-	var building_menu_scene = load(BUILDING_MENU_SCENE)
-	
-	if building_menu_scene:
-		building_menu = building_menu_scene.instance()
-		add_child(building_menu)
-		print("Building menu loaded")
-	else:
-		print("Building menu scene not found, creating it dynamically")
-		
-		# Create a simple building menu directly
-		building_menu = Control.new()
-		building_menu.name = "BuildingMenu"
-		building_menu.anchor_right = 1.0
-		building_menu.anchor_bottom = 1.0
-		building_menu.margin_right = -800  # Leave space on the right
-		building_menu.margin_bottom = -500  # Leave space at the bottom
-		building_menu.visible = false
-		
-		# Load or create script
-		var script = load("res://scripts/ui/building_menu.gd")
-		if script:
-			building_menu.set_script(script)
-		
-		add_child(building_menu)
-		
-		# Create panel
-		var panel = Panel.new()
-		panel.name = "Panel"
-		panel.rect_position = Vector2(10, 10)
-		panel.rect_size = Vector2(400, 300)
-		building_menu.add_child(panel)
-		
-		# Create title label
-		var title_label = Label.new()
-		title_label.name = "TitleLabel"
-		title_label.rect_position = Vector2(10, 10)
-		title_label.rect_size = Vector2(380, 30)
-		title_label.text = "Available Buildings"
-		title_label.align = Label.ALIGN_CENTER
-		panel.add_child(title_label)
-		
-		# Create grid container for building buttons
-		# Create building menu
+# Only keep one _create_building_menu method
 func _create_building_menu() -> void:
 	print("Creating building menu...")
 	
@@ -211,6 +127,7 @@ func _create_building_menu() -> void:
 		building_menu._ready()
 	
 	print("Building menu created successfully")
+
 
 # Create resource display
 func _create_resource_display() -> void:

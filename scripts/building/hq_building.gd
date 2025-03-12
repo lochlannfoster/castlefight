@@ -112,15 +112,16 @@ func complete_construction() -> void:
 	_apply_income_bonus()
 
 # Notify that HQ is under attack
+f# Modification to handle screen position conversion
 func _notify_under_attack() -> void:
 	var team_name = "Blue" if team == 0 else "Red"
 	print("%s team headquarters under attack!" % team_name)
 	
 	# Show notification to team members
-	var ui_manager = get_node("/root/GameManager/UIManager")
+	var ui_manager = get_node_or_null("/root/GameManager/UIManager")
 	if ui_manager:
-		# Get the position to show the warning
-		var screen_pos = get_viewport().get_camera().unproject_position(global_position)
+		# Convert global position to screen position
+		var screen_pos = get_viewport().get_canvas_transform() * global_position
 		
 		# Create warning label
 		var warning_label = Label.new()
@@ -150,7 +151,7 @@ func _notify_under_attack() -> void:
 		# Remove after animation
 		yield(tween, "tween_all_completed")
 		warning_label.queue_free()
-
+		
 # Get income bonus
 func get_income_bonus() -> float:
 	return current_income_bonus

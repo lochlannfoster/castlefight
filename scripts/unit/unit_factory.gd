@@ -30,7 +30,7 @@ func _load_unit_data() -> void:
 				_load_unit_file(unit_id, file_path)
 			file_name = dir.get_next()
 	else:
-		push_error("Error: Could not open units data directory")
+		push_warning("Warning: Could not open units data directory")
 
 # Load a single unit data file
 func _load_unit_file(unit_id: String, file_path: String) -> void:
@@ -45,7 +45,9 @@ func _load_unit_file(unit_id: String, file_path: String) -> void:
 			unit_data[unit_id] = data
 			print("Loaded unit data: ", unit_id)
 		else:
-			push_error("Error parsing unit data: " + file_path)
+			push_error("Error parsing unit data: " + file_path + 
+					   "\nError at line " + str(parse_result.error_line) + 
+					   ": " + parse_result.error_string)
 	else:
 		push_error("Error opening unit file: " + file_path)
 

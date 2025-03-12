@@ -1,75 +1,76 @@
-extends GutTest
+extends "res://addons/gut/test.gd"
 
-var network_manager = null
+var NetworkManager = preload("res://scripts/networking/network_manager.gd")
+var network_manager
 
 func before_each():
-	network_manager = NetworkManager.new()
-	add_child(network_manager)
-	
-	# Mock NetworkedMultiplayerENet
-	network_manager.network = mock("NetworkedMultiplayerENet", self)
+    network_manager = NetworkManager.new()
+    add_child(network_manager)
+    
+    # Mock NetworkedMultiplayerENet
+    network_manager.network = double("NetworkedMultiplayerENet").new()
 
 func after_each():
-	network_manager.queue_free()
-	network_manager = null
+    network_manager.queue_free()
+    network_manager = null
 
 func test_initialization():
-	assert_eq(network_manager.local_player_id, 0)
-	assert_false(network_manager.is_server)
-	assert_eq(network_manager.player_info.size(), 0)
-	assert_false(network_manager.game_started)
+    assert_eq(network_manager.local_player_id, 0)
+    assert_false(network_manager.is_server)
+    assert_eq(network_manager.player_info.size(), 0)
+    assert_false(network_manager.game_started)
 
 func test_set_player_info():
-	var test_player_name = "TestPlayer"
-	var test_team = 0
-	
-	# Mock get_network_unique_id
-	network_manager.local_player_id = 123
-	
-	# Set player info
-	network_manager.set_player_info(test_player_name, test_team)
-	
-	# Check player info was set correctly
-	assert_true(network_manager.player_info.has(123))
-	assert_eq(network_manager.player_info[123].name, test_player_name)
-	assert_eq(network_manager.player_info[123].team, test_team)
-	assert_false(network_manager.player_info[123].ready)
+    var test_player_name = "TestPlayer"
+    var test_team = 0
+    
+    # Mock local player ID
+    network_manager.local_player_id = 123
+    
+    # Set player info
+    network_manager.set_player_info(test_player_name, test_team)
+    
+    # Check player info was set correctly
+    assert_true(network_manager.player_info.has(123))
+    assert_eq(network_manager.player_info[123].name, test_player_name)
+    assert_eq(network_manager.player_info[123].team, test_team)
+    assert_false(network_manager.player_info[123].ready)
 
 func test_set_player_ready():
-	# Mock get_network_unique_id
-	network_manager.local_player_id = 123
-	
-	# Set player info first
-	network_manager.set_player_info("TestPlayer", 0)
-	
-	# Initially not ready
-	assert_false(network_manager.player_info[123].ready)
-	
-	# Set ready
-	network_manager.set_player_ready(true)
-	assert_true(network_manager.player_info[123].ready)
-	
-	# Set not ready
-	network_manager.set_player_ready(false)
-	assert_false(network_manager.player_info[123].ready)
+    # Mock local player ID
+    network_manager.local_player_id = 123
+    
+    # Set player info first
+    network_manager.set_player_info("TestPlayer", 0)
+    
+    # Initially not ready
+    assert_false(network_manager.player_info[123].ready)
+    
+    # Set ready
+    network_manager.set_player_ready(true)
+    assert_true(network_manager.player_info[123].ready)
+    
+    # Set not ready
+    network_manager.set_player_ready(false)
+    assert_false(network_manager.player_info[123].ready)
 
 func test_change_team():
-	# Mock get_network_unique_id
-	network_manager.local_player_id = 123
-	
-	# Set player info first
-	network_manager.set_player_info("TestPlayer", 0)
-	
-	# Initially team 0
-	assert_eq(network_manager.player_info[123].team, 0)
-	
-	# Change to team 1
-	network_manager.change_team(1)
-	assert_eq(network_manager.player_info[123].team, 1)
-	
-	# Change back to team 0
-	network_manager.change_team(0)
-	assert_eq(network_manager.player_info[123].team, 0)
+    # Mock local player ID
+    network_manager.local_player_id = 123
+    
+    # Set player info first
+    network_manager.set_player_info("TestPlayer", 0)
+    
+    # Initially team 0
+    assert_eq(network_manager.player_info[123].team, 0)
+    
+    # Change to team 1
+    network_manager.change_team(1)
+    assert_eq(network_manager.player_info[123].team, 1)
+    
+    # Change back to team 0
+    network_manager.change_team(0)
+    assert_eq(network_manager.player_info[123].team, 0)
 
 func test_server_functions():
 	# Test start_server function

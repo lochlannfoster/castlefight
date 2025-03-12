@@ -1,0 +1,67 @@
+{
+    "unit_id": "archer",
+    "display_name": "Archer",
+    "description": "Ranged unit with long attack range",
+    "race": "human",
+    "scene_path": "res://scenes/units/human/archer.tscn",
+    
+    "stats": {
+      "health": 80,
+      "armor": 1,
+      "armor_type": "light",
+      "attack_damage": 15,
+      "attack_type": "piercing",
+      "attack_range": 250,
+      "attack_speed": 1.0,
+      "movement_speed": 100,
+      "collision_radius": 16,
+      "vision_range": 300,
+      "health_regen": 0.25
+    },
+    
+    "abilities": [
+      {
+        "name": "ranged_shot",
+        "display_name": "Precise Shot",
+        "description": "Increases accuracy for the next attack",
+        "cooldown": 5,
+        "effects": [
+          {
+            "type": "accuracy_boost",
+            "value": 0.2,
+            "duration": 3
+          }
+        ]
+      }
+    ],
+    
+    "animations": {
+      "idle": {
+        "frames": 1,
+        "path": "res://assets/units/human/archer/idle"
+      },
+      "move": {
+        "frames": 8,
+        "path": "res://assets/units/human/archer/move"
+      },
+      "attack": {
+        "frames": 5,
+        "path": "res://assets/units/human/archer/attack"
+      },
+      "death": {
+        "frames": 3,
+        "path": "res://assets/units/human/archer/death"
+      },
+      "hurt": {
+        "frames": 2,
+        "path": "res://assets/units/human/archer/hurt"
+      }
+    },
+    
+    "sounds": {
+      "attack": "res://assets/audio/sfx/units/archer/attack.ogg",
+      "death": "res://assets/audio/sfx/units/archer/death.ogg",
+      "select": "res://assets/audio/sfx/units/archer/select.ogg",
+      "acknowledge": "res://assets/audio/sfx/units/archer/acknowledge.ogg"
+    }
+}
