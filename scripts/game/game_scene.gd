@@ -5,17 +5,17 @@ extends Node2D
 
 # Called when the scene enters the tree
 func _ready():
-    print("Game scene loaded")
-    
-    # Load the map scene first
-    var map_scene = load("res://scenes/game/map.tscn")
-    if map_scene:
-        var map_instance = map_scene.instance()
-        add_child(map_instance)
-        print("Map loaded successfully")
-    else:
-        print("ERROR: Could not load map scene!")
-    
+	print("Game scene loaded")
+	
+	# Load the map scene first
+	var map_scene = load("res://scenes/game/map.tscn")
+	if map_scene:
+		var map_instance = map_scene.instance()
+		add_child(map_instance)
+		print("Map loaded successfully")
+	else:
+		print("ERROR: Could not load map scene!")
+	
 func _emergency_init():
 	print("Emergency initialization triggered")
 	var game_manager = get_node_or_null("/root/GameManager")
@@ -110,69 +110,64 @@ func _add_ui_manager(ui_manager):
 	worker_timer.connect("timeout", self, "_add_test_worker")
 	worker_timer.connect("timeout", worker_timer, "queue_free")
 
-# Add a test worker for UI testing
 func _add_test_worker():
-	print("DEBUG: Attempting to add test worker...")
+	print("DEBUG: Creating test worker...")
 	
-	# Make sure the worker directory exists
-	var dir = Directory.new()
-	if not dir.dir_exists("res://scenes/units"):
-		print("DEBUG: Worker scene directory does not exist!")
-		return
-	
-	# Check if the worker scene exists
-	var worker_scene_path = "res://scenes/units/worker.tscn"
-	var file = File.new()
-	
-	if not file.file_exists(worker_scene_path):
-		print("DEBUG: Worker scene file does not exist at: ", worker_scene_path)
-		return
-	
-	var worker_scene = load(worker_scene_path)
-	
+	var worker_scene = load("res://scenes/units/worker.tscn")
 	if not worker_scene:
-		print("DEBUG: Failed to load worker scene!")
+		print("DEBUG: Worker scene file could not be loaded!")
 		return
-	
+		
 	var worker = worker_scene.instance()
-	
 	if not worker:
-		print("DEBUG: Failed to create worker instance!")
+		print("DEBUG: Failed to instance worker scene!")
 		return
-	
-	print("DEBUG: Worker instance created successfully")
+		
+	print("DEBUG: Worker instance created")
 	worker.position = Vector2(400, 300)
 	worker.team = 0  # Team A
-	worker.add_to_group("workers")
 	
-	# Explicitly add to Units node
-	var units_node = get_node_or_null("Units")
-	if units_node:
-		units_node.add_child(worker)
-		print("DEBUG: Worker added to Units node at ", worker.position)
-	else:
-		add_child(worker)
-		print("DEBUG: Units node not found, adding worker directly to scene")
+	# Add directly to the scene
+	add_child(worker)
+	print("DEBUG: Worker added to scene at " + str(worker.position))
+	
+	# Make worker stand out
+	var sprite = worker.get_node_or_null("Sprite")
+	if sprite:
+		sprite.modulate = Color(0, 1, 0)  # Bright green
+		print("DEBUG: Worker colored bright green for visibility")
+	
+	# Select the worker
+	if worker.has_method("select"):
+		worker.select()
+		print("DEBUG: Worker select() method called")
+	
+	# Select via UI manager too
+	var ui_manager = get_node_or_null("SimpleUIManager")
+	if ui_manager and ui_manager.has_method("select_worker"):
+		ui_manager.select_worker(worker)
+		print("DEBUG: UI manager select_worker() called")
 
 func _input(event):
-    if event is InputEventKey and event.pressed:
-        print("Key pressed: " + str(event.scancode))
-        
-        if event.scancode == KEY_B:
-            print("B key pressed - opening building menu")
-            var ui_manager = get_node_or_null("SimpleUIManager")
-            if ui_manager and ui_manager.has_method("toggle_building_menu"):
-                ui_manager.toggle_building_menu()
-            
-        elif event.scancode == KEY_H:
-            print("H key pressed - creating emergency HQ")
-            # Create an HQ manually
-            var game_manager = get_node_or_null("/root/GameManager")
-            if game_manager and game_manager.building_manager:
-                for team in range(2):
-                    var position = Vector2(200 + team * 600, 300)
-                    var hq = game_manager.building_manager.place_building("headquarters", position, team)
-                    if hq:
-                        print("Created HQ for team " + str(team))
-                    else:
-                        print("Failed to create HQ for team " + str(team))
+	if event is InputEventKey and event.pressed:
+		print("Key pressed: " + str(event.scancode))
+		
+		if event.scancode == KEY_B:
+			print("B key pressed - opening building menu")
+			var ui_manager = get_node_or_null("SimpleUIManager")
+			if ui_manager and ui_manager.has_method("toggle_building_menu"):
+				ui_manager.toggle_building_menu()
+			
+		elif event.scancode == KEY_H:
+			print("H key pressed - creating emergency HQ")
+			# Create an HQ manually
+			var game_manager = get_node_or_null("/root/GameManager")
+			if game_manager and game_manager.building_manager:
+				for team in range(2):
+					var position = Vector2(200 + team * 600, 300)
+					var hq = game_manager.building_manager.place_building("headquarters", position, team)
+					if hq:
+						print("Created HQ for team " + str(team))
+					else:
+						print("Failed to create HQ for team " + str(team))
+
