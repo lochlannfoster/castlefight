@@ -139,13 +139,16 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 
 # Create a headquarters building (fallback method)
 func _create_headquarters_building(position: Vector2, team: int) -> Building:
+	# First try to load headquarters data
+	var building_data = {}
+	if building_data.has("headquarters"):
+		return place_building("headquarters", position, team)
+	
 	# Use the HQ building scene directly
 	var hq_scene = load("res://scenes/buildings/hq_building.tscn")
 	if not hq_scene:
 		push_error("Could not load HQ building scene")
 		return null
-	
-	var hq_instance = hq_scene.instance()
 	
 	# Set up basic HQ properties
 	hq_instance.building_id = "hq"

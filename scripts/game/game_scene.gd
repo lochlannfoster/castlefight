@@ -7,8 +7,13 @@ extends Node2D
 func _ready():
 	print("Game scene loaded")
 	
-	# Fallback initialization if automated methods fail
-	call_deferred("_emergency_init")
+	# Give a short delay for everything to initialize
+	var timer = Timer.new()
+	add_child(timer)
+	timer.wait_time = 0.5
+	timer.one_shot = true
+	timer.connect("timeout", self, "_initialize_game")
+	timer.start()
 
 func _emergency_init():
 	print("Emergency initialization triggered")

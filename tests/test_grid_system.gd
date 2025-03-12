@@ -68,15 +68,14 @@ func test_can_place_building():
     assert_false(grid_system.can_place_building(grid_pos, size, team))
 
 	# Free the cell
-	grid_system.free_cell(grid_pos)
-	
-	# Test wrong team
-	var wrong_team = grid_system.Team.TEAM_B
-	assert_false(grid_system.can_place_building(grid_pos, size, wrong_team))
+    grid_system.free_cell(grid_pos)
+    # Test wrong team
+    var wrong_team = grid_system.Team.TEAM_B
+    assert_false(grid_system.can_place_building(grid_pos, size, wrong_team))
 	
 	# Test out of bounds
-	var edge_pos = Vector2(grid_system.grid_width - 1, grid_system.grid_height - 1)
-	assert_false(grid_system.can_place_building(edge_pos, size, team))
+    var edge_pos = Vector2(grid_system.grid_width - 1, grid_system.grid_height - 1)
+    assert_false(grid_system.can_place_building(edge_pos, size, team))
 
 func test_valid_placement_cells():
 	var team = grid_system.Team.TEAM_A

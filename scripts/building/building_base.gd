@@ -55,7 +55,7 @@ var grid_position: Vector2
 func _ready() -> void:
 	# Get references
 	grid_system = get_node("/root/GameManager/GridSystem")
-	unit_factory = get_node("/root/GameManager/UnitFactory")
+	unit_factory = get_node_or_null("/root/UnitFactory")
 	
 	# Setup components
 	sprite = $Sprite

@@ -298,11 +298,12 @@ func start_pregame_countdown() -> void:
 func start_game() -> void:
 	print("GameManager: Attempting to start game")
 	print("Current state: ", current_state)
-	print("Current scene: ", get_tree().current_scene.filename)
 	
-	if current_state != GameState.PREGAME:
-		print("Not in PREGAME state, changing to PREGAME")
-		change_game_state(GameState.PREGAME)
+	# Force the game to start from any state
+	if current_state == GameState.PREGAME:
+		countdown_timer = 0  # Skip countdown
+	elif current_state != GameState.PLAYING:
+		change_game_state(GameState.PLAYING)
 		return
 
 	# Create workers for all players
@@ -366,8 +367,10 @@ func _create_starting_buildings() -> void:
 	for team in range(2):  # For both teams
 		var hq_position = map_manager.get_team_hq_position(team) if map_manager else Vector2(500, 300) * team
 		
-		# Create HQ
-		var hq = building_manager.place_building("hq", hq_position, team)
+		# Create HQ - try both possible building IDs
+		var hq = building_manager.place_building("headquarters", hq_position, team)
+		if not hq:
+			hq = building_manager.place_building("hq", hq_position, team)
 		
 		if hq:
 			# Register as headquarters
