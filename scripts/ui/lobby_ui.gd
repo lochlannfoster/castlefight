@@ -3,56 +3,56 @@
 extends Control
 
 # References to UI elements - Create Game tab
-onready var create_game_name_edit = $ModeTabContainer/"Create Game"/CreateGamePanel/SettingsContainer/GameNameContainer/GameNameEdit
-onready var create_player_name_edit = $ModeTabContainer/"Create Game"/CreateGamePanel/SettingsContainer/PlayerNameContainer/PlayerNameEdit
-onready var create_port_edit = $ModeTabContainer/"Create Game"/CreateGamePanel/SettingsContainer/PortContainer/PortEdit
-onready var max_players_options = $ModeTabContainer/"Create Game"/CreateGamePanel/SettingsContainer/MaxPlayersContainer/MaxPlayersOptions
-onready var map_options = $ModeTabContainer/"Create Game"/CreateGamePanel/SettingsContainer/MapContainer/MapOptions
-onready var debug_mode_checkbox = $ModeTabContainer/"Create Game"/CreateGamePanel/DebugModeContainer/DebugModeCheckBox
-onready var create_button = $ModeTabContainer/"Create Game"/CreateGamePanel/CreateButton
-onready var start_game_button = $ModeTabContainer/"Create Game"/CreateGamePanel/StartGameButton
-onready var create_team_a_list = $ModeTabContainer/"Create Game"/CreateGamePanel/PlayersPanel/TeamAList
-onready var create_team_b_list = $ModeTabContainer/"Create Game"/CreateGamePanel/PlayersPanel/TeamBList
-onready var create_team_a_button = $ModeTabContainer/"Create Game"/CreateGamePanel/PlayersPanel/TeamAButton
-onready var create_team_b_button = $ModeTabContainer/"Create Game"/CreateGamePanel/PlayersPanel/TeamBButton
-onready var create_status_label = $ModeTabContainer/"Create Game"/CreateGamePanel/StatusLabel
-onready var debug_info_label = $ModeTabContainer/"Create Game"/CreateGamePanel/DebugInfoLabel
+onready var create_game_name_edit = get_node("ModeTabContainer/Create Game/CreateGamePanel/SettingsContainer/GameNameContainer/GameNameEdit")
+onready var create_player_name_edit = get_node("ModeTabContainer/Create Game/CreateGamePanel/SettingsContainer/PlayerNameContainer/PlayerNameEdit")
+onready var create_port_edit = get_node("ModeTabContainer/Create Game/CreateGamePanel/SettingsContainer/PortContainer/PortEdit")
+onready var max_players_options = get_node("ModeTabContainer/Create Game/CreateGamePanel/SettingsContainer/MaxPlayersContainer/MaxPlayersOptions")
+onready var map_options = get_node("ModeTabContainer/Create Game/CreateGamePanel/SettingsContainer/MapContainer/MapOptions")
+onready var debug_mode_checkbox = get_node("ModeTabContainer/Create Game/CreateGamePanel/DebugModeContainer/DebugModeCheckBox")
+onready var create_button = get_node("ModeTabContainer/Create Game/CreateGamePanel/CreateButton")
+onready var start_game_button = get_node("ModeTabContainer/Create Game/CreateGamePanel/StartGameButton")
+onready var create_team_a_list = get_node("ModeTabContainer/Create Game/CreateGamePanel/PlayersPanel/TeamAList")
+onready var create_team_b_list = get_node("ModeTabContainer/Create Game/CreateGamePanel/PlayersPanel/TeamBList")
+onready var create_team_a_button = get_node("ModeTabContainer/Create Game/CreateGamePanel/PlayersPanel/TeamAButton")
+onready var create_team_b_button = get_node("ModeTabContainer/Create Game/CreateGamePanel/PlayersPanel/TeamBButton")
+onready var create_status_label = get_node("ModeTabContainer/Create Game/CreateGamePanel/StatusLabel")
+onready var debug_info_label = get_node("ModeTabContainer/Create Game/CreateGamePanel/DebugInfoLabel")
 
 # References to UI elements - Join Game tab
-onready var join_player_name_edit = $ModeTabContainer/"Join Game"/JoinGamePanel/SettingsContainer/PlayerNameContainer/PlayerNameEdit
-onready var join_ip_edit = $ModeTabContainer/"Join Game"/JoinGamePanel/SettingsContainer/IPContainer/IPEdit
-onready var join_port_edit = $ModeTabContainer/"Join Game"/JoinGamePanel/SettingsContainer/PortContainer/PortEdit
-onready var connect_button = $ModeTabContainer/"Join Game"/JoinGamePanel/ConnectButton
-onready var join_team_a_list = $ModeTabContainer/"Join Game"/JoinGamePanel/PlayersPanel/TeamAList
-onready var join_team_b_list = $ModeTabContainer/"Join Game"/JoinGamePanel/PlayersPanel/TeamBList
-onready var join_team_a_button = $ModeTabContainer/"Join Game"/JoinGamePanel/PlayersPanel/TeamAButton
-onready var join_team_b_button = $ModeTabContainer/"Join Game"/JoinGamePanel/PlayersPanel/TeamBButton
-onready var join_status_label = $ModeTabContainer/"Join Game"/JoinGamePanel/StatusLabel
-onready var ready_button = $ModeTabContainer/"Join Game"/JoinGamePanel/ReadyButton
+onready var join_player_name_edit = get_node("ModeTabContainer/Join Game/JoinGamePanel/SettingsContainer/PlayerNameContainer/PlayerNameEdit")
+onready var join_ip_edit = get_node("ModeTabContainer/Join Game/JoinGamePanel/SettingsContainer/IPContainer/IPEdit")
+onready var join_port_edit = get_node("ModeTabContainer/Join Game/JoinGamePanel/SettingsContainer/PortContainer/PortEdit")
+onready var connect_button = get_node("ModeTabContainer/Join Game/JoinGamePanel/ConnectButton")
+onready var join_team_a_list = get_node("ModeTabContainer/Join Game/JoinGamePanel/PlayersPanel/TeamAList")
+onready var join_team_b_list = get_node("ModeTabContainer/Join Game/JoinGamePanel/PlayersPanel/TeamBList")
+onready var join_team_a_button = get_node("ModeTabContainer/Join Game/JoinGamePanel/PlayersPanel/TeamAButton")
+onready var join_team_b_button = get_node("ModeTabContainer/Join Game/JoinGamePanel/PlayersPanel/TeamBButton")
+onready var join_status_label = get_node("ModeTabContainer/Join Game/JoinGamePanel/StatusLabel")
+onready var ready_button = get_node("ModeTabContainer/Join Game/JoinGamePanel/ReadyButton")
 
 # References to UI elements - LAN Games tab
-onready var games_list = $ModeTabContainer/"LAN Games"/LANGamesPanel/GamesList
-onready var refresh_button = $ModeTabContainer/"LAN Games"/LANGamesPanel/RefreshButton
-onready var join_selected_button = $ModeTabContainer/"LAN Games"/LANGamesPanel/JoinSelectedButton
+onready var games_list = get_node("ModeTabContainer/LAN Games/LANGamesPanel/GamesList")
+onready var refresh_button = get_node("ModeTabContainer/LAN Games/LANGamesPanel/RefreshButton")
+onready var join_selected_button = get_node("ModeTabContainer/LAN Games/LANGamesPanel/JoinSelectedButton")
 
 # References to dialogs
-onready var connection_dialog = $ConnectionDialog
-onready var error_dialog = $ErrorDialog
+onready var connection_dialog = get_node("ConnectionDialog")
+onready var error_dialog = get_node("ErrorDialog")
 
 # References to common elements
-onready var back_button = $BackButton
-onready var network_manager = $NetworkManager
-onready var tab_container = $ModeTabContainer
+onready var back_button = get_node("BackButton")
+onready var network_manager = get_node("NetworkManager")
+onready var tab_container = get_node("ModeTabContainer")
 
 # UI state
-var current_team: int = 0  # 0 = Team A, 1 = Team B
+var current_team: int = 0 # 0 = Team A, 1 = Team B
 var is_ready: bool = false
 var current_tab: int = 0
 
 # Ready function
 func _ready() -> void:
 	# Add debug info label if it doesn't exist
-	if not has_node("ModeTabContainer/\"Create Game\"/CreateGamePanel/DebugInfoLabel"):
+	if not has_node("ModeTabContainer/Create Game/CreateGamePanel/DebugInfoLabel"):
 		debug_info_label = Label.new()
 		debug_info_label.name = "DebugInfoLabel"
 		debug_info_label.rect_position = Vector2(20, 410)
@@ -61,7 +61,7 @@ func _ready() -> void:
 		debug_info_label.add_color_override("font_color", Color(1, 0.5, 0, 1))  # Orange color
 		debug_info_label.text = "Debug Mode: In this mode, you can start the game with just one player."
 		debug_info_label.visible = false
-		$ModeTabContainer/"Create Game"/CreateGamePanel.add_child(debug_info_label)
+		get_node("ModeTabContainer/Create Game/CreateGamePanel").add_child(debug_info_label)
 	
 	# Connect debug checkbox signal
 	debug_mode_checkbox.connect("toggled", self, "_on_debug_mode_toggled")
@@ -83,7 +83,7 @@ func _ready() -> void:
 	back_button.connect("pressed", self, "_on_back_button_pressed")
 	
 	# Connect dialog signals
-	$ConnectionDialog/VBoxContainer/CancelButton.connect("pressed", self, "_on_connection_cancel_pressed")
+	connection_dialog.get_node("VBoxContainer/CancelButton").connect("pressed", self, "_on_connection_cancel_pressed")
 	
 	# Connect NetworkManager signals
 	network_manager.connect("server_started", self, "_on_server_started")
@@ -174,8 +174,8 @@ func connect_to_game() -> void:
 	
 	# Show connection dialog
 	connection_dialog.popup_centered()
-	$ConnectionDialog/VBoxContainer/StatusLabel.text = "Connecting to " + ip + ":" + str(port) + "..."
-	$ConnectionDialog/VBoxContainer/ProgressBar.value = 0.5
+	connection_dialog.get_node("VBoxContainer/StatusLabel").text = "Connecting to " + ip + ":" + str(port) + "..."
+	connection_dialog.get_node("VBoxContainer/ProgressBar").value = 0.5
 	
 	# Try to connect
 	var success = network_manager.connect_to_server(ip, port, player_name)
@@ -219,6 +219,8 @@ func set_ready(ready: bool) -> void:
 
 # Start the game (host only)
 func start_game() -> void:
+	print("LobbyUI: Starting game")
+	print("Network manager debug mode: ", network_manager.debug_mode)
 	network_manager.start_game()
 
 # Update player lists based on current player info
@@ -325,7 +327,7 @@ func _update_ui() -> void:
 
 # Show error dialog with custom message
 func _show_error(message: String) -> void:
-	$ErrorDialog/MessageLabel.text = message
+	error_dialog.get_node("MessageLabel").text = message
 	error_dialog.popup_centered()
 
 # Signal handlers
@@ -344,7 +346,6 @@ func _on_team_a_button_pressed() -> void:
 	else:
 		current_team = 0  # Team A
 	
-	# Remove the check for can_handle_no_team
 	network_manager.change_team(current_team)
 	_update_ui()
 
@@ -400,8 +401,6 @@ func _on_tab_changed(tab: int) -> void:
 # Network signal handlers
 func _on_server_started() -> void:
 	create_status_label.text = "Server started. Waiting for players..."
-	if debug_mode_checkbox.pressed:
-		create_status_label.text += "\nDEBUG MODE: You can start with just one player."
 	_update_ui()
 
 func _on_server_stopped() -> void:
