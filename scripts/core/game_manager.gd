@@ -304,20 +304,23 @@ func start_game() -> void:
 		countdown_timer = 0  # Skip countdown
 	elif current_state != GameState.PLAYING:
 		change_game_state(GameState.PLAYING)
-		return
-
+		# REMOVE THE RETURN STATEMENT
+	
 	# Create workers for all players
+	print("Creating player workers")
 	_create_player_workers()
 	
 	# Create initial buildings (HQs)
+	print("Creating starting buildings")
 	_create_starting_buildings()
 	
-	# Start the game
-	change_game_state(GameState.PLAYING)
+	# Start the game if not already in PLAYING state
+	if current_state != GameState.PLAYING:
+		change_game_state(GameState.PLAYING)
 	
 	emit_signal("game_started")
 	print("GameManager: Game started signal emitted")
-
+	
 # Make _create_player_workers more robust
 func _create_player_workers() -> void:
 	print("Creating player workers")
@@ -353,6 +356,13 @@ func _create_player_workers() -> void:
 		# Store reference in player data
 		player_data.worker = worker
 
+		print("Making worker visible for team " + str(team))
+		var sprite = worker.get_node_or_null("Sprite")
+		if sprite:
+		# Make sprite bright green or red depending on team
+			sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
+			sprite.scale = Vector2(2, 2)  # Make it twice as big
+
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):
 	if has_node(path):
@@ -366,8 +376,14 @@ func _create_starting_buildings() -> void:
 		print("No building manager available!")
 		return
 	
+	# Try different positions for Team 1's HQ
+	var hq_positions = [
+		Vector2(100, 300),  # Team 0 HQ
+		Vector2(700, 300)   # Team 1 HQ - using 700 instead of 900
+	]
+	
 	for team in range(2):  # For both teams
-		var hq_position = Vector2(100 + team * 800, 300)  # Hardcoded position for testing
+		var hq_position = hq_positions[team]
 		print("Attempting to create HQ at " + str(hq_position) + " for team " + str(team))
 		
 		var hq = building_manager.place_building("headquarters", hq_position, team)

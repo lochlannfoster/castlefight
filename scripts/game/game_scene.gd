@@ -13,8 +13,23 @@ func _ready():
 		var map_instance = map_scene.instance()
 		add_child(map_instance)
 		print("Map loaded successfully")
+		# After "Map loaded successfully" in _ready()
+	print("Setting up camera")
+	var camera = get_node_or_null("Camera2D")
+	if camera:
+	# Position camera to see the game area
+		camera.position = Vector2(400, 300)
+		camera.current = true
+		print("Camera positioned at " + str(camera.position))
 	else:
-		print("ERROR: Could not load map scene!")
+		print("Creating new camera")
+		camera = Camera2D.new()
+		camera.name = "Camera2D"
+		camera.position = Vector2(400, 300)
+		camera.current = true
+		add_child(camera)
+		print("Created new camera at " + str(camera.position))
+		
 	
 func _emergency_init():
 	print("Emergency initialization triggered")
@@ -132,10 +147,12 @@ func _add_test_worker():
 	print("DEBUG: Worker added to scene at " + str(worker.position))
 	
 	# Make worker stand out
+	print("Making worker visible for team " + str(team))
 	var sprite = worker.get_node_or_null("Sprite")
 	if sprite:
-		sprite.modulate = Color(0, 1, 0)  # Bright green
-		print("DEBUG: Worker colored bright green for visibility")
+		# Make sprite bright green or red depending on team
+		sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)  
+		sprite.scale = Vector2(2, 2)  # Make it twice as big
 	
 	# Select the worker
 	if worker.has_method("select"):
