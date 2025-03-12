@@ -2,11 +2,16 @@
 
 importer="texture"
 type="StreamTexture"
-valid=false
+path="res://.import/death2.png-a65cf0ed384e5808723ef784b3d40a60.stex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/units/human/footman/death/death2.png"
+dest_files=[ "res://.import/death2.png-a65cf0ed384e5808723ef784b3d40a60.stex" ]
+
 [params]
 
 compress/mode=0

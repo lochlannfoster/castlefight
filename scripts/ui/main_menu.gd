@@ -12,9 +12,13 @@ func _ready() -> void:
 	
 	# Set version text
 	$VersionLabel.text = "Version 0.1.0"
+	
+	# Debug connection success
+	print("Main menu buttons connected successfully!")
 
 # Navigate to multiplayer lobby
 func _on_multiplayer_button_pressed() -> void:
+	print("Multiplayer button pressed, changing to lobby scene")
 	get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Start a singleplayer game

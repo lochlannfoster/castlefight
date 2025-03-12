@@ -175,16 +175,16 @@ func _distribute_income() -> void:
 # Add resources to a team
 func add_resource(team: int, resource_type: int, amount: float) -> void:
 	if not team_resources.has(team):
-		push_error("Invalid team: " + str(team))
-		return
-	
-	if not team_resources[team].has(resource_type):
-		push_error("Invalid resource type: " + str(resource_type))
-		return
+		# Initialize this team if it doesn't exist (to handle -1 case)
+		team_resources[team] = {
+			ResourceType.GOLD: 0,
+			ResourceType.WOOD: 0,
+			ResourceType.SUPPLY: 0
+		}
 	
 	team_resources[team][resource_type] += amount
-	
 	emit_signal("resources_changed", team, resource_type, team_resources[team][resource_type])
+
 
 # Get a team's resource amount
 func get_resource(team: int, resource_type: int) -> float:

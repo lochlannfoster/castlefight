@@ -31,9 +31,9 @@ func _ready() -> void:
 	_load_building_data()
 
 # Process function
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	# Check for building selection via input
-	if Input.is_action_just_pressed("select"):
+	if Input.is_action_just_pressed("ui_select"):
 		_handle_selection()
 
 # Load building configurations from data files
