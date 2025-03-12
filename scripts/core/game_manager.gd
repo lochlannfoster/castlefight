@@ -43,7 +43,7 @@ var grid_system
 var building_manager
 var combat_system
 var economy_manager
-var unit_factory
+onready var unit_factory = get_node_or_null("/root/UnitFactory")
 var ui_manager
 var fog_of_war_manager
 var network_manager
@@ -54,6 +54,8 @@ var GridSystemScript = preload("res://scripts/core/grid_system.gd")
 var CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
 var EconomyManagerScript = preload("res://scripts/economy/economy_manager.gd")
 var BuildingManagerScript = preload("res://scripts/building/building_manager.gd")
+
+
 
 # Ready function
 func _ready() -> void:
@@ -140,6 +142,10 @@ func _initialize_systems() -> void:
 	
 	# Initialize Unit Factory (already a singleton)
 	unit_factory = get_node_or_null("/root/UnitFactory")
+	if not unit_factory:
+		print("WARNING: UnitFactory not found! Creating manually.")
+		unit_factory = load("res://scripts/unit/unit_factory.gd").new()
+		add_child(unit_factory)
 	
 	# Initialize UI Manager if available
 	ui_manager = get_node_or_null("UIManager")
@@ -290,17 +296,15 @@ func start_pregame_countdown() -> void:
 # Update in scripts/core/game_manager.gd
 
 func start_game() -> void:
+	print("GameManager: Attempting to start game")
+	print("Current state: ", current_state)
+	print("Current scene: ", get_tree().current_scene.filename)
+	
 	if current_state != GameState.PREGAME:
+		print("Not in PREGAME state, changing to PREGAME")
 		change_game_state(GameState.PREGAME)
 		return
-	
-	print("GameManager: Starting game")
-	
-	# Check if we're in the game scene, and if not, change to it
-	if get_tree().current_scene.filename != "res://scenes/game/game.tscn":
-		get_tree().change_scene("res://scenes/game/game.tscn")
-		return
-	
+
 	# Create workers for all players
 	_create_player_workers()
 	

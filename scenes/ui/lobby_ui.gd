@@ -187,7 +187,9 @@ func set_ready(ready: bool) -> void:
 
 # Start the game (host only)
 func start_game() -> void:
-	network_manager.start_game()
+    print("LobbyUI: Starting game")
+    print("Network manager debug mode: ", network_manager.debug_mode)
+    network_manager.start_game()
 
 # Update player lists based on current player info
 func update_player_lists(player_info: Dictionary) -> void:

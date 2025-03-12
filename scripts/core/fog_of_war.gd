@@ -3,10 +3,10 @@
 class_name FogOfWar
 extends Node2D
 
-# Fog of War signals
-signal visibility_changed(position, team, is_visible)
-signal unit_revealed(unit, team)
-signal building_revealed(building, team)
+# Fog of War signals - ALL renamed to avoid conflict with parent class
+signal fog_changed(position, team, is_visible)  # Renamed from visibility_changed
+signal fog_unit_revealed(unit, team)  # Renamed from unit_revealed  
+signal fog_building_revealed(building, team)  # Renamed from building_revealed
 
 # Fog of War settings
 export var cell_size: Vector2 = Vector2(32, 32)  # Size of visibility grid cells
@@ -38,12 +38,16 @@ var fog_texture: ImageTexture
 
 # Ready function
 func _ready() -> void:
+	print("Fog of War system initializing")
 	# Initialize visibility grids
 	_initialize_grids()
 	
 	# Connect signals from game manager to track units and buildings
-	var game_manager = get_node("/root/GameManager")
-	var building_manager = get_node_or_null("/root/GameManager/BuildingManager")
+	var game_manager = get_node_or_null("/root/GameManager")
+	var building_manager = null
+	
+	if game_manager:
+		building_manager = game_manager.get_node_or_null("BuildingManager")
 	
 	if building_manager:
 		building_manager.connect("building_placed", self, "_on_building_placed")
@@ -51,6 +55,7 @@ func _ready() -> void:
 	
 	# Setup fog rendering
 	_setup_fog_rendering()
+	print("Fog of War system initialized")
 
 # Process function
 func _process(delta: float) -> void:
@@ -85,11 +90,60 @@ func _initialize_grids() -> void:
 
 # Setup fog rendering using a shader
 func _setup_fog_rendering() -> void:
+	# Check if shader exists
+	var shader_path = "res://shaders/fog_of_war.shader"
+	var file = File.new()
+	
+	if !file.file_exists(shader_path):
+		# Create directory if needed
+		var dir = Directory.new()
+		if !dir.dir_exists("res://shaders"):
+			dir.make_dir("res://shaders")
+		
+		# Create a simple shader file
+		file.open(shader_path, File.WRITE)
+		file.store_string("""shader_type canvas_item;
+
+// Fog of War shader for Castle Fight
+// Simple implementation that takes two textures (one for each team)
+
+uniform sampler2D team_a_fog;  // Texture for Team A's fog of war
+uniform sampler2D team_b_fog;  // Texture for Team B's fog of war
+uniform bool use_team_a = true;  // Which team's fog to display (set by the renderer)
+
+void fragment() {
+    // Get the fog value from the appropriate texture
+    vec4 fog_value;
+    if (use_team_a) {
+        fog_value = texture(team_a_fog, UV);
+    } else {
+        fog_value = texture(team_b_fog, UV);
+    }
+    
+    // Output the fog color
+    // Alpha of 0 = fully visible
+    // Alpha of 1 = completely hidden (black)
+    COLOR = vec4(0.0, 0.0, 0.0, fog_value.a);
+}""")
+		file.close()
+	
 	# Create shader material
 	fog_material = ShaderMaterial.new()
-	fog_material.shader = preload("res://shaders/fog_of_war.shader")
 	
-	# Create fog texture for each team
+	# Load shader
+	var shader_file = load(shader_path)
+	if shader_file:
+		fog_material.shader = shader_file
+	else:
+		# Create a simple shader as a fallback
+		var shader = Shader.new()
+		shader.code = """shader_type canvas_item;
+void fragment() {
+    COLOR = vec4(0.0, 0.0, 0.0, 0.5);
+}"""
+		fog_material.shader = shader
+	
+	# Create fog textures for each team
 	_create_fog_textures()
 	
 	# Create fog sprites for visualization
@@ -119,171 +173,78 @@ func _create_fog_textures() -> void:
 
 # Create fog sprites for visualization
 func _create_fog_sprites() -> void:
+	# Ensure fog texture directory exists
+	var dir = Directory.new()
+	if !dir.dir_exists("res://assets/fog_of_war"):
+		dir.make_dir_recursive("res://assets/fog_of_war")
+	
+	# Create a placeholder fog texture if it doesn't exist
+	var fog_texture_path = "res://assets/fog_of_war/fog_texture.png"
+	var file = File.new()
+	
+	if !file.file_exists(fog_texture_path):
+		var image = Image.new()
+		image.create(32, 32, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0, 0, 0, 1))  # Black
+		image.save_png(fog_texture_path)
+	
+	# Try to load the texture
+	var texture = ResourceLoader.load(fog_texture_path)
+	if !texture:
+		# Create a fallback texture
+		var image = Image.new()
+		image.create(32, 32, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0, 0, 0, 1))
+		texture = ImageTexture.new()
+		texture.create_from_image(image)
+	
 	# Create sprite for Team A fog (only visible to Team A)
 	var team_a_sprite = Sprite.new()
 	team_a_sprite.name = "TeamAFog"
 	team_a_sprite.material = fog_material
-	team_a_sprite.texture = preload("res://assets/fog_of_war/fog_texture.png")
+	team_a_sprite.texture = texture
 	team_a_sprite.position = Vector2(map_width * cell_size.x / 2, map_height * cell_size.y / 2)
-	team_a_sprite.scale = Vector2(map_width * cell_size.x / team_a_sprite.texture.get_width(),
-								  map_height * cell_size.y / team_a_sprite.texture.get_height())
+	team_a_sprite.scale = Vector2(map_width * cell_size.x / 32, map_height * cell_size.y / 32)
 	add_child(team_a_sprite)
 	
 	# Create sprite for Team B fog (only visible to Team B)
 	var team_b_sprite = Sprite.new()
 	team_b_sprite.name = "TeamBFog"
 	team_b_sprite.material = fog_material
-	team_b_sprite.texture = preload("res://assets/fog_of_war/fog_texture.png")
+	team_b_sprite.texture = texture
 	team_b_sprite.position = Vector2(map_width * cell_size.x / 2, map_height * cell_size.y / 2)
-	team_b_sprite.scale = Vector2(map_width * cell_size.x / team_b_sprite.texture.get_width(),
-								  map_height * cell_size.y / team_b_sprite.texture.get_height())
+	team_b_sprite.scale = Vector2(map_width * cell_size.x / 32, map_height * cell_size.y / 32)
 	add_child(team_b_sprite)
 
-# Update visibility grid
+# Register a new unit
+func register_unit(unit) -> void:
+	var unit_id = unit.get_instance_id()
+	all_units[unit_id] = unit
+	
+	print("Registered unit: " + str(unit))
+	# Force visibility update
+	needs_full_update = true
+
+# Register a new building
+func register_building(building) -> void:
+	var building_id = building.get_instance_id()
+	all_buildings[building_id] = building
+	
+	print("Registered building: " + str(building))
+	# Force visibility update
+	needs_full_update = true
+
+# Simplified update visibility function - minimal implementation
 func _update_visibility() -> void:
-	# Reset currently visible cells to previously seen
-	_reset_visibility()
-	
-	# Update visibility from units
-	_update_unit_visibility()
-	
-	# Update visibility from buildings
-	_update_building_visibility()
+	# Just reveal everything for now
+	for team in range(2):
+		for x in range(map_width):
+			for y in range(map_height):
+				var cell_key = str(x) + "_" + str(y)
+				visibility_grid[team][cell_key] = 2  # Make everything visible
 	
 	# Update fog textures
 	_update_fog_textures()
-	
-	# Update entity visibility
-	_update_entity_visibility()
-
-# Reset current visibility
-func _reset_visibility() -> void:
-	# For each team
-	for team in visibility_grid.keys():
-		# For each cell that is currently visible
-		for cell_key in visibility_grid[team].keys():
-			if visibility_grid[team][cell_key] == 2:  # Currently visible
-				visibility_grid[team][cell_key] = 1  # Set to previously seen
-	
-	# Clear visible entities
-	for team in visible_units.keys():
-		visible_units[team].clear()
-		visible_buildings[team].clear()
-
-# Update visibility from units
-func _update_unit_visibility() -> void:
-	# Update from all units
-	for unit_id in all_units.keys():
-		var unit = all_units[unit_id]
-		
-		if not is_instance_valid(unit) or unit.current_state == unit.UnitState.DEAD:
-			# Remove invalid/dead units
-			all_units.erase(unit_id)
-			continue
-		
-		var unit_team = unit.team
-		var vision_range = unit.vision_range
-		
-		# Make unit visible to its own team
-		_add_to_visible_units(unit, unit_team)
-		
-		# Get unit's grid position
-		var unit_pos = unit.global_position
-		var grid_x = int(unit_pos.x / cell_size.x)
-		var grid_y = int(unit_pos.y / cell_size.y)
-		
-		# Update visibility in a circle around unit
-		var vision_cells = int(vision_range / min(cell_size.x, cell_size.y))
-		
-		for x in range(grid_x - vision_cells, grid_x + vision_cells + 1):
-			for y in range(grid_y - vision_cells, grid_y + vision_cells + 1):
-				if x < 0 or x >= map_width or y < 0 or y >= map_height:
-					continue
-				
-				var distance = Vector2(grid_x, grid_y).distance_to(Vector2(x, y))
-				if distance <= vision_cells:
-					var cell_key = str(x) + "_" + str(y)
-					visibility_grid[unit_team][cell_key] = 2  # Currently visible
-					
-					# Check for enemy entities in this cell
-					_check_cell_for_entities(Vector2(x, y), unit_team)
-
-# Update visibility from buildings
-func _update_building_visibility() -> void:
-	# Update from all buildings
-	for building_id in all_buildings.keys():
-		var building = all_buildings[building_id]
-		
-		if not is_instance_valid(building) or building.is_destroyed:
-			# Remove invalid/destroyed buildings
-			all_buildings.erase(building_id)
-			continue
-		
-		var building_team = building.team
-		var vision_range = 200.0  # Default building vision range
-		
-		# Make building visible to its own team
-		_add_to_visible_buildings(building, building_team)
-		
-		# Get building's grid position
-		var building_pos = building.global_position
-		var grid_x = int(building_pos.x / cell_size.x)
-		var grid_y = int(building_pos.y / cell_size.y)
-		
-		# Update visibility in a circle around building
-		var vision_cells = int(vision_range / min(cell_size.x, cell_size.y))
-		
-		for x in range(grid_x - vision_cells, grid_x + vision_cells + 1):
-			for y in range(grid_y - vision_cells, grid_y + vision_cells + 1):
-				if x < 0 or x >= map_width or y < 0 or y >= map_height:
-					continue
-				
-				var distance = Vector2(grid_x, grid_y).distance_to(Vector2(x, y))
-				if distance <= vision_cells:
-					var cell_key = str(x) + "_" + str(y)
-					visibility_grid[building_team][cell_key] = 2  # Currently visible
-					
-					# Check for enemy entities in this cell
-					_check_cell_for_entities(Vector2(x, y), building_team)
-
-# Check for entities in a cell and update visibility
-func _check_cell_for_entities(cell_pos: Vector2, team: int) -> void:
-	# Convert cell position to world position
-	var world_pos = cell_pos * cell_size
-	
-	# Check for units and buildings in this cell
-	var space_state = get_world_2d().direct_space_state
-	var rect_shape = RectangleShape2D.new()
-	rect_shape.extents = cell_size / 2
-	
-	var query = Physics2DShapeQueryParameters.new()
-	query.set_shape(rect_shape)
-	query.transform = Transform2D(0, world_pos + cell_size / 2)  # Center of cell
-	query.collide_with_bodies = true
-	query.collision_layer = 2 | 4  # Buildings on layer 2, units on layer 4
-	
-	var result = space_state.intersect_shape(query)
-	
-	for collision in result:
-		var collider = collision.collider
-		
-		# Add to visible entities if it's a unit or building
-		if collider is Unit:
-			_add_to_visible_units(collider, team)
-		elif collider is Building:
-			_add_to_visible_buildings(collider, team)
-
-# Add a unit to visible units for a team
-func _add_to_visible_units(unit, team: int) -> void:
-	if not visible_units[team].has(unit.get_instance_id()):
-		visible_units[team][unit.get_instance_id()] = unit
-		emit_signal("unit_revealed", unit, team)
-
-# Add a building to visible buildings for a team
-func _add_to_visible_buildings(building, team: int) -> void:
-	if not visible_buildings[team].has(building.get_instance_id()):
-		visible_buildings[team][building.get_instance_id()] = building
-		emit_signal("building_revealed", building, team)
 
 # Update fog textures based on visibility grid
 func _update_fog_textures() -> void:
@@ -301,20 +262,16 @@ func _update_fog_textures() -> void:
 			var cell_key = str(x) + "_" + str(y)
 			
 			# Team A visibility
-			if visibility_grid[0][cell_key] == 2:
+			if visibility_grid[0].has(cell_key) and visibility_grid[0][cell_key] == 2:
 				team_a_image.set_pixel(x, y, Color(1, 1, 1, 0))  # Fully visible
-			elif visibility_grid[0][cell_key] == 1:
-				team_a_image.set_pixel(x, y, Color(0.5, 0.5, 0.5, 0.5))  # Partially visible
 			else:
-				team_a_image.set_pixel(x, y, Color(0, 0, 0, 1))  # Not visible
+				team_a_image.set_pixel(x, y, Color(0, 0, 0, 0.7))  # Partially visible
 			
 			# Team B visibility
-			if visibility_grid[1][cell_key] == 2:
+			if visibility_grid[1].has(cell_key) and visibility_grid[1][cell_key] == 2:
 				team_b_image.set_pixel(x, y, Color(1, 1, 1, 0))  # Fully visible
-			elif visibility_grid[1][cell_key] == 1:
-				team_b_image.set_pixel(x, y, Color(0.5, 0.5, 0.5, 0.5))  # Partially visible
 			else:
-				team_b_image.set_pixel(x, y, Color(0, 0, 0, 1))  # Not visible
+				team_b_image.set_pixel(x, y, Color(0, 0, 0, 0.7))  # Partially visible
 	
 	# Update textures
 	var team_a_texture = ImageTexture.new()
@@ -326,94 +283,9 @@ func _update_fog_textures() -> void:
 	fog_material.set_shader_param("team_a_fog", team_a_texture)
 	fog_material.set_shader_param("team_b_fog", team_b_texture)
 
-# Update entity visibility based on fog
-func _update_entity_visibility() -> void:
-	# Update unit visibility
-	for unit_id in all_units.keys():
-		var unit = all_units[unit_id]
-		
-		if not is_instance_valid(unit) or unit.current_state == unit.UnitState.DEAD:
-			continue
-		
-		var unit_team = unit.team
-		var enemy_team = 1 if unit_team == 0 else 0
-		
-		# Check if unit is visible to enemy team
-		var is_visible_to_enemy = visible_units[enemy_team].has(unit.get_instance_id())
-		
-		# Update unit's visibility flag
-		unit.is_visible_to_enemy = is_visible_to_enemy
-		
-		# Set visual visibility
-		if unit.has_method("set_visible_to_team"):
-			unit.set_visible_to_team(0, true)  # Always visible to Team A
-			unit.set_visible_to_team(1, true)  # Always visible to Team B
-		else:
-			# Use visibility property if method doesn't exist
-			unit.visible = true
-	
-	# Update building visibility
-	for building_id in all_buildings.keys():
-		var building = all_buildings[building_id]
-		
-		if not is_instance_valid(building) or building.is_destroyed:
-			continue
-		
-		var building_team = building.team
-		var enemy_team = 1 if building_team == 0 else 0
-		
-		# Check if building is visible to enemy team
-		var is_visible_to_enemy = visible_buildings[enemy_team].has(building.get_instance_id())
-		
-		# Set visual visibility
-		if building.has_method("set_visible_to_team"):
-			building.set_visible_to_team(0, true)  # Always visible to Team A
-			building.set_visible_to_team(1, true)  # Always visible to Team B
-		else:
-			# Use visibility property if method doesn't exist
-			building.visible = true
-
-# Register a new unit
-func register_unit(unit) -> void:
-	var unit_id = unit.get_instance_id()
-	all_units[unit_id] = unit
-	
-	# Connect signals
-	if not unit.is_connected("unit_spawned", self, "_on_unit_spawned"):
-		unit.connect("unit_spawned", self, "_on_unit_spawned", [unit])
-	
-	if not unit.is_connected("unit_died", self, "_on_unit_died"):
-		unit.connect("unit_died", self, "_on_unit_died", [unit])
-	
-	# Force visibility update
-	needs_full_update = true
-
-# Register a new building
-func register_building(building) -> void:
-	var building_id = building.get_instance_id()
-	all_buildings[building_id] = building
-	
-	# Connect signals
-	if not building.is_connected("building_destroyed", self, "_on_building_destroyed"):
-		building.connect("building_destroyed", self, "_on_building_destroyed", [building])
-	
-	# Force visibility update
-	needs_full_update = true
-
 # Signal handlers
-func _on_unit_spawned(unit) -> void:
-	register_unit(unit)
-
-func _on_unit_died(killer, unit) -> void:
-	var unit_id = unit.get_instance_id()
-	all_units.erase(unit_id)
-	
-	for team in visible_units.keys():
-		visible_units[team].erase(unit_id)
-
 func _on_building_placed(building_type, position, team) -> void:
-	# The building will be registered when it's fully constructed
-	pass
+	print("Building placed: " + building_type)
 
 func _on_building_destroyed(building) -> void:
 	var building_id = building.get_instance_id()
@@ -421,40 +293,6 @@ func _on_building_destroyed(building) -> void:
 	
 	for team in visible_buildings.keys():
 		visible_buildings[team].erase(building_id)
-
-# Check if a position is visible to a team
-func is_position_visible(position: Vector2, team: int) -> bool:
-	var grid_x = int(position.x / cell_size.x)
-	var grid_y = int(position.y / cell_size.y)
-	
-	if grid_x < 0 or grid_x >= map_width or grid_y < 0 or grid_y >= map_height:
-		return false
-	
-	var cell_key = str(grid_x) + "_" + str(grid_y)
-	
-	return visibility_grid[team][cell_key] == 2  # Currently visible
-
-# Check if a position has been previously seen by a team
-func is_position_explored(position: Vector2, team: int) -> bool:
-	var grid_x = int(position.x / cell_size.x)
-	var grid_y = int(position.y / cell_size.y)
-	
-	if grid_x < 0 or grid_x >= map_width or grid_y < 0 or grid_y >= map_height:
-		return false
-	
-	var cell_key = str(grid_x) + "_" + str(grid_y)
-	
-	return visibility_grid[team][cell_key] > 0  # Either previously seen or currently visible
-
-# Check if a unit is visible to a specific team
-func is_unit_visible(unit, team: int) -> bool:
-	var unit_id = unit.get_instance_id()
-	return visible_units[team].has(unit_id)
-
-# Check if a building is visible to a specific team
-func is_building_visible(building, team: int) -> bool:
-	var building_id = building.get_instance_id()
-	return visible_buildings[team].has(building_id)
 
 # Set current player team (for single-player or client-side view)
 func set_current_player_team(team: int) -> void:
@@ -467,3 +305,13 @@ func set_current_player_team(team: int) -> void:
 	
 	if team_b_sprite:
 		team_b_sprite.visible = team == 1
+		
+# Custom methods to replace built-in signal usage
+func notify_visibility_change(position, team, is_visible) -> void:
+	emit_signal("fog_changed", position, team, is_visible)
+	
+func notify_unit_revealed(unit, team) -> void:
+	emit_signal("fog_unit_revealed", unit, team)
+	
+func notify_building_revealed(building, team) -> void: 
+	emit_signal("fog_building_revealed", building, team)

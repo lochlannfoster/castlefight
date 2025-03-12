@@ -396,19 +396,12 @@ func _send_ping(player_id: int) -> void:
 
 # Start game locally# Start game locally
 func _start_game_locally() -> void:
-	print("Starting game locally")
+	print("NetworkManager: Starting game locally")
+	print("Current scene: ", get_tree().current_scene.filename)
 	
-	# Change to the game scene
-	get_tree().change_scene("res://scenes/game/game.tscn")
-	
-	# The GameManager is an autoload, so it will persist across scene changes
-	# Wait a short time to ensure the scene is fully loaded
-	var safe_timer = Timer.new()
-	add_child(safe_timer)
-	safe_timer.one_shot = true
-	safe_timer.wait_time = 0.2
-	safe_timer.start()
-	safe_timer.connect("timeout", self, "_finish_game_start")
+	# Change to game scene
+	var scene_change_result = get_tree().change_scene("res://scenes/game/game.tscn")
+	print("Scene change result: ", scene_change_result)
 
 # Finish game start after scene change 
 func _finish_game_start() -> void:

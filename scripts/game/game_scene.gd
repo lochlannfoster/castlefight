@@ -7,14 +7,15 @@ extends Node2D
 func _ready():
 	print("Game scene loaded")
 	
-	# Give a brief delay to allow all systems to initialize
-	var init_timer = Timer.new()
-	add_child(init_timer)
-	init_timer.wait_time = 0.5
-	init_timer.one_shot = true
-	init_timer.autostart = true
-	init_timer.connect("timeout", self, "_initialize_game")
-	init_timer.connect("timeout", init_timer, "queue_free")
+	# Fallback initialization if automated methods fail
+	call_deferred("_emergency_init")
+
+func _emergency_init():
+	print("Emergency initialization triggered")
+	var game_manager = get_node_or_null("/root/GameManager")
+	if game_manager:
+		game_manager.start_game()
+	
 
 # Initialize the game after a short delay
 func _initialize_game():

@@ -112,7 +112,7 @@ func complete_construction() -> void:
 	_apply_income_bonus()
 
 # Notify that HQ is under attack
-f# Modification to handle screen position conversion
+# Modification to handle screen position conversion
 func _notify_under_attack() -> void:
 	var team_name = "Blue" if team == 0 else "Red"
 	print("%s team headquarters under attack!" % team_name)

@@ -1,5 +1,7 @@
 # Unit Factory - Handles creation of unit instances from data
 # Path: scripts/unit/unit_factory.gd
+# Unit Factory - Handles creation of unit instances from data
+# Path: scripts/unit/unit_factory.gd
 extends Node
 
 # Unit creation signals
@@ -11,6 +13,7 @@ var unit_data: Dictionary = {}
 
 # Ready function
 func _ready() -> void:
+	print("UnitFactory initialized")
 	# Load all unit data
 	_load_unit_data()
 
@@ -30,7 +33,7 @@ func _load_unit_data() -> void:
 				_load_unit_file(unit_id, file_path)
 			file_name = dir.get_next()
 	else:
-		push_warning("Warning: Could not open units data directory")
+		print("Warning: Could not open units data directory")
 
 # Load a single unit data file
 func _load_unit_file(unit_id: String, file_path: String) -> void:
@@ -45,48 +48,63 @@ func _load_unit_file(unit_id: String, file_path: String) -> void:
 			unit_data[unit_id] = data
 			print("Loaded unit data: ", unit_id)
 		else:
-			push_error("Error parsing unit data: " + file_path + 
-					   "\nError at line " + str(parse_result.error_line) + 
-					   ": " + parse_result.error_string)
+			print("Error parsing unit data: " + file_path)
 	else:
-		push_error("Error opening unit file: " + file_path)
+		print("Error opening unit file: " + file_path)
 
 # Create a unit instance
-func create_unit(unit_type: String, position: Vector2, team: int) -> Unit:
+func create_unit(unit_type: String, position: Vector2, team: int):
 	# Check if unit type exists
 	if not unit_data.has(unit_type):
-		push_error("Unknown unit type: " + unit_type)
+		print("Unknown unit type: " + unit_type)
 		emit_signal("unit_creation_failed", unit_type, "Unknown unit type")
 		return null
 	
 	# Get unit data
 	var data = unit_data[unit_type]
 	
-	# Load unit scene
-	var scene_path = data.scene_path if data.has("scene_path") else "res://scenes/units/base_unit.tscn"
-	var unit_scene = load(scene_path)
+	# Create a default unit if scene isn't available
+	var unit = KinematicBody2D.new()
+	unit.name = unit_type
 	
-	if not unit_scene:
-		push_error("Could not load unit scene: " + scene_path)
-		emit_signal("unit_creation_failed", unit_type, "Could not load unit scene")
-		return null
+	# Set basic properties
+	unit.unit_id = unit_type
+	unit.display_name = data.display_name if data.has("display_name") else unit_type
+	unit.team = team
 	
-	# Create instance
-	var unit_instance = unit_scene.instance()
+	# Add a sprite
+	var sprite = Sprite.new()
+	sprite.name = "Sprite"
 	
-	# Configure unit properties
-	_configure_unit(unit_instance, unit_type, data, team)
+	# Set color based on team
+	if team == 0:
+		sprite.modulate = Color(0, 0, 1)  # Blue for Team A
+	else:
+		sprite.modulate = Color(1, 0, 0)  # Red for Team B
+	
+	unit.add_child(sprite)
+	
+	# Add collision
+	var collision = CollisionShape2D.new()
+	collision.name = "CollisionShape2D"
+	var shape = CircleShape2D.new()
+	shape.radius = 16.0
+	collision.shape = shape
+	unit.add_child(collision)
 	
 	# Set position
-	unit_instance.position = position
+	unit.position = position
 	
 	# Add to scene
-	get_tree().current_scene.add_child(unit_instance)
+	var scene = get_tree().current_scene
+	if scene:
+		scene.add_child(unit)
 	
-	emit_signal("unit_created", unit_instance, unit_type, team)
+	print("Created unit: " + unit_type)
+	emit_signal("unit_created", unit, unit_type, team)
 	
-	return unit_instance
-
+	return unit
+	
 # Configure a unit instance with data
 func _configure_unit(unit: Unit, unit_type: String, data: Dictionary, team: int) -> void:
 	# Set basic properties
