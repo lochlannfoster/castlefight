@@ -2,6 +2,20 @@
 # Path: scripts/worker/worker.gd
 extends KinematicBody2D
 
+func _ready():
+	print("DEBUG: Worker _ready() called")
+	print("DEBUG: Worker position: ", position)
+	print("DEBUG: Worker team: ", team)
+	
+	# Ensure sprite is visible
+	var sprite = $Sprite
+	if sprite:
+		print("DEBUG: Sprite found")
+		# Set a default color or texture if not set
+		sprite.modulate = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
+	else:
+		print("DEBUG: No sprite found!")
+
 # Signals
 signal building_placement_started(building_type, size)
 signal building_placement_completed(building_type, position)

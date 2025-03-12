@@ -111,85 +111,44 @@ func _add_ui_manager(ui_manager):
 
 # Add a test worker for UI testing
 func _add_test_worker():
-	print("Adding test worker...")
+	print("DEBUG: Attempting to add test worker...")
 	
 	# Make sure the worker directory exists
 	var dir = Directory.new()
 	if not dir.dir_exists("res://scenes/units"):
-		dir.make_dir_recursive("res://scenes/units")
+		print("DEBUG: Worker scene directory does not exist!")
+		return
 	
 	# Check if the worker scene exists
 	var worker_scene_path = "res://scenes/units/worker.tscn"
 	var file = File.new()
-	var worker_scene
 	
-	if file.file_exists(worker_scene_path):
-		worker_scene = load(worker_scene_path)
-	
-	if not worker_scene:
-		print("Worker scene not found or couldn't be loaded, creating simple worker directly")
-		
-		# Create a basic worker directly
-		var worker = KinematicBody2D.new()
-		worker.name = "TestWorker"
-		
-		# Load worker script
-		var script = load("res://scripts/worker/worker.gd")
-		if script:
-			worker.set_script(script)
-		else:
-			print("Could not load worker script!")
-			return
-		
-		var sprite = Sprite.new()
-		sprite.name = "Sprite"
-		worker.add_child(sprite)
-		
-		var collision = CollisionShape2D.new()
-		collision.name = "CollisionShape2D"
-		var shape = CircleShape2D.new()
-		shape.radius = 16.0
-		collision.shape = shape
-		worker.add_child(collision)
-		
-		# Add indicator and ghost nodes
-		var selection_indicator = Node2D.new()
-		selection_indicator.name = "SelectionIndicator"
-		selection_indicator.visible = false
-		worker.add_child(selection_indicator)
-		
-		var selection_rect = ColorRect.new()
-		selection_rect.rect_size = Vector2(36, 36)
-		selection_rect.rect_position = Vector2(-18, -18)
-		selection_rect.color = Color(0, 1, 0, 0.3)
-		selection_indicator.add_child(selection_rect)
-		
-		var building_ghost = Node2D.new()
-		building_ghost.name = "BuildingGhost"
-		building_ghost.visible = false
-		worker.add_child(building_ghost)
-		
-		var ghost_visual = ColorRect.new()
-		ghost_visual.name = "GhostVisual"
-		ghost_visual.rect_size = Vector2(64, 64)
-		ghost_visual.rect_position = Vector2(-32, -32)
-		ghost_visual.color = Color(0, 1, 0, 0.5)
-		building_ghost.add_child(ghost_visual)
-		
-		# Set worker properties and add to scene
-		worker.position = Vector2(400, 300)
-		worker.team = 0  # Team A
-		worker.add_to_group("workers")
-		
-		# Adding directly to scene
-		add_child(worker)
-		print("Created test worker")
+	if not file.file_exists(worker_scene_path):
+		print("DEBUG: Worker scene file does not exist at: ", worker_scene_path)
 		return
 	
-	# Create instance from scene
+	var worker_scene = load(worker_scene_path)
+	
+	if not worker_scene:
+		print("DEBUG: Failed to load worker scene!")
+		return
+	
 	var worker = worker_scene.instance()
+	
+	if not worker:
+		print("DEBUG: Failed to create worker instance!")
+		return
+	
+	print("DEBUG: Worker instance created successfully")
 	worker.position = Vector2(400, 300)
 	worker.team = 0  # Team A
 	worker.add_to_group("workers")
-	add_child(worker)
-	print("Added test worker from scene")
+	
+	# Explicitly add to Units node
+	var units_node = get_node_or_null("Units")
+	if units_node:
+		units_node.add_child(worker)
+		print("DEBUG: Worker added to Units node at ", worker.position)
+	else:
+		add_child(worker)
+		print("DEBUG: Units node not found, adding worker directly to scene")

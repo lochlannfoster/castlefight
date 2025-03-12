@@ -85,6 +85,10 @@ GridSystem="*res://scripts/core/grid_system.gd"
 EconomyManager="*res://scripts/economy/economy_manager.gd"
 UnitFactory="*res://scripts/unit/unit_factory.gd"
 
+[debug]
+
+settings/stdout/verbose_stdout=true
+
 [editor_plugins]
 
 enabled=PoolStringArray(  )
