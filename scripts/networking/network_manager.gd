@@ -228,6 +228,7 @@ func change_team(team: int) -> void:
 		rpc("_update_player_list", player_info)
 
 # Start game for all players
+
 func start_game() -> void:
 	if not is_server:
 		return
@@ -244,11 +245,42 @@ func start_game() -> void:
 	server_tick_timer = 0
 	checksum_timer = 0
 	
+	# Make sure all players have valid teams before starting
+	# A player with team = -1 should be assigned to team 0 or 1
+	for player_id in player_info.keys():
+		if player_info[player_id].team < 0 or player_info[player_id].team > 1:
+			# Assign to the team with fewer players
+			var team0_count = 0
+			var team1_count = 0
+			
+			for pid in player_info.keys():
+				if player_info[pid].team == 0:
+					team0_count += 1
+				elif player_info[pid].team == 1:
+					team1_count += 1
+			
+			# Assign to team with fewer players
+			var new_team = 0 if team0_count <= team1_count else 1
+			player_info[player_id].team = new_team
+			
+			# Notify the player of team change
+			if player_id != local_player_id:
+				rpc_id(player_id, "_update_team_assignment", new_team)
+	
 	# Notify all clients to start game
 	rpc("_start_game_on_client", match_id)
 	
 	# Start game locally
 	_start_game_locally()
+
+# Add this method to NetworkManager
+remote func _update_team_assignment(new_team: int) -> void:
+	# Client receives team assignment from server
+	if is_server:
+		return
+	
+	if player_info.has(local_player_id):
+		player_info[local_player_id].team = new_team
 
 # Pause game
 func pause_game(paused_state: bool) -> void:
@@ -366,7 +398,15 @@ func _send_ping(player_id: int) -> void:
 func _start_game_locally() -> void:
 	print("Starting game locally")
 	
-	# Tell game manager to start the game
+	# Change to the game scene
+	get_tree().change_scene("res://scenes/game/game.tscn")
+	
+	# The GameManager is an autoload, so it will persist across scene changes
+	# Give it a moment to initialize with the new scene
+	yield(get_tree().create_timer(0.1), "timeout")
+	
+	# Now set up the game with GameManager
+	var game_manager = get_node("/root/GameManager")
 	if game_manager:
 		# Set player teams
 		for player_id in player_info.keys():

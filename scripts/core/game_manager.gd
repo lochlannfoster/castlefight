@@ -196,7 +196,13 @@ func _reset_game() -> void:
 		pass
 
 # Add a player to the game
+# Update the add_player method in scripts/core/game_manager.gd
+
 func add_player(player_id, player_name: String, team: int) -> bool:
+	# Ensure team is valid (0 or 1)
+	if team < 0 or team > 1:
+		team = 0  # Default to Team A if invalid
+	
 	# Check if teams are full
 	if team_players[team].size() >= max_players_per_team:
 		return false
@@ -213,6 +219,14 @@ func add_player(player_id, player_name: String, team: int) -> bool:
 			"supply": 0
 		}
 	}
+	
+	# Add to player tracking
+	players[player_id] = player_data
+	team_players[team].append(player_id)
+	
+	emit_signal("player_joined", player_id, team)
+	
+	return true
 	
 	# Add to player tracking
 	players[player_id] = player_data
@@ -251,9 +265,20 @@ func start_pregame_countdown() -> void:
 	change_game_state(GameState.PREGAME)
 
 # Start the game
+# Update in scripts/core/game_manager.gd
+
+# Update in scripts/core/game_manager.gd
+
 func start_game() -> void:
 	if current_state != GameState.PREGAME:
 		change_game_state(GameState.PREGAME)
+		return
+	
+	print("GameManager: Starting game")
+	
+	# Check if we're in the game scene, and if not, change to it
+	if get_tree().current_scene.filename != "res://scenes/game/game.tscn":
+		get_tree().change_scene("res://scenes/game/game.tscn")
 		return
 	
 	# Create workers for all players
@@ -266,10 +291,15 @@ func start_game() -> void:
 	change_game_state(GameState.PLAYING)
 	
 	emit_signal("game_started")
+	print("GameManager: Game started signal emitted")
 
-# Create worker units for all players
+# Make _create_player_workers more robust
 func _create_player_workers() -> void:
-	var worker_scene = preload("res://scenes/units/worker.tscn")
+	print("Creating player workers")
+	var worker_scene = load("res://scenes/units/worker.tscn")
+	if not worker_scene:
+		push_error("Failed to load worker scene")
+		return
 	
 	for player_id in players.keys():
 		var player_data = players[player_id]
@@ -282,14 +312,27 @@ func _create_player_workers() -> void:
 		worker.team = team
 		
 		# Position worker near team's starting area
-		var start_position = map_manager.get_team_start_position(team) if map_manager else Vector2(100, 100) * team
+		var start_position
+		if has_node("MapManager") and get_node("MapManager").has_method("get_team_start_position"):
+			start_position = get_node("MapManager").get_team_start_position(team)
+		else:
+			# Fallback positions if no map manager
+			start_position = Vector2(100 + team * 800, 300)
+		
 		worker.position = start_position
+		print("Spawning worker for team " + str(team) + " at " + str(start_position))
 		
 		# Add worker to scene
 		get_tree().current_scene.add_child(worker)
 		
 		# Store reference in player data
 		player_data.worker = worker
+
+# Safe method to get a node without crashing if it doesn't exist
+func safe_get_node(path):
+	if has_node(path):
+		return get_node(path)
+	return null
 
 # Create starting buildings (HQs)
 func _create_starting_buildings() -> void:

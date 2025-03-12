@@ -340,19 +340,12 @@ func _on_connect_button_pressed() -> void:
 
 func _on_team_a_button_pressed() -> void:
 	if current_team == 0:
-		# Instead of directly setting to -1, check if the dictionary can handle it
 		current_team = -1  # No team
 	else:
 		current_team = 0  # Team A
 	
-	# Add a check before calling network_manager functions
-	if current_team >= 0 or network_manager.can_handle_no_team():
-		network_manager.change_team(current_team)
-	else:
-		# Default to team 0 if necessary
-		current_team = 0
-		network_manager.change_team(current_team)
-	
+	# Remove the check for can_handle_no_team
+	network_manager.change_team(current_team)
 	_update_ui()
 
 func _on_team_b_button_pressed() -> void:

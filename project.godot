@@ -58,11 +58,6 @@ _global_script_classes=[ {
 "class": "Unit",
 "language": "GDScript",
 "path": "res://scripts/unit/unit_base.gd"
-}, {
-"base": "KinematicBody2D",
-"class": "Worker",
-"language": "GDScript",
-"path": "res://scripts/worker/worker.gd"
 } ]
 _global_script_class_icons={
 "Building": "",
@@ -74,8 +69,7 @@ _global_script_class_icons={
 "NetworkManager": "",
 "TechTreeManager": "",
 "UIManager": "",
-"Unit": "",
-"Worker": ""
+"Unit": ""
 }
 
 [application]

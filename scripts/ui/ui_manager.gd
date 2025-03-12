@@ -108,7 +108,7 @@ func _create_resource_display() -> void:
 	resource_display.add_child(gold_container)
 	
 	var gold_icon = TextureRect.new()
-	gold_icon.texture = preload("res://assets/ui/gold_icon.png")
+	gold_icon.texture = preload("res://assets/ui/icons/gold_icon.png")
 	gold_icon.rect_min_size = Vector2(24, 24)
 	gold_container.add_child(gold_icon)
 	
@@ -124,7 +124,7 @@ func _create_resource_display() -> void:
 	resource_display.add_child(wood_container)
 	
 	var wood_icon = TextureRect.new()
-	wood_icon.texture = preload("res://assets/ui/wood_icon.png")
+	wood_icon.texture = preload("res://assets/ui/icons/wood_icon.png")
 	wood_icon.rect_min_size = Vector2(24, 24)
 	wood_container.add_child(wood_icon)
 	
@@ -140,7 +140,7 @@ func _create_resource_display() -> void:
 	resource_display.add_child(supply_container)
 	
 	var supply_icon = TextureRect.new()
-	supply_icon.texture = preload("res://assets/ui/supply_icon.png")
+	supply_icon.texture = preload("res://assets/ui/icons/supply_icon.png")
 	supply_icon.rect_min_size = Vector2(24, 24)
 	supply_container.add_child(supply_icon)
 	
@@ -156,7 +156,7 @@ func _create_resource_display() -> void:
 	resource_display.add_child(income_container)
 	
 	var income_icon = TextureRect.new()
-	income_icon.texture = preload("res://assets/ui/income_icon.png")
+	income_icon.texture = preload("res://assets/ui/icons/income_icon.png")
 	income_icon.rect_min_size = Vector2(24, 24)
 	income_container.add_child(income_icon)
 	
@@ -305,7 +305,7 @@ func _create_minimap() -> void:
 	minimap_rect.rect_position = Vector2(10, 10)
 	minimap_rect.rect_size = Vector2(180, 80)
 	minimap_rect.expand = true
-	minimap_rect.texture = preload("res://assets/ui/minimap_placeholder.png")
+	minimap_rect.texture = preload("res://assets/ui/icons/minimap_placeholder.png")
 	panel.add_child(minimap_rect)
 
 # Create floating text container

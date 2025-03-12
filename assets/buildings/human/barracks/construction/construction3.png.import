@@ -2,11 +2,16 @@
 
 importer="texture"
 type="StreamTexture"
-valid=false
+path="res://.import/construction3.png-3d12698761c45880f4bc455c8bce32d5.stex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/buildings/human/barracks/construction/construction3.png"
+dest_files=[ "res://.import/construction3.png-3d12698761c45880f4bc455c8bce32d5.stex" ]
+
 [params]
 
 compress/mode=0
