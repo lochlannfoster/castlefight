@@ -361,20 +361,21 @@ func safe_get_node(path):
 
 # Create starting buildings (HQs)
 func _create_starting_buildings() -> void:
+	print("Creating starting buildings...")
 	if not building_manager:
+		print("No building manager available!")
 		return
 	
 	for team in range(2):  # For both teams
-		var hq_position = map_manager.get_team_hq_position(team) if map_manager else Vector2(500, 300) * team
+		var hq_position = Vector2(100 + team * 800, 300)  # Hardcoded position for testing
+		print("Attempting to create HQ at " + str(hq_position) + " for team " + str(team))
 		
-		# Create HQ - try both possible building IDs
 		var hq = building_manager.place_building("headquarters", hq_position, team)
-		if not hq:
-			hq = building_manager.place_building("hq", hq_position, team)
-		
 		if hq:
-			# Register as headquarters
+			print("HQ successfully created for team " + str(team))
 			register_headquarters(hq, team)
+		else:
+			print("Failed to create HQ for team " + str(team))
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:

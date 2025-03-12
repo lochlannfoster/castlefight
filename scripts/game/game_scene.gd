@@ -5,16 +5,17 @@ extends Node2D
 
 # Called when the scene enters the tree
 func _ready():
-	print("Game scene loaded")
-	
-	# Give a short delay for everything to initialize
-	var timer = Timer.new()
-	add_child(timer)
-	timer.wait_time = 0.5
-	timer.one_shot = true
-	timer.connect("timeout", self, "_initialize_game")
-	timer.start()
-
+    print("Game scene loaded")
+    
+    # Load the map scene first
+    var map_scene = load("res://scenes/game/map.tscn")
+    if map_scene:
+        var map_instance = map_scene.instance()
+        add_child(map_instance)
+        print("Map loaded successfully")
+    else:
+        print("ERROR: Could not load map scene!")
+    
 func _emergency_init():
 	print("Emergency initialization triggered")
 	var game_manager = get_node_or_null("/root/GameManager")
@@ -152,3 +153,26 @@ func _add_test_worker():
 	else:
 		add_child(worker)
 		print("DEBUG: Units node not found, adding worker directly to scene")
+
+func _input(event):
+    if event is InputEventKey and event.pressed:
+        print("Key pressed: " + str(event.scancode))
+        
+        if event.scancode == KEY_B:
+            print("B key pressed - opening building menu")
+            var ui_manager = get_node_or_null("SimpleUIManager")
+            if ui_manager and ui_manager.has_method("toggle_building_menu"):
+                ui_manager.toggle_building_menu()
+            
+        elif event.scancode == KEY_H:
+            print("H key pressed - creating emergency HQ")
+            # Create an HQ manually
+            var game_manager = get_node_or_null("/root/GameManager")
+            if game_manager and game_manager.building_manager:
+                for team in range(2):
+                    var position = Vector2(200 + team * 600, 300)
+                    var hq = game_manager.building_manager.place_building("headquarters", position, team)
+                    if hq:
+                        print("Created HQ for team " + str(team))
+                    else:
+                        print("Failed to create HQ for team " + str(team))

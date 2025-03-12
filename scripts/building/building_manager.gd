@@ -152,6 +152,8 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 	
 	# Create the instance
 	var hq_instance = hq_scene.instance()
+	print("Creating HQ for team " + str(team) + " at position " + str(position))
+
 	
 	# Set up basic HQ properties
 	hq_instance.building_id = "hq"

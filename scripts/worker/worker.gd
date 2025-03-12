@@ -2,20 +2,6 @@
 # Path: scripts/worker/worker.gd
 extends KinematicBody2D
 
-func _ready():
-	print("DEBUG: Worker _ready() called")
-	print("DEBUG: Worker position: ", position)
-	print("DEBUG: Worker team: ", team)
-	
-	# Ensure sprite is visible
-	var sprite = $Sprite
-	if sprite:
-		print("DEBUG: Sprite found")
-		# Set a default color or texture if not set
-		sprite.modulate = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
-	else:
-		print("DEBUG: No sprite found!")
-
 # Signals
 signal building_placement_started(building_type, size)
 signal building_placement_completed(building_type, position)
@@ -55,19 +41,6 @@ var target_position: Vector2 = Vector2.ZERO
 var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
-
-# Ready function
-func _ready() -> void:
-	# Get references to managers
-	_get_manager_references()
-	
-	# Set up visual appearance
-	_setup_visuals()
-	
-	# Set up building ghost
-	_setup_building_ghost()
-	
-	print("Worker initialized for team ", team)
 
 # Process function
 func _physics_process(delta: float) -> void:
