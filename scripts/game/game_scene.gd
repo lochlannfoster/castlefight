@@ -13,11 +13,12 @@ func _ready():
 		var map_instance = map_scene.instance()
 		add_child(map_instance)
 		print("Map loaded successfully")
-		# After "Map loaded successfully" in _ready()
+		
+	# Set up camera
 	print("Setting up camera")
 	var camera = get_node_or_null("Camera2D")
 	if camera:
-	# Position camera to see the game area
+		# Position camera to see the game area
 		camera.position = Vector2(400, 300)
 		camera.current = true
 		print("Camera positioned at " + str(camera.position))
@@ -29,6 +30,17 @@ func _ready():
 		camera.current = true
 		add_child(camera)
 		print("Created new camera at " + str(camera.position))
+	
+	# Call initialization functions to set up the game
+	_initialize_game()
+	
+	# Call emergency init after a short delay to ensure everything is loaded
+	var timer = Timer.new()
+	add_child(timer)
+	timer.wait_time = 0.5
+	timer.one_shot = true
+	timer.connect("timeout", self, "_emergency_init")
+	timer.start()
 		
 	
 func _emergency_init():
@@ -36,6 +48,22 @@ func _emergency_init():
 	var game_manager = get_node_or_null("/root/GameManager")
 	if game_manager:
 		game_manager.start_game()
+		
+		# Try to directly create HQs and workers
+		print("Creating emergency game elements...")
+		
+		# Try to create HQs
+		if game_manager.building_manager:
+			for team in range(2):
+				var position = Vector2(200 + team * 400, 300)
+				var hq = game_manager.building_manager._create_headquarters_building(position, team)
+				if hq:
+					print("Successfully created emergency HQ for team " + str(team))
+				else:
+					print("Failed to create emergency HQ for team " + str(team))
+		
+		# Try to create a worker
+		_add_test_worker()
 	
 
 # Initialize the game after a short delay
@@ -147,11 +175,11 @@ func _add_test_worker():
 	print("DEBUG: Worker added to scene at " + str(worker.position))
 	
 	# Make worker stand out
-	print("Making worker visible for team " + str(team))
+	print("Making worker visible for team " + str(worker.team))
 	var sprite = worker.get_node_or_null("Sprite")
 	if sprite:
 		# Make sprite bright green or red depending on team
-		sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)  
+		sprite.modulate = Color(0, 1, 0) if worker.team == 0 else Color(1, 0, 0)  
 		sprite.scale = Vector2(2, 2)  # Make it twice as big
 	
 	# Select the worker

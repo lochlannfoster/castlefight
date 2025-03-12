@@ -76,21 +76,17 @@ func _setup_visuals() -> void:
 	if not has_node("Sprite"):
 		sprite.name = "Sprite"
 		add_child(sprite)
+
+	var texture_path = "res://assets/units/human/worker/idle.png"
+	var texture = load(texture_path)
+	if texture:
+		sprite.texture = texture
 	
 	# Set color based on team
 	if team == 0:
 		sprite.modulate = Color(0, 0, 1)  # Blue for Team A
 	else:
 		sprite.modulate = Color(1, 0, 0)  # Red for Team B
-	
-	# If no texture is set, create a placeholder
-	if not sprite.texture:
-		var image = Image.new()
-		image.create(32, 32, false, Image.FORMAT_RGBA8)
-		image.fill(Color(1, 1, 1, 1))
-		var texture = ImageTexture.new()
-		texture.create_from_image(image)
-		sprite.texture = texture
 	
 	# Create selection indicator
 	var selection_indicator = Node2D.new()
@@ -124,16 +120,35 @@ func _setup_building_ghost() -> void:
 
 # Handle input for the worker
 func _handle_input() -> void:
-	# Get input direction
-	var input_direction = Vector2.ZERO
-	if Input.is_action_pressed("ui_right"):
-		input_direction.x += 1
-	if Input.is_action_pressed("ui_left"):
-		input_direction.x -= 1
-	if Input.is_action_pressed("ui_down"):
-		input_direction.y += 1
-	if Input.is_action_pressed("ui_up"):
-		input_direction.y -= 1
+    # Get input direction
+    var input_direction = Vector2.ZERO
+    
+    # Check for arrow key input
+    if Input.is_action_pressed("ui_right"):
+        input_direction.x += 1
+    if Input.is_action_pressed("ui_left"):
+        input_direction.x -= 1
+    if Input.is_action_pressed("ui_down"):
+        input_direction.y += 1
+    if Input.is_action_pressed("ui_up"):
+        input_direction.y -= 1
+    
+    # Apply input to velocity
+    if input_direction != Vector2.ZERO:
+        is_moving_to_target = false
+        velocity = input_direction.normalized() * speed
+        print("Moving worker with velocity: " + str(velocity))
+    elif not is_moving_to_target:
+        velocity = velocity.move_toward(Vector2.ZERO, friction)
+    
+    # Building placement - left click to place
+    if is_placing_building and Input.is_action_just_pressed("select"):
+        var mouse_pos = get_global_mouse_position()
+        _try_place_building(mouse_pos)
+    
+    # Cancel building placement - right click or ESC
+    if is_placing_building and (Input.is_action_just_pressed("ui_cancel") or Input.is_mouse_button_pressed(BUTTON_RIGHT)):
+        cancel_building_placement()
 	
 	# Apply input to velocity
 	if input_direction != Vector2.ZERO:
