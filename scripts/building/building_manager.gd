@@ -150,6 +150,9 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 		push_error("Could not load HQ building scene")
 		return null
 	
+	# Create the instance
+	var hq_instance = hq_scene.instance()
+	
 	# Set up basic HQ properties
 	hq_instance.building_id = "hq"
 	hq_instance.display_name = "Headquarters"
