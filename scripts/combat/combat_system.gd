@@ -95,12 +95,6 @@ func _load_damage_tables() -> void:
 
 # Calculate damage based on attack type and armor type
 func calculate_damage(base_damage: float, attack_type: String, armor_value: float, armor_type: String) -> float:
-	# Default armor type if not recognized
-	if not damage_table.has(attack_type):
-		attack_type = "normal"
-	
-	if not damage_table[attack_type].has(armor_type):
-		armor_type = "medium"
 	
 	# Get type modifier
 	var type_modifier = damage_table[attack_type][armor_type]

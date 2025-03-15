@@ -234,15 +234,6 @@ func register_building(building) -> void:
 	# Force visibility update
 	needs_full_update = true
 
-# Simplified update visibility function - minimal implementation
-func _update_visibility() -> void:
-	# Just reveal everything for now
-	for team in range(2):
-		for x in range(map_width):
-			for y in range(map_height):
-				var cell_key = str(x) + "_" + str(y)
-				visibility_grid[team][cell_key] = 2  # Make everything visible
-	
 	# Update fog textures
 	_update_fog_textures()
 

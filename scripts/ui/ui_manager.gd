@@ -183,14 +183,6 @@ func _create_building_menu() -> void:
 	panel.rect_min_size = Vector2(400, 100)
 	building_menu.add_child(panel)
 	
-	# Create grid container for building buttons
-	var grid = GridContainer.new()
-	grid.name = "BuildingGrid"
-	grid.columns = 5
-	grid.rect_position = Vector2(10, 10)
-	grid.rect_size = Vector2(380, 80)
-	panel.add_child(grid)
-	
 	# Close button
 	var close_button = Button.new()
 	close_button.name = "CloseButton"

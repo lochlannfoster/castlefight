@@ -321,10 +321,7 @@ func _create_player_workers() -> void:
         if has_node("MapManager") and get_node("MapManager").has_method("get_team_start_position"):
             start_position = get_node("MapManager").get_team_start_position(team)
         else:
-            # Fallback positions if no map manager
-            start_position = Vector2(100 + team * 800, 300)
-        
-        worker.position = start_position
+           worker.position = start_position
         print("Spawning worker for team " + str(team) + " at " + str(start_position))
         
         # Add worker to scene
