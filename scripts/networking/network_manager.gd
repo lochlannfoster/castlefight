@@ -190,16 +190,22 @@ func start_server(server_name: String = "Castle Fight Server",
 		elif result == ERR_ALREADY_EXISTS:
 			error_message += ": Server already exists"
 			
-			print(error_message)
-			network = null
-			emit_signal("network_error", error_message)
-			return false
+		print(error_message)
+		network = null
+		emit_signal("network_error", error_message)
+		return false
 	
 	# Set network peer and update connection state
 	get_tree().network_peer = network
 	connection_state = ConnectionState.SERVER_RUNNING
 	local_player_id = 1  # Server always has ID 1
 	is_server = true  # Set is_server to true
+	
+	# Initialize players dictionary properly
+	players = {
+		0: [],  # Team A
+		1: []   # Team B
+	}
 	
 	# Initialize server player info
 	player_info[local_player_id] = {
@@ -210,7 +216,6 @@ func start_server(server_name: String = "Castle Fight Server",
 		"ping": 0
 	}
 	
-	
 	# Log server start
 	if debug_mode:
 		print("Server started on port " + str(port))
@@ -220,8 +225,8 @@ func start_server(server_name: String = "Castle Fight Server",
 
 # Client Connection Method
 func connect_to_server(ip: String, 
-					   port: int = DEFAULT_PORT, 
-					   player_name: String = "Player") -> bool:
+					 port: int = DEFAULT_PORT, 
+					 player_name: String = "Player") -> bool:
 	# Prevent multiple connection attempts
 	if network:
 		print("Already connected or server running")
@@ -245,8 +250,14 @@ func connect_to_server(ip: String,
 	
 	# Set network peer and update connection state
 	get_tree().network_peer = network
-	connection_state = ConnectionState.CONNECTING
-	is_server = false  # Set is_server to false
+	connection_state = ConnectionState.CONNECTING  # Use CONNECTING, not SERVER_RUNNING
+	is_server = false  # Client is not the server
+	
+	# Initialize players dictionary properly
+	players = {
+		0: [],  # Team A
+		1: []  # Team B
+	}
 	
 	# Store temporary player info
 	player_info[0] = {
@@ -387,19 +398,26 @@ func change_player_team(player_id: int, new_team: int) -> bool:
 	if not is_server or new_team < 0 or new_team > 1:
 		return false
 	
+	# Initialize players dictionary if needed
+	if not players.has(0):
+		players[0] = []
+	if not players.has(1):
+		players[1] = []
+	
 	# Get current team
 	var current_team = -1
-	for team in players:
-		if player_id in players[team]:
+	for team in players.keys():
+		if players[team].has(player_id):
 			current_team = team
 			break
 	
-	# Remove from current team
-	if current_team != -1:
+	# Remove from current team if already on a team
+	if current_team != -1 and players.has(current_team):
 		players[current_team].erase(player_id)
 	
 	# Add to new team
-	players[new_team].append(player_id)
+	if players.has(new_team):
+		players[new_team].append(player_id)
 	
 	# Update player info
 	if player_info.has(player_id):
@@ -456,14 +474,20 @@ remote func _request_set_player_info(player_name: String, team: int) -> void:
 		player_info[player_id]["name"] = player_name
 		player_info[player_id]["team"] = team
 		
-		# Update team assignment
-		change_player_team(player_id, team)
+		# Update team assignment - use team, not new_team
+		var _change_result = change_player_team(player_id, team)
 		
 		# Broadcast updated player list
 		rpc("_update_player_list", player_info)
 		emit_signal("player_list_changed", player_info)
 
 func _check_match_start_conditions() -> void:
+	# Ensure players dictionary has required keys
+	if not players.has(0):
+		players[0] = []
+	if not players.has(1):
+		players[1] = []
+	
 	# Ensure both teams have players and all are ready
 	var team_0_ready = _team_all_ready(0)
 	var team_1_ready = _team_all_ready(1)
@@ -478,7 +502,16 @@ func _check_match_start_conditions() -> void:
 		_prepare_match_start()
 
 func _team_all_ready(team: int) -> bool:
+	if not players.has(team):
+		print("Team " + str(team) + " does not exist")
+		return false
+		
+	if players[team].empty():
+		return true  # Empty team is considered "ready"
+	
 	for player_id in players[team]:
+		if not player_info.has(player_id):
+			continue
 		if not player_info[player_id].get("ready", false):
 			return false
 	return true
@@ -861,6 +894,12 @@ func _calculate_team_score(team: int) -> float:
 
 # Match Validity Check
 func _check_match_validity() -> void:
+	# Ensure players dictionary is properly initialized
+	if not players.has(0):
+		players[0] = []
+	if not players.has(1):
+		players[1] = []
+	
 	# End match if either team is empty
 	if players[0].empty() or players[1].empty():
 		var winning_team = 0 if players[1].empty() else 1
@@ -1524,3 +1563,30 @@ remote func _ping_response(timestamp: int) -> void:
 		
 		# Emit signal for UI updates
 		emit_signal("ping_updated", sender_id, ping_time)
+
+func start_game() -> void:
+	if not is_server or game_phase != GamePhase.PREGAME:
+		print("Cannot start game: Not server or wrong game phase")
+		return
+	
+	print("NetworkManager: Starting match")
+	start_match()
+
+func change_team(new_team: int) -> bool:
+	if not network:
+		print("Cannot change team: No active network connection")
+		return false
+	
+	if is_server:
+		var change_result = change_player_team(local_player_id, new_team)
+		return change_result  # Return the result from change_player_team
+	else:
+		rpc_id(1, "_request_change_team", new_team)
+		return true
+
+remote func _request_change_team(new_team: int) -> void:
+	if not is_server:
+		return
+	
+	var player_id = get_tree().get_rpc_sender_id()
+	var _change_result = change_player_team(player_id, new_team)

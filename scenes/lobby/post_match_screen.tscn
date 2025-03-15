@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://scenes/lobby/post_match_screen.gd" type="Script" id=1]
+
+[node name="PostMatchScreen" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+
+[node name="Background" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color( 0.121569, 0.145098, 0.188235, 1 )
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -300.0
+margin_top = -250.0
+margin_right = 300.0
+margin_bottom = 250.0
+custom_constants/separation = 20
+
+[node name="TitleLabel" type="Label" parent="VBoxContainer"]
+margin_right = 600.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 0, 50 )
+text = "MATCH RESULTS"
+align = 1
+valign = 1
+uppercase = true
+
+[node name="WinMessage" type="Label" parent="VBoxContainer"]
+margin_top = 70.0
+margin_right = 600.0
+margin_bottom = 120.0
+rect_min_size = Vector2( 0, 50 )
+text = "Team X Wins!"
+align = 1
+valign = 1
+uppercase = true
+
+[node name="StatsPanel" type="Panel" parent="VBoxContainer"]
+margin_top = 140.0
+margin_right = 600.0
+margin_bottom = 440.0
+rect_min_size = Vector2( 0, 300 )
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/StatsPanel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 20.0
+margin_top = 20.0
+margin_right = -20.0
+margin_bottom = -20.0
+custom_constants/separation = 20
+
+[node name="MatchStats" type="Label" parent="VBoxContainer/StatsPanel/VBoxContainer"]
+margin_right = 560.0
+margin_bottom = 14.0
+text = "Match Duration: 00:00"
+
+[node name="TeamAStats" type="Label" parent="VBoxContainer/StatsPanel/VBoxContainer"]
+margin_top = 34.0
+margin_right = 560.0
+margin_bottom = 48.0
+text = "Team A Statistics:"
+
+[node name="TeamBStats" type="Label" parent="VBoxContainer/StatsPanel/VBoxContainer"]
+margin_top = 68.0
+margin_right = 560.0
+margin_bottom = 82.0
+text = "Team B Statistics:"
+
+[node name="PlayerStats" type="Label" parent="VBoxContainer/StatsPanel/VBoxContainer"]
+margin_top = 102.0
+margin_right = 560.0
+margin_bottom = 116.0
+text = "Player Statistics:"
+
+[node name="ContinueButton" type="Button" parent="VBoxContainer"]
+margin_top = 460.0
+margin_right = 600.0
+margin_bottom = 510.0
+rect_min_size = Vector2( 0, 50 )
+text = "Return to Lobby"
