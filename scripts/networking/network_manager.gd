@@ -100,6 +100,9 @@ var game_manager = null
 var economy_manager = null
 var unit_factory = null
 var tech_tree_manager = null
+var ui_manager
+var map_manager
+var fog_of_war_manager
 
 # Debugging and Development
 var debug_mode: bool = false
@@ -139,6 +142,7 @@ func _initialize_game_references() -> void:
 	economy_manager = get_node_or_null("/root/EconomyManager")
 	unit_factory = get_node_or_null("/root/UnitFactory")
 	tech_tree_manager = get_node_or_null("/root/TechTreeManager")
+	ui_manager = get_node_or_null("/root/GameManager/UIManager")
 	
 	if debug_mode:
 		print("Game system references initialized")
@@ -308,10 +312,10 @@ func _on_player_disconnected(player_id: int) -> void:
 		# Remove player from teams
 		for team in players:
 			if player_id in players[team]:
-				players[team].erase(player_id)
+				var _result = players[team].erase(player_id)  # Use team instead of current_team
 		
 		# Remove player info
-		player_info.erase(player_id)
+		var _result2 = player_info.erase(player_id)  # Capture the return value
 		
 		# Update player list for all clients
 		rpc("_update_player_list", player_info)
@@ -322,7 +326,6 @@ func _on_player_disconnected(player_id: int) -> void:
 		# Check match validity
 		_check_match_validity()
 
-# Connection Success Handlers
 func _on_connected_to_server() -> void:
 	print("Successfully connected to server")
 	connection_state = ConnectionState.CONNECTED
@@ -331,7 +334,7 @@ func _on_connected_to_server() -> void:
 	# Transfer temporary player info
 	if player_info.has(0):
 		var temp_info = player_info[0]
-		player_info.erase(0)
+		var _result = player_info.erase(0)  # Changed player_id to 0
 		player_info[local_player_id] = temp_info
 	
 	emit_signal("connection_succeeded")
@@ -493,6 +496,180 @@ func _client_match_start_setup() -> void:
 	
 	# Sync initial game state
 	_sync_initial_game_state()
+
+# Spawn initial units for match start
+func _spawn_initial_match_units() -> void:
+	# Make sure unit factory and game manager exist
+	if not unit_factory or not game_manager:
+		push_error("Cannot spawn initial units: Missing unit factory or game manager")
+		return
+	
+	# Get map manager for spawn positions
+	var map_manager = game_manager.get_node_or_null("MapManager")
+	
+	# Spawn worker for local player
+	var local_team = -1
+	
+	# Get team from player info
+	if player_info.has(local_player_id):
+		local_team = player_info[local_player_id].get("team", -1)
+	
+	# Only spawn if on a valid team
+	if local_team >= 0:
+		# Get spawn position from map manager if available
+		var spawn_position
+		if map_manager and map_manager.has_method("get_team_start_position"):
+			spawn_position = map_manager.get_team_start_position(local_team)
+		else:
+			# Fallback position based on team
+			spawn_position = Vector2(100 + local_team * 800, 300)
+		
+		# Get worker scene path (could be stored in config)
+		var worker_scene_path = "res://scenes/units/worker.tscn"
+		
+		# Load worker scene 
+		var worker_scene = load(worker_scene_path)
+		if worker_scene:
+			# Instance the worker
+			var worker = worker_scene.instance()
+			
+			# Configure worker properties
+			worker.team = local_team
+			worker.position = spawn_position
+			
+			# Add to scene
+			game_manager.add_child(worker)
+			
+			# Register worker with game manager if required
+			if game_manager.has_method("register_player_worker"):
+				game_manager.register_player_worker(local_player_id, worker)
+			
+			print("Spawned initial worker for player " + str(local_player_id) + " at " + str(spawn_position))
+		else:
+			push_error("Failed to load worker scene: " + worker_scene_path)
+	else:
+		print("Player has no team assigned, not spawning worker")
+
+# Synchronize initial game state when match starts
+func _sync_initial_game_state() -> void:
+	if is_server:
+		# Server collects and broadcasts initial state
+		var initial_state = {
+			"timestamp": OS.get_ticks_msec(),
+			"match_config": match_config,
+			"resources": {},
+			"buildings": [],
+			"server_seed": server_seed
+		}
+		
+		# Collect initial resource state
+		if economy_manager:
+			for team in range(2):
+				initial_state["resources"][str(team)] = {
+					"0": economy_manager.get_resource(team, 0), # Gold
+					"1": economy_manager.get_resource(team, 1), # Wood
+					"2": economy_manager.get_resource(team, 2)  # Supply
+				}
+		
+		# Collect building state (only headquarters initially)
+		if game_manager and game_manager.headquarters:
+			for team in range(2):
+				if game_manager.headquarters.has(team) and game_manager.headquarters[team]:
+					var hq = game_manager.headquarters[team]
+					initial_state["buildings"].append(_collect_building_state(hq))
+		
+		# Broadcast to all clients
+		for player_id in player_info.keys():
+			if player_id != 1:  # Skip server
+				rpc_id(player_id, "_receive_initial_state", initial_state)
+	else:
+		# Client requests initial state
+		rpc_id(1, "_request_initial_state", local_player_id)
+		print("Requesting initial game state from server")
+	
+	# Set up a fallback timer to prevent clients from being stuck
+	# if server doesn't respond
+	var fallback_timer = Timer.new()
+	fallback_timer.one_shot = true
+	fallback_timer.wait_time = 5.0
+	fallback_timer.connect("timeout", self, "_on_sync_timeout")
+	add_child(fallback_timer)
+	fallback_timer.start()
+
+# Request handler for initial state
+remote func _request_initial_state(requester_id: int) -> void:
+	if not is_server:
+		return
+	
+	# Same as in _sync_initial_game_state, but sending only to requester
+	var initial_state = {
+		"timestamp": OS.get_ticks_msec(),
+		"match_config": match_config,
+		"resources": {},
+		"buildings": [],
+		"server_seed": server_seed
+	}
+	
+	# Collect resource state
+	if economy_manager:
+		for team in range(2):
+			initial_state["resources"][str(team)] = {
+				"0": economy_manager.get_resource(team, 0),
+				"1": economy_manager.get_resource(team, 1),
+				"2": economy_manager.get_resource(team, 2)
+			}
+	
+	# Add headquarters
+	if game_manager and game_manager.headquarters:
+		for team in range(2):
+			if game_manager.headquarters.has(team) and game_manager.headquarters[team]:
+				initial_state["buildings"].append(_collect_building_state(game_manager.headquarters[team]))
+	
+	# Send to requester
+	rpc_id(requester_id, "_receive_initial_state", initial_state)
+
+# Receiver for initial state
+remote func _receive_initial_state(state_data: Dictionary) -> void:
+	print("Received initial game state")
+	
+	# Apply server seed for deterministic randomness
+	if state_data.has("server_seed"):
+		var rng = RandomNumberGenerator.new()
+		rng.seed = state_data.server_seed
+		
+	# Apply match configuration
+	if state_data.has("match_config"):
+		match_config = state_data.match_config
+	
+	# Apply resource state
+	if state_data.has("resources") and economy_manager:
+		for team_str in state_data.resources:
+			var team = int(team_str)
+			for resource_type_str in state_data.resources[team_str]:
+				var resource_type = int(resource_type_str)
+				economy_manager.set_resource(team, resource_type, 
+										  state_data.resources[team_str][resource_type_str])
+	
+	# Apply building state
+	if state_data.has("buildings") and game_manager and game_manager.building_manager:
+		for building_data in state_data.buildings:
+			# For headquarters or other starting buildings
+			if building_data.has("type") and building_data.has("position"):
+				var position = Vector2(building_data.position.x, building_data.position.y)
+				game_manager.building_manager.place_building(
+					building_data.type, position, building_data.team
+				)
+	
+	print("Initial game state synchronized")
+
+# Fallback in case synchronization fails
+func _on_sync_timeout() -> void:
+	print("Game state sync timed out - using default state")
+	# Game will proceed with default starting state
+	# Remove the timer
+	var timer = get_node_or_null("Timer")
+	if timer:
+		timer.queue_free()
 
 # Match End Handling
 func _trigger_match_end_by_timeout() -> void:

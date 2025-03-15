@@ -50,10 +50,10 @@ var network_manager
 var map_manager
 
 # Script references for instantiation
-var GridSystemScript = preload("res://scripts/core/grid_system.gd")
-var CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
-var EconomyManagerScript = preload("res://scripts/economy/economy_manager.gd")
-var BuildingManagerScript = preload("res://scripts/building/building_manager.gd")
+var GridSystemScript = load("res://scripts/core/grid_system.gd")
+var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
+var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
+var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 
 
