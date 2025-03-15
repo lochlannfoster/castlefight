@@ -156,3 +156,6 @@ quality/driver/driver_name="GLES2"
 vram_compression/import_etc=true
 vram_compression/import_etc2=false
 environment/default_environment="res://default_env.tres"
+
+[autoload]
+DebugLogger="*res://scripts/core/debug_logger.gd"
