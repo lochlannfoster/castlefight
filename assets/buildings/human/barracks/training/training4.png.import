@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/training4.png-0cc9e8084ded03d51aa85ee20a0a32e2.stex"
+path="res://.import/training4.png-f5661df810d2f34e7ee8b2883663b8c4.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/buildings/human/barracks/training4/training4.png"
-dest_files=[ "res://.import/training4.png-0cc9e8084ded03d51aa85ee20a0a32e2.stex" ]
+source_file="res://assets/buildings/human/barracks/training/training4.png"
+dest_files=[ "res://.import/training4.png-f5661df810d2f34e7ee8b2883663b8c4.stex" ]
 
 [params]
 

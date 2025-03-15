@@ -23,23 +23,29 @@ var attack_warning_cooldown: float = 10.0  # Time between "under attack" warning
 
 # Ready function
 func _ready() -> void:
-	# Call parent ready function
-	._ready()
-	
+    # Call parent ready function
+    ._ready()
+    
+    # Verify HQ texture was loaded
+    # Access sprite through the class member variable 
+    if sprite and not sprite.texture:
+        push_error("CRITICAL: HQ texture failed to load for team " + str(team))
+        get_tree().quit()
+
 	# Set initial income bonus
-	current_income_bonus = base_income_bonus
+    current_income_bonus = base_income_bonus
 	
 	# HQ is a special building with different settings
-	building_id = "hq"
-	display_name = "Headquarters"
-	max_health = 1000.0
-	health = max_health
-	armor = 5.0
-	armor_type = "fortified"
-	size = Vector2(3, 3)
+    building_id = "hq"
+    display_name = "Headquarters"
+    max_health = 1000.0
+    health = max_health
+    armor = 5.0
+    armor_type = "fortified"
+    size = Vector2(3, 3)
 	
 	# Immediately grant income bonus when constructed
-	_apply_income_bonus()
+    _apply_income_bonus()
 
 # Process function
 func _process(delta: float) -> void:

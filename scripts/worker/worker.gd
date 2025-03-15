@@ -89,10 +89,13 @@ func _setup_visuals() -> void:
 		sprite.name = "Sprite"
 		add_child(sprite)
 
-	var texture_path = "res://assets/units/human/worker/idle.png"
+	var texture_path = "res://assets/units/human/worker/idle/idle.png"
 	var texture = load(texture_path)
 	if texture:
 		sprite.texture = texture
+	else:
+		push_error("CRITICAL: Failed to load worker texture: " + texture_path)
+		get_tree().quit()  # Force quit the game if texture can't be loaded
 	
 	# Set color based on team
 	if team == 0:

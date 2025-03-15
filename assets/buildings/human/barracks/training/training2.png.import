@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/training2.png-2a27739292c8c762ac30c650cf14e960.stex"
+path="res://.import/training2.png-6f49d93d6d88310e7245d7a2b2e6f48c.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/buildings/human/barracks/training2/training2.png"
-dest_files=[ "res://.import/training2.png-2a27739292c8c762ac30c650cf14e960.stex" ]
+source_file="res://assets/buildings/human/barracks/training/training2.png"
+dest_files=[ "res://.import/training2.png-6f49d93d6d88310e7245d7a2b2e6f48c.stex" ]
 
 [params]
 

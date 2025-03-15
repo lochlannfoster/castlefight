@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/construction1.png-5e7cf76b84047b1d8d5298e819ba227a.stex"
+path="res://.import/construction1.png-be505f3758f2850c335c4275e385296d.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/buildings/human/barracks/construction1/construction1.png"
-dest_files=[ "res://.import/construction1.png-5e7cf76b84047b1d8d5298e819ba227a.stex" ]
+source_file="res://assets/buildings/human/barracks/construction/construction1.png"
+dest_files=[ "res://.import/construction1.png-be505f3758f2850c335c4275e385296d.stex" ]
 
 [params]
 

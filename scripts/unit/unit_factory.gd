@@ -96,10 +96,17 @@ func create_unit(unit_type: String, position: Vector2, team: int):
 	unit.position = position
 	
 	# Add to scene
+# Add to scene
 	var scene = get_tree().current_scene
 	if scene:
 		scene.add_child(unit)
-	
+		
+	# Verify sprite has texture
+	var sprite = unit.get_node_or_null("Sprite")
+	if sprite and not sprite.texture:
+		push_error("CRITICAL: Unit texture failed to load for " + unit_type)
+		get_tree().quit()
+		
 	print("Created unit: " + unit_type)
 	emit_signal("unit_created", unit, unit_type, team)
 	
