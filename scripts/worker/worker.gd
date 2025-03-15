@@ -93,15 +93,7 @@ func _setup_visuals() -> void:
     var texture = load(texture_path)
     if texture:
         sprite.texture = texture
-    else:
-        push_error("Failed to load worker texture: " + texture_path)
-        # Create a simple colored rectangle as visual indicator
-        var placeholder = ColorRect.new()
-        placeholder.rect_size = Vector2(32, 32)
-        placeholder.rect_position = Vector2(-16, -16)
-        placeholder.color = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
-        sprite.add_child(placeholder)
-        
+
     # Set color based on team
     if team == 0:
         sprite.modulate = Color(0, 0, 1)  # Blue for Team A

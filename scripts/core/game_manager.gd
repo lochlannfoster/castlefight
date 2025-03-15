@@ -369,14 +369,6 @@ func _create_starting_buildings() -> void:
         
         print("Team territories initialized")
     
-        var hq_positions = []
-    if map_manager and map_manager.has_method("get_team_hq_position"):
-        for team in range(2):
-            hq_positions.append(map_manager.get_team_hq_position(team))
-    else:
-        push_error("Map manager not available for HQ positioning")
-        return
-
     for team in range(2):
         var hq_position = hq_positions[team]
         print("Attempting to create HQ at " + str(hq_position) + " for team " + str(team))

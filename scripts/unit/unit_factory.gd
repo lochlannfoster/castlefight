@@ -63,21 +63,6 @@ func create_unit(unit_type: String, position: Vector2, team: int):
 	# Get unit data
 	var data = unit_data[unit_type]
 	
-	# Set basic properties
-	unit.unit_id = unit_type
-	unit.display_name = data.display_name if data.has("display_name") else unit_type
-	unit.team = team
-	
-	# Add a sprite
-	var unit_sprite = Sprite.new()
-	unit_sprite.name = "Sprite"
-	
-	# Set color based on team
-	if team == 0:
-		unit_sprite.modulate = Color(0, 0, 1)  # Blue for Team A
-	else:
-		unit_sprite.modulate = Color(1, 0, 0)  # Red for Team B
-	
 	unit.add_child(unit_sprite)
 	
 	# Add collision
