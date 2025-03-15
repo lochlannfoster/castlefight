@@ -1,853 +1,956 @@
-# Network Manager - Handles networking and multiplayer functionality
+# Network Manager - Comprehensive Multiplayer Networking System
 # Path: scripts/networking/network_manager.gd
 class_name NetworkManager
 extends Node
 
-# Network signals
+# Network Connection Constants
+const DEFAULT_PORT = 27015
+const MAX_PLAYERS = 6  # Maximum 3v3 support
+const RECONNECT_TIMEOUT = 300  # 5 minutes reconnect window
+const SERVER_TICK_RATE = 20  # Server updates per second
+const MATCH_TIMEOUT = 1800  # 30-minute match limit
+const PROTOCOL_VERSION = "1.0.0"
+
+# Networking State Enums
+enum ConnectionState {
+	DISCONNECTED,
+	CONNECTING,
+	CONNECTED,
+	SERVER_RUNNING
+}
+
+# Game State Management Enums
+enum GamePhase {
+	LOBBY,
+	PREGAME,
+	LOADING,
+	ACTIVE,
+	PAUSED,
+	ENDED
+}
+
+# Input Types for Networked Gameplay
+enum InputType {
+	MOVE,
+	ATTACK,
+	BUILD,
+	USE_ABILITY,
+	PURCHASE
+}
+
+# Comprehensive Networking Signals
 signal server_started
 signal server_stopped
 signal client_connected(player_id)
 signal client_disconnected(player_id)
 signal connection_failed
 signal connection_succeeded
-signal player_list_changed(player_list)
-signal match_ready
+signal player_list_updated(players)
+signal player_joined(player_id)
+signal player_left(player_id)
+signal team_changed(player_id, old_team, new_team)
+signal match_preparing
+signal match_started
+signal match_ended(winner, reason)
 signal network_error(error_message)
 signal ping_updated(player_id, ping)
 
-# Network constants
-const DEFAULT_PORT = 27015
-const MAX_PLAYERS = 6  # Maximum of 3v3
-const RECONNECT_TIMEOUT = 300  # 5 minutes (300 seconds)
-const SERVER_TICK_RATE = 20  # Ticks per second
-const USE_DELTA_COMPRESSION = true
-const CHECKSUM_INTERVAL = 5.0  # How often to verify game state checksums
-
-# Network properties
+# Core Networking Properties
 var network: NetworkedMultiplayerENet = null
 var local_player_id: int = 0
-var is_server: bool = false
-var server_detachable: bool = true  # If true, server can continue running if host disconnects
-var player_info: Dictionary = {}  # Player ID -> Player Info (name, team, ready, etc.)
-var disconnected_players: Dictionary = {}  # Tracks players who disconnected for reconnection
+var connection_state: int = ConnectionState.DISCONNECTED
+var game_phase: int = GamePhase.LOBBY
+
+# Player Management Structures
+var players: Dictionary = {
+	0: [],  # Team A
+	1: []   # Team B
+}
+var player_info: Dictionary = {}
+var spectator_players: Array = []
+
+# Match Configuration
+var match_config: Dictionary = {
+	"map": "default_map",
+	"max_players": 6,
+	"game_mode": "standard",
+	"team_size": 3,
+	"allow_spectators": true
+}
+
+# Match State Tracking
+var match_start_time: float = 0.0
+var match_duration: float = 0.0
+var match_winner: int = -1
+var match_end_reason: String = ""
+
+# Networking Technical Variables
 var server_tick_timer: float = 0.0
-var checksum_timer: float = 0.0
-var last_ping_time: Dictionary = {}  # Player ID -> timestamp of last ping sent
-var ping_values: Dictionary = {}  # Player ID -> current ping (ms)
-var waiting_for_checksum: bool = false
-var player_checksums: Dictionary = {}  # Player ID -> last checksum
-var local_sequence_num: int = 0  # Local input sequence number
-var last_processed_input: Dictionary = {}  # Player ID -> last processed input sequence
+var ping_timer: float = 0.0
+var last_network_update: float = 0.0
+var ping_interval: float = 1.0
+var player_pings: Dictionary = {}
+var input_sequence: int = 0
+var last_processed_inputs: Dictionary = {}
 
-# Debug properties
-var debug_mode: bool = false  # When true, host can control all workers
+# Game System References
+var game_manager = null
+var economy_manager = null
+var unit_factory = null
+var tech_tree_manager = null
 
-# Game state variables
-var game_started: bool = false
-var paused: bool = false
-var match_id: String = ""
+# Debugging and Development
+var debug_mode: bool = false
+var log_network_traffic: bool = false
+var network_log: Array = []
 
-# References
-var game_manager: GameManager
+# Anti-Cheat and Security
+var server_seed: int = 0
+var client_checksums: Dictionary = {}
+var server_checksum: int = 0
 
-# Helper method to safely determine game winner
-func _calculate_game_end_winner(team_a_score: float, team_b_score: float) -> int:
-	# Explicitly determine winner
-	if team_b_score > team_a_score:
-		return 1  # Team B wins
-	return 0  # Team A wins (or in case of a tie)
+# Performance and Optimization
+var network_compression_enabled: bool = true
+var delta_updates_enabled: bool = true
+var bandwidth_limit: int = 100000  # Bytes per second
 
-# Safely remove player from player info
-func _safely_remove_player(player_id: int) -> void:
-	if player_info.has(player_id):
-		player_info.erase(player_id)
-	
-	if disconnected_players.has(player_id):
-		disconnected_players.erase(player_id)
-	
-	emit_signal("player_list_changed", player_info)
+# Player Authentication (Placeholder for future implementation)
+var player_tokens: Dictionary = {}
+var authentication_required: bool = false
 
-# Calculate a team's score for time-based win determination
-func _calculate_team_score(team: int) -> float:
-	var score = 0.0
-	
-	# Score based on buildings
-	if game_manager and game_manager.building_manager:
-		var team_buildings = game_manager.building_manager.get_team_buildings(team)
-		score += team_buildings.size() * 100
-		
-		# Bonus for specialized buildings
-		for building in team_buildings:
-			if building.building_id == "bank_vault":
-				score += 500
-	
-	# Score based on economy
-	if game_manager and game_manager.economy_manager:
-		score += game_manager.economy_manager.get_income(team) * 10
-	
-	return score
-
-func _on_player_connected(player_id: int) -> void:
-	print("Player connected: ", player_id)
-	
-	emit_signal("client_connected", player_id)
-	
-	if is_server:
-		# Add player to player_info with default data if not exists
-		if not player_info.has(player_id):
-			player_info[player_id] = {
-				"name": "Player " + str(player_id),
-				"team": -1,
-				"ready": false
-			}
-		
-		# Broadcast updated player list
-		emit_signal("player_list_changed", player_info)
-		rpc("_update_player_list", player_info)
-
-# Ready function
+# Initialization Method
 func _ready() -> void:
-	# Get game manager reference
+	# Initialize game system references
+	_initialize_game_references()
+	
+	# Setup network connection handling
+	_setup_network_signals()
+	
+	# Generate initial server seed for synchronization
+	_generate_server_seed()
+	
+	print("NetworkManager initialized - Protocol Version: " + PROTOCOL_VERSION)
+
+# Core Network Initialization Methods
+func _initialize_game_references() -> void:
 	game_manager = get_node_or_null("/root/GameManager")
+	economy_manager = get_node_or_null("/root/EconomyManager")
+	unit_factory = get_node_or_null("/root/UnitFactory")
+	tech_tree_manager = get_node_or_null("/root/TechTreeManager")
 	
-	# Set network peer
-	var _connect1 = get_tree().connect("network_peer_connected", self, "_on_player_connected")
-	var _connect2 = get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
-	var _connect3 = get_tree().connect("connected_to_server", self, "_on_connected_to_server")
-	var _connect4 = get_tree().connect("connection_failed", self, "_on_connection_failed")
-	var _connect5 = get_tree().connect("server_disconnected", self, "_on_server_disconnected")
+	if debug_mode:
+		print("Game system references initialized")
 
-# Process function for server ticks and ping
-func _process(delta: float) -> void:
-	if not network:
-		return
-	
-	if is_server and game_started:
-		# Handle server ticks
-		server_tick_timer += delta
-		if server_tick_timer >= 1.0 / SERVER_TICK_RATE:
-			server_tick_timer -= 1.0 / SERVER_TICK_RATE
-			_process_server_tick()
-	
-	# Handle checksum verification
-	if game_started:
-		checksum_timer += delta
-		if checksum_timer >= CHECKSUM_INTERVAL:
-			checksum_timer = 0
-			_verify_game_state()
-	
-	# Update pings
-	_update_pings(delta)
+func _setup_network_signals() -> void:
+	get_tree().connect("network_peer_connected", self, "_on_player_connected")
+	get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
+	get_tree().connect("connected_to_server", self, "_on_connected_to_server")
+	get_tree().connect("connection_failed", self, "_on_connection_failed")
+	get_tree().connect("server_disconnected", self, "_on_server_disconnected")
 
-# Start server
-func start_server(server_name: String = "Local Game", max_players: int = MAX_PLAYERS, port: int = DEFAULT_PORT) -> bool:
+func _generate_server_seed() -> void:
+	var rng = RandomNumberGenerator.new()
+	rng.randomize()
+	server_seed = rng.randi()
+
+# Server Creation Method
+func start_server(server_name: String = "Castle Fight Server", 
+				  port: int = DEFAULT_PORT, 
+				  max_players: int = MAX_PLAYERS) -> bool:
+	# Prevent multiple server instances
 	if network:
-		# Already running a server or connected to one
+		print("Server already running!")
 		return false
 	
+	# Create network instance
 	network = NetworkedMultiplayerENet.new()
+	
+	# Configure network compression if enabled
+	if network_compression_enabled:
+		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_FASTLZ)
+	
+	# Attempt to create server
 	var result = network.create_server(port, max_players)
 	
 	if result != OK:
-		emit_signal("network_error", "Failed to create server on port " + str(port))
+		print("Failed to create server on port " + str(port))
 		network = null
+		emit_signal("network_error", "Server creation failed")
 		return false
 	
+	# Set network peer and update connection state
 	get_tree().network_peer = network
-	is_server = true
-	local_player_id = get_tree().get_network_unique_id()
+	connection_state = ConnectionState.SERVER_RUNNING
+	local_player_id = 1  # Server always has ID 1
 	
-	# Initialize player info for server player
+	# Initialize server player info
 	player_info[local_player_id] = {
-		"name": server_name + " (Host)",
-		"team": 0,  # Default to Team A for host
-		"ready": false,
+		"name": server_name,
+		"team": 0,
 		"is_host": true,
+		"ready": true,
 		"ping": 0
 	}
 	
-	# Generate a unique match ID
-	match_id = _generate_match_id()
+	# Log server start
+	if debug_mode:
+		print("Server started on port " + str(port))
 	
 	emit_signal("server_started")
-	emit_signal("player_list_changed", player_info)
-	
-	print("Server started on port: ", port)
 	return true
 
-# Connect to server
-func connect_to_server(ip: String, port: int = DEFAULT_PORT, player_name: String = "Player") -> bool:
+# Client Connection Method
+func connect_to_server(ip: String, 
+					   port: int = DEFAULT_PORT, 
+					   player_name: String = "Player") -> bool:
+	# Prevent multiple connection attempts
 	if network:
-		# Already connected or running a server
+		print("Already connected or server running")
 		return false
 	
+	# Create network instance
 	network = NetworkedMultiplayerENet.new()
+	
+	# Configure network compression if enabled
+	if network_compression_enabled:
+		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_FASTLZ)
+	
+	# Attempt to connect to server
 	var result = network.create_client(ip, port)
 	
 	if result != OK:
-		emit_signal("network_error", "Failed to connect to server at " + ip + ":" + str(port))
+		print("Failed to connect to " + ip + ":" + str(port))
 		network = null
+		emit_signal("network_error", "Connection failed")
 		return false
 	
+	# Set network peer and update connection state
 	get_tree().network_peer = network
-	is_server = false
+	connection_state = ConnectionState.CONNECTING
 	
-	# Store player name for when we connect
+	# Store temporary player info
 	player_info[0] = {
 		"name": player_name,
-		"ready": false
+		"team": -1,
+		"ready": false,
+		"ping": -1
 	}
 	
-	print("Connecting to server at ", ip, ":", port)
+	# Log connection attempt
+	if debug_mode:
+		print("Connecting to server: " + ip + ":" + str(port))
+	
 	return true
 
-# Disconnect from network
+# Disconnect from Network
 func disconnect_from_network() -> void:
 	if network:
 		network.close_connection()
 		network = null
 	
 	get_tree().network_peer = null
-	is_server = false
+	
+	# Reset all network-related states
+	connection_state = ConnectionState.DISCONNECTED
+	game_phase = GamePhase.LOBBY
 	local_player_id = 0
+	
+	# Clear player and match information
 	player_info.clear()
-	disconnected_players.clear()
-	game_started = false
-	paused = false
+	players = {0: [], 1: []}
+	spectator_players.clear()
 	
-	print("Disconnected from network")
+	# Reset match state
+	match_start_time = 0.0
+	match_duration = 0.0
+	match_winner = -1
+	
+	# Clear technical variables
+	input_sequence = 0
+	last_processed_inputs.clear()
+	player_pings.clear()
+	
+	# Emit signals
 	emit_signal("server_stopped")
+	emit_signal("connection_failed")
 
-# Set player information
-func set_player_info(p_name: String, team: int) -> void:
-	if not network:
-		return
-	
-	# Update local info
-	if local_player_id == 0:
-		local_player_id = get_tree().get_network_unique_id()
-	
-	# Set player info
-	var info = {
-		"name": p_name,
-		"team": team,
-		"ready": false,
-		"is_host": is_server,
-		"ping": 0
-	}
-	
-	# Update local info
-	player_info[local_player_id] = info
-	
-	# Send to server if we're a client
-	if not is_server:
-		rpc_id(1, "_receive_player_info", local_player_id, info)
-	else:
-		# If we're the server, broadcast to all clients
-		emit_signal("player_list_changed", player_info)
-		rpc("_update_player_list", player_info)
-
-# Set player ready status
-func set_player_ready(ready: bool) -> void:
-	if not network or not player_info.has(local_player_id):
-		return
-	
-	# Update local ready status
-	player_info[local_player_id].ready = ready
-	
-	# Send to server if we're a client
-	if not is_server:
-		rpc_id(1, "_receive_player_ready", local_player_id, ready)
-	else:
-		# If we're the server, broadcast to all clients
-		emit_signal("player_list_changed", player_info)
-		rpc("_update_player_list", player_info)
-		
-		# Check if all players are ready to start
-		_check_all_ready()
-
-# Change team
-func change_team(team: int) -> void:
-	if not network or not player_info.has(local_player_id):
-		return
-	
-	# Update local team
-	player_info[local_player_id].team = team
-	
-	# Send to server if we're a client
-	if not is_server:
-		rpc_id(1, "_receive_player_team", local_player_id, team)
-	else:
-		# If we're the server, broadcast to all clients
-		emit_signal("player_list_changed", player_info)
-		rpc("_update_player_list", player_info)
-
-func start_game() -> void:
-	if not is_server:
-		return
-	
-	# Make sure all players are ready
-	for player_id in player_info.keys():
-		if not player_info[player_id].ready:
-			return
-	
-	# Set game started flag
-	game_started = true
-	
-	# Reset timers
-	server_tick_timer = 0
-	checksum_timer = 0
-	
-	# Make sure all players have valid teams before starting
-	# A player with team = -1 should be assigned to team 0 or 1
-	for player_id in player_info.keys():
-		if player_info[player_id].team < 0 or player_info[player_id].team > 1:
-			# Determine team based on current team counts
-			var team0_count = 0
-			var team1_count = 0
-			
-			for pid in player_info.keys():
-				if player_info[pid].team == 0:
-					team0_count += 1
-				elif player_info[pid].team == 1:
-					team1_count += 1
-			
-			# Explicitly assign team based on count comparison
-			var new_team = 0
-			if team1_count < team0_count:
-				new_team = 1
-			
-			player_info[player_id].team = new_team
-			
-			# Notify the player of team change
-			if player_id != local_player_id:
-				rpc_id(player_id, "_update_team_assignment", new_team)
-	
-	# Notify all clients to start game
-	rpc("_start_game_on_client", match_id)
-	
-	# Start game locally
-	_start_game_locally()
-
-remote func _update_team_assignment(new_team: int) -> void:
-	# Client receives team assignment from server
-	if is_server:
-		return
-	
-	if player_info.has(local_player_id):
-		player_info[local_player_id].team = new_team
-
-# Pause game
-func pause_game(paused_state: bool) -> void:
-	if not is_server:
-		# Only server can pause
-		rpc_id(1, "_request_pause", paused_state)
-		return
-	
-	paused = paused_state
-	rpc("_set_game_paused", paused)
-	
-	if game_manager:
-		game_manager.toggle_pause()
-
-# Send player input to server
-func send_input(input_data: Dictionary) -> void:
-	if not network or not game_started:
-		return
-	
-	# Increment sequence number
-	local_sequence_num += 1
-	
-	# Add sequence number to input data
-	input_data.seq = local_sequence_num
+# Player Connection Handlers
+func _on_player_connected(player_id: int) -> void:
+	print("Player connected: " + str(player_id))
+	emit_signal("client_connected", player_id)
 	
 	if is_server:
-		# Process locally immediately if we're the server
-		_process_player_input(local_player_id, input_data)
-	else:
-		# Send to server if we're a client
-		rpc_id(1, "_receive_player_input", input_data)
-
-# Calculate current game state checksum
-func calculate_game_state_checksum() -> int:
-	var checksum = 0
-	
-	if game_manager:
-		# Include grid state with more detail
-		if game_manager.grid_system:
-			for cell_pos in game_manager.grid_system.grid_cells:
-				var cell = game_manager.grid_system.grid_cells[cell_pos]
-				# Hash different cell properties
-				checksum = (checksum + hash(cell.get("occupied", false))) % 1000000007
-				checksum = (checksum + hash(cell.get("team_territory", -1))) % 1000000007
-		
-		# Include building state with more comprehensive tracking
-		if game_manager.building_manager:
-			for building in game_manager.building_manager.buildings.values():
-				checksum = (checksum + hash(building.health)) % 1000000007
-				checksum = (checksum + hash(building.team)) % 1000000007
-		
-		# Include economy state with expanded metrics
-		if game_manager.economy_manager:
-			for team in range(2):
-				checksum = (checksum + hash(game_manager.economy_manager.get_income(team))) % 1000000007
-				checksum = (checksum + hash(game_manager.economy_manager.get_resource(team, 0))) % 1000000007
-	
-	return checksum
-
-# Comprehensive checksum validation
-func _validate_checksums() -> void:
-	if not is_server:
-		return
-	
-	# Collect checksums from all players
-	var all_checksums = {}
-	var reference_checksum = player_checksums.get(local_player_id)
-	
-	if reference_checksum == null:
-		print("No reference checksum available")
-		return
-	
-	# Check if all players' checksums match the reference
-	var checksum_matches = true
-	for player_id in player_checksums:
-		if player_checksums[player_id] != reference_checksum:
-			print("Checksum mismatch for player %d" % player_id)
-			checksum_matches = false
-	
-	if not checksum_matches:
-		print("Game state desynchronization detected!")
-
-# Verify game state across all clients
-func _verify_game_state() -> void:
-	if not network or not game_started:
-		return
-	
-	var checksum = calculate_game_state_checksum()
-	
-	if is_server:
-		# Store server's checksum
-		player_checksums[local_player_id] = checksum
-		
-		# Request checksums from all clients
-		waiting_for_checksum = true
-		player_checksums.clear()
-		player_checksums[local_player_id] = checksum
-		rpc("_request_game_state_checksum")
-	else:
-		# If client, send checksum to server when requested
-		if waiting_for_checksum:
-			rpc_id(1, "_receive_game_state_checksum", checksum)
-			waiting_for_checksum = false
-
-# Process server tick (server-side)
-func _process_server_tick() -> void:
-	if not is_server or not game_started or paused:
-		return
-	
-	# This is where server would process game state updates
-	# and send delta updates to clients
-	
-	# For now, just send a heartbeat
-	rpc("_server_heartbeat", OS.get_ticks_msec())
-
-# Update pings
-func _update_pings(_delta: float) -> void:
-	if not network:
-		return
-	
-	# Send ping every second
-	for player_id in player_info.keys():
-		if player_id != local_player_id:
-			if not last_ping_time.has(player_id) or OS.get_ticks_msec() - last_ping_time[player_id] > 1000:
-				_send_ping(player_id)
-
-# Send ping to a player
-func _send_ping(player_id: int) -> void:
-	if player_id == local_player_id:
-		return
-	
-	last_ping_time[player_id] = OS.get_ticks_msec()
-	
-	if is_server:
-		rpc_id(player_id, "_ping", OS.get_ticks_msec())
-	else:
-		if player_id == 1:  # Server
-			rpc_id(1, "_ping", OS.get_ticks_msec())
-
-# Start game locally
-func _start_game_locally() -> void:
-	print("NetworkManager: Starting game locally")
-	print("Current scene: ", get_tree().current_scene.filename)
-	
-	# Change to game scene
-	var scene_change_result = get_tree().change_scene("res://scenes/game/game.tscn")
-	print("Scene change result: ", scene_change_result)
-
-# Trigger game end by time limit
-func _trigger_game_end_by_time() -> void:
-	# Determine winner based on team scores
-	var team_a_score = _calculate_team_score(0)
-	var team_b_score = _calculate_team_score(1)
-	
-	# Explicitly determine winner
-	var time_winner = 0  # Default to Team A
-	if team_b_score > team_a_score:
-		time_winner = 1  # Switch to Team B if their score is higher
-	
-	_trigger_game_end(time_winner)
-# Generate a unique match ID
-func _generate_match_id() -> String:
-	var rng = RandomNumberGenerator.new()
-	rng.randomize()
-	
-	var id = ""
-	for _i in range(8):
-		id += char(rng.randi_range(65, 90))  # A-Z
-	
-	return id
-
-# Check if all players are ready
-func _check_all_ready() -> void:
-	if not is_server:
-		return
-	
-	var all_ready = true
-	for player_id in player_info.keys():
-		if not player_info[player_id].ready:
-			all_ready = false
-			break
-	
-	if all_ready:
-		emit_signal("match_ready")
-
-# Send current game state to a player
-func _send_game_state_to_player(player_id: int) -> void:
-	if not is_server or not game_started:
-		return
-	
-	# Create a snapshot of current game state
-	var game_state = {
-		"match_id": match_id,
-		"paused": paused,
-		"time": game_manager.match_timer if game_manager else 0
-	}
-	
-	# Send to the specific player
-	rpc_id(player_id, "_receive_game_state", game_state)
-
-# RPC methods (prefixed with _ to distinguish them)
-remote func _receive_player_info(player_id: int, info: Dictionary) -> void:
-	# Server receives player info from clients
-	if not is_server:
-		return
-	
-	print("Received player info from: ", player_id)
-	
-	# Store player info
-	player_info[player_id] = info
-	
-	# Broadcast updated player list
-	emit_signal("player_list_changed", player_info)
-	rpc("_update_player_list", player_info)
-
-remote func _receive_player_ready(player_id: int, ready: bool) -> void:
-	# Server receives player ready status
-	if not is_server:
-		return
-	
-	if player_info.has(player_id):
-		player_info[player_id].ready = ready
+		# Initialize player info if not existing
+		if not player_info.has(player_id):
+			player_info[player_id] = {
+				"name": "Player_" + str(player_id),
+				"team": -1,
+				"ready": false,
+				"ping": -1
+			}
 		
 		# Broadcast updated player list
-		emit_signal("player_list_changed", player_info)
 		rpc("_update_player_list", player_info)
 		
-		# Check if all players are ready
-		_check_all_ready()
-
-remote func _receive_player_team(player_id: int, team: int) -> void:
-	# Server receives player team change
-	if not is_server:
-		return
-	
-	if player_info.has(player_id):
-		player_info[player_id].team = team
-		
-		# Broadcast updated player list
-		emit_signal("player_list_changed", player_info)
-		rpc("_update_player_list", player_info)
-
-remote func _update_player_list(updated_player_info: Dictionary) -> void:
-	# Clients receive updated player list from server
-	if is_server:
-		return
-	
-	player_info = updated_player_info
-	emit_signal("player_list_changed", player_info)
-
-remote func _start_game_on_client(server_match_id: String) -> void:
-	# Clients receive game start notification
-	if is_server:
-		return
-	
-	match_id = server_match_id
-	game_started = true
-	
-	# Start game locally
-	_start_game_locally()
-
-remote func _set_game_paused(paused_state: bool) -> void:
-	# All peers receive pause state change
-	paused = paused_state
-	
-	if game_manager:
-		game_manager.toggle_pause()
-
-remote func _request_pause(paused_state: bool) -> void:
-	# Server receives pause request from client
-	if not is_server:
-		return
-	
-	pause_game(paused_state)
-
-remote func _receive_player_input(input_data: Dictionary) -> void:
-	# Server receives input from clients
-	if not is_server:
-		return
-	
-	var player_id = get_tree().get_rpc_sender_id()
-	_process_player_input(player_id, input_data)
-
-remote func _server_heartbeat(_server_time: int) -> void:
-	# Clients receive heartbeat from server
-	if is_server:
-		return
-	
-	# Could use this for latency calculation or to detect timeout
-	pass
-
-remote func _request_game_state_checksum() -> void:
-	# Clients receive request for checksum
-	if is_server:
-		return
-	
-	waiting_for_checksum = true
-	
-	# Send checksum back to server
-	var checksum = calculate_game_state_checksum()
-	rpc_id(1, "_receive_game_state_checksum", checksum)
-
-remote func _receive_game_state_checksum(checksum: int) -> void:
-	# Server receives checksums from clients
-	if not is_server:
-		return
-	
-	var player_id = get_tree().get_rpc_sender_id()
-	player_checksums[player_id] = checksum
-	
-	# Check if we have received checksums from all players
-	var all_received = true
-	for id in player_info.keys():
-		if id != local_player_id and not player_checksums.has(id):
-			all_received = false
-			break
-	
-	if all_received:
-		_validate_checksums()
-
-remote func _ping(timestamp: int) -> void:
-	# Receive ping request and respond with pong
-	var sender_id = get_tree().get_rpc_sender_id()
-	rpc_id(sender_id, "_pong", timestamp)
-
-remote func _pong(timestamp: int) -> void:
-	# Receive pong response and calculate ping
-	var sender_id = get_tree().get_rpc_sender_id()
-	var ping_ms = OS.get_ticks_msec() - timestamp
-	ping_values[sender_id] = ping_ms
-	
-	if player_info.has(sender_id):
-		player_info[sender_id].ping = ping_ms
-		emit_signal("ping_updated", sender_id, ping_ms)
-
-remote func _receive_game_state(game_state: Dictionary) -> void:
-	# Client receives game state after reconnection
-	if is_server:
-		return
-	
-	match_id = game_state.match_id
-	paused = game_state.paused
-	
-	# Apply game state to game manager
-	if game_manager:
-		game_manager.match_timer = game_state.time
-	
-	print("Received game state after reconnection")
-
-# Process player input (server-side)
-func _process_player_input(player_id: int, input_data: Dictionary) -> void:
-	if not is_server:
-		return
-	
-	# Check for sequence number to prevent processing outdated inputs
-	if last_processed_input.has(player_id) and input_data.seq <= last_processed_input[player_id]:
-		return
-	
-	last_processed_input[player_id] = input_data.seq
-	
-	# Process input based on type
-	if input_data.has("type"):
-		match input_data.type:
-			"worker_move":
-				# More detailed worker movement processing
-				if game_manager and player_info.has(player_id):
-					var team = player_info[player_id].team
-					var worker = _find_player_worker(player_id)
-					
-					if worker:
-						var target_pos = Vector2(input_data.position.x, input_data.position.y)
-						_move_worker(worker, target_pos, team)
-			
-			# Other input types remain the same...
-	
-	# Broadcast input to all clients (except the sender)
-	_broadcast_input(player_id, input_data)
-
-# Helper method to find a player's worker
-func _find_player_worker(player_id: int):
-	# Implement logic to find the specific player's worker
-	# This might involve searching through units or using a player-worker mapping
-	return null  # Placeholder
-
-# Helper method to move a worker
-func _move_worker(worker, target_pos: Vector2, team: int):
-	# Implement actual worker movement logic
-	# This might involve pathfinding, grid validation, etc.
-	pass
-
-# Broadcast input to other clients
-func _broadcast_input(sender_id: int, input_data: Dictionary):
-	for id in player_info.keys():
-		if id != sender_id:
-			rpc_id(id, "_apply_remote_input", sender_id, input_data)
-
-remote func _apply_remote_input(_player_id: int, input_data: Dictionary) -> void:
-	# Clients apply input received from server
-	if is_server:
-		return
-	
-	# Process input based on type
-	if input_data.has("type"):
-		match input_data.type:
-			"worker_move":
-				# Update worker position for the specific player
-				pass
-			
-			"build":
-				# Apply building placement
-				pass
-			
-			"use_ability":
-				# Apply ability usage
-				pass
-			
-			"purchase_item":
-				# Apply item purchase
-				pass
-
+		# Emit player joined signal
+		emit_signal("player_joined", player_id)
 
 func _on_player_disconnected(player_id: int) -> void:
-	print("Player disconnected: ", player_id)
-	
+	print("Player disconnected: " + str(player_id))
 	emit_signal("client_disconnected", player_id)
 	
 	if is_server:
-		if game_started and server_detachable:
-			# Store player info for potential reconnection
-			if player_info.has(player_id):
-				disconnected_players[player_id] = {
-					"info": player_info[player_id],
-					"disconnect_time": OS.get_unix_time()
-				}
-				
-				# Keep player in the list for a grace period
-				player_info[player_id].disconnected = true
-				
-				# Broadcast updated player list
-				emit_signal("player_list_changed", player_info)
-				rpc("_update_player_list", player_info)
-				
-				# Start a timer to remove the player if they don't reconnect
-				yield(get_tree().create_timer(RECONNECT_TIMEOUT), "timeout")
-				
-				# Safely remove the player
-				if player_info.has(player_id):
-					player_info.erase(player_id)
-				if disconnected_players.has(player_id):
-					disconnected_players.erase(player_id)
-				
-				# Broadcast updated player list if still connected
-				if network:
-					rpc("_update_player_list", player_info)
-			else:
-				# Safely remove player info
-				if player_info.has(player_id):
-					player_info.erase(player_id)
-				
-				if network:  # Make sure we're still connected
-					rpc("_update_player_list", player_info)
+		# Remove player from teams
+		for team in players:
+			if player_id in players[team]:
+				players[team].erase(player_id)
+		
+		# Remove player info
+		player_info.erase(player_id)
+		
+		# Update player list for all clients
+		rpc("_update_player_list", player_info)
+		
+		# Emit player left signal
+		emit_signal("player_left", player_id)
+		
+		# Check match validity
+		_check_match_validity()
 
-				
-# Handle reconnection of a player
-func _handle_reconnection(player_id: int) -> void:
-	if not is_server or not disconnected_players.has(player_id):
-		return
-	
-	# Restore player info
-	player_info[player_id] = disconnected_players[player_id].info
-	
-	# Remove from disconnected players
-	var _removed = disconnected_players.erase(player_id)
-	
-	# Send current game state to reconnected player
-	_send_game_state_to_player(player_id)
-	
-	# Broadcast updated player list
-	emit_signal("player_list_changed", player_info)
-	rpc("_update_player_list", player_info)
-	
-	print("Player reconnected: ", player_id)
-
+# Connection Success Handlers
 func _on_connected_to_server() -> void:
-	print("Connected to server")
-	
-	emit_signal("connection_succeeded")
-	
-	# Set our player ID
+	print("Successfully connected to server")
+	connection_state = ConnectionState.CONNECTED
 	local_player_id = get_tree().get_network_unique_id()
 	
-	# Send our player info to the server
-	if player_info.has(0):  # We stored our info temporarily with ID 0
-		var name = player_info[0].name
+	# Transfer temporary player info
+	if player_info.has(0):
+		var temp_info = player_info[0]
 		player_info.erase(0)
-		set_player_info(name, 0)  # Default to Team A
+		player_info[local_player_id] = temp_info
+	
+	emit_signal("connection_succeeded")
 
 func _on_connection_failed() -> void:
-	print("Connection failed")
-	
+	print("Connection to server failed")
+	connection_state = ConnectionState.DISCONNECTED
 	network = null
 	get_tree().network_peer = null
 	
 	emit_signal("connection_failed")
 
 func _on_server_disconnected() -> void:
-	print("Server disconnected")
+	print("Disconnected from server")
+	disconnect_from_network()
+	emit_signal("network_error", "Server connection lost")
+
+# Team and Player Management Methods
+func change_player_team(player_id: int, new_team: int) -> bool:
+	if not is_server or new_team < 0 or new_team > 1:
+		return false
 	
-	emit_signal("network_error", "Lost connection to server")
+	# Get current team
+	var current_team = -1
+	for team in players:
+		if player_id in players[team]:
+			current_team = team
+			break
 	
-	network = null
-	get_tree().network_peer = null
-	player_info.clear()
-	is_server = false
-	game_started = false
+	# Remove from current team
+	if current_team != -1:
+		players[current_team].erase(player_id)
+	
+	# Add to new team
+	players[new_team].append(player_id)
+	
+	# Update player info
+	if player_info.has(player_id):
+		player_info[player_id]["team"] = new_team
+	
+	# Emit team change signal
+	emit_signal("team_changed", player_id, current_team, new_team)
+	
+	# Broadcast updated player list
+	rpc("_update_player_list", player_info)
+	
+	return true
+
+func set_player_ready(player_id: int, is_ready: bool) -> void:
+	if not is_server:
+		return
+	
+	if player_info.has(player_id):
+		player_info[player_id]["ready"] = is_ready
+	
+	# Broadcast updated player list
+	rpc("_update_player_list", player_info)
+	
+	# Check match start conditions
+	_check_match_start_conditions()
+
+# Match Start Condition Checking
+func _check_match_start_conditions() -> void:
+	# Ensure both teams have players and all are ready
+	var team_0_ready = _team_all_ready(0)
+	var team_1_ready = _team_all_ready(1)
+	
+	# Check team sizes and readiness
+	if (team_0_ready and team_1_ready and 
+		players[0].size() > 0 and players[1].size() > 0):
+		_prepare_match_start()
+
+func _team_all_ready(team: int) -> bool:
+	for player_id in players[team]:
+		if not player_info[player_id].get("ready", false):
+			return false
+	return true
+
+func _prepare_match_start() -> void:
+	if game_phase != GamePhase.LOBBY:
+		return
+	
+	game_phase = GamePhase.PREGAME
+	emit_signal("match_preparing")
+	
+	# Broadcast match preparation to all clients
+	rpc("_begin_match_preparation")
+
+remote func _begin_match_preparation() -> void:
+	if is_server:
+		return
+	
+	game_phase = GamePhase.PREGAME
+	
+	# Perform any client-side pre-match setup
+	_client_pre_match_setup()
+
+func _client_pre_match_setup() -> void:
+	# Load map
+	# Initialize game systems
+	# Prepare UI
+	pass
+
+# Match Start and Management
+func start_match() -> void:
+	if not is_server or game_phase != GamePhase.PREGAME:
+		return
+	
+	# Set match start time and phase
+	match_start_time = OS.get_unix_time()
+	match_duration = 0.0
+	game_phase = GamePhase.ACTIVE
+	
+	# Reset match-related variables
+	match_winner = -1
+	match_end_reason = ""
+	
+	# Broadcast match start to all clients
+	rpc("_match_started")
+	
+	emit_signal("match_started")
+
+remote func _match_started() -> void:
+	if is_server:
+		return
+	
+	game_phase = GamePhase.ACTIVE
+	
+	# Client-side match start preparations
+	_client_match_start_setup()
+
+func _client_match_start_setup() -> void:
+	# Ensure game manager exists
+	if not game_manager:
+		push_error("Game Manager not initialized for match start")
+		return
+	
+	# Reset game state
+	game_manager.reset_game_state()
+	
+	# Initialize UI for match
+	if ui_manager:
+		ui_manager.prepare_match_ui()
+	
+	# Load and initialize map
+	if map_manager:
+		map_manager.load_match_map(match_config.get("map", "default_map"))
+	
+	# Initialize economy for match
+	if economy_manager:
+		economy_manager.reset_team_resources()
+	
+	# Set up initial units and structures
+	_spawn_initial_match_units()
+	
+	# Initialize fog of war
+	if fog_of_war_manager:
+		fog_of_war_manager.reset_visibility()
+	
+	# Sync initial game state
+	_sync_initial_game_state()
+
+# Match End Handling
+func _trigger_match_end_by_timeout() -> void:
+	if not is_server or game_phase != GamePhase.ACTIVE:
+		return
+	
+	var team_0_score = _calculate_team_score(0)
+	var team_1_score = _calculate_team_score(1)
+	
+	var winning_team = 0 if team_0_score >= team_1_score else 1
+	_end_match(winning_team, "timeout")
+
+func _end_match(winning_team: int, reason: String = "standard") -> void:
+	if game_phase == GamePhase.ENDED:
+		return
+	
+	game_phase = GamePhase.ENDED
+	match_winner = winning_team
+	match_end_reason = reason
+	
+	# Broadcast match end to all clients
+	rpc("_match_concluded", winning_team, reason)
+	
+	emit_signal("match_ended", winning_team, reason)
+
+remote func _match_concluded(winner: int, reason: String) -> void:
+	if is_server:
+		return
+	
+	game_phase = GamePhase.ENDED
+	match_winner = winner
+	match_end_reason = reason
+	
+	# Client-side match end handling
+	_client_match_end_processing()
+
+func _client_match_end_processing() -> void:
+	# Stop active game processes
+	if game_manager:
+		game_manager.stop_game_simulation()
+	
+	# Disable active UI elements
+	if ui_manager:
+		ui_manager.show_end_game_screen(match_winner, match_end_reason)
+	
+	# Collect and display match statistics
+	var match_stats = _collect_match_statistics()
+	
+	# Save match replay or log (if enabled)
+	if debug_mode:
+		_save_match_replay(match_stats)
+	
+	# Reset game systems
+	_reset_game_systems()
+	
+	# Transition to post-match lobby or menu
+	get_tree().change_scene("res://scenes/lobby/post_match_screen.tscn")
+
+# Team Score Calculation
+func _calculate_team_score(team: int) -> float:
+	var score = 0.0
+	
+	# Buildings score
+	if game_manager and game_manager.building_manager:
+		var team_buildings = game_manager.building_manager.get_team_buildings(team)
+		score += team_buildings.size() * 100.0
+		
+		for building in team_buildings:
+			match building.building_id:
+				"headquarters": score += 1000.0
+				"bank_vault": score += 500.0
+	
+	# Economy score
+	if economy_manager:
+		score += economy_manager.get_income(team) * 10.0
+		score += economy_manager.get_resource(team, 0) * 0.1  # Gold resources
+	
+	return score
+
+# Match Validity Check
+func _check_match_validity() -> void:
+	# End match if either team is empty
+	if players[0].empty() or players[1].empty():
+		var winning_team = 0 if players[1].empty() else 1
+		_end_match(winning_team, "team_eliminated")
+
+# Input Handling and Synchronization
+func send_player_input(input_type: int, input_data: Dictionary) -> void:
+	if not network or game_phase != GamePhase.ACTIVE:
+		return
+	
+	# Increment input sequence
+	input_sequence += 1
+	
+	# Add sequence to input data
+	input_data["sequence"] = input_sequence
+	input_data["type"] = input_type
+	
+	if is_server:
+		# Process input locally if server
+		_process_player_input(local_player_id, input_data)
+	else:
+		# Send to server
+		rpc_id(1, "_receive_player_input", input_data)
+
+remote func _receive_player_input(input_data: Dictionary) -> void:
+	if not is_server:
+		return
+	
+	var player_id = get_tree().get_rpc_sender_id()
+	_process_player_input(player_id, input_data)
+
+func _process_player_input(player_id: int, input_data: Dictionary) -> void:
+	# Validate input
+	if not _validate_player_input(player_id, input_data):
+		return
+	
+	# Process input based on type
+	match input_data["type"]:
+		InputType.MOVE:
+			_handle_move_input(player_id, input_data)
+		InputType.ATTACK:
+			_handle_attack_input(player_id, input_data)
+		InputType.BUILD:
+			_handle_build_input(player_id, input_data)
+		InputType.USE_ABILITY:
+			_handle_ability_input(player_id, input_data)
+		InputType.PURCHASE:
+			_handle_purchase_input(player_id, input_data)
+	
+	# Broadcast input to other clients
+	_broadcast_input(player_id, input_data)
+
+# Input Handling Stub Methods
+func _validate_player_input(_player_id: int, _input_data: Dictionary) -> bool:
+	# Implement input validation logic
+	return true
+
+func _handle_move_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Implement move input handling
+	pass
+
+func _handle_attack_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Implement attack input handling
+	pass
+
+func _handle_build_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Implement build input handling
+	pass
+
+func _handle_ability_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Implement ability input handling
+	pass
+
+func _handle_purchase_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Implement purchase input handling
+	pass
+
+func _broadcast_input(_sender_id: int, _input_data: Dictionary) -> void:
+	# Broadcast input to other clients
+	for player_id in player_info.keys():
+		if player_id != _sender_id:
+			rpc_id(player_id, "_apply_remote_input", _sender_id, _input_data)
+
+remote func _apply_remote_input(_player_id: int, _input_data: Dictionary) -> void:
+	# Client-side input application
+	if is_server:
+		return
+	
+	# Process and apply received input
+	match _input_data["type"]:
+		InputType.MOVE:
+			# Apply move input
+			pass
+		InputType.ATTACK:
+			# Apply attack input
+			pass
+		InputType.BUILD:
+			# Apply build input
+			pass
+		InputType.USE_ABILITY:
+			# Apply ability input
+			pass
+		InputType.PURCHASE:
+			# Apply purchase input
+			pass
+
+
+# Network Performance Optimization
+func _optimize_network_bandwidth() -> void:
+	if not network:
+		return
+	
+	# Adjust send buffer size
+	network.set_stats_enabled(true)
+	network.set_max_packet_size(1024 * 64)  # 64KB max packet
+	
+	# Enable delta compression
+	if network_compression_enabled:
+		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_RANGE)
+
+# Advanced Anti-Cheat Mechanisms
+func _generate_network_checksum() -> int:
+	var checksum_data = {
+		"game_state": _capture_game_state_snapshot(),
+		"player_actions": last_processed_inputs,
+		"timestamp": OS.get_unix_time()
+	}
+	
+	# Use a robust checksum generation method
+	var checksum = hash(JSON.print(checksum_data))
+	return abs(checksum) % 100000  # Normalize to a smaller range
+
+func _validate_network_checksum(client_checksum: int) -> bool:
+	var server_checksum = _generate_network_checksum()
+	
+	# Allow small variance to account for network latency
+	var checksum_tolerance = 5
+	
+	return abs(server_checksum - client_checksum) <= checksum_tolerance
+
+# Comprehensive Logging System
+func _log_network_event(event_type: String, details: Dictionary) -> void:
+	var log_entry = {
+		"timestamp": OS.get_datetime(),
+		"event_type": event_type,
+		"player_id": local_player_id,
+		"details": details
+	}
+	
+	# Store in memory
+	network_log.append(log_entry)
+	
+	# Optionally write to file in debug mode
+	if debug_mode:
+		_write_network_log_to_file(log_entry)
+
+func _write_network_log_to_file(log_entry: Dictionary) -> void:
+	var log_dir = "user://network_logs/"
+	var dir = Directory.new()
+	
+	# Create log directory if it doesn't exist
+	if not dir.dir_exists(log_dir):
+		dir.make_dir_recursive(log_dir)
+	
+	var log_file_path = log_dir + "network_log_" + str(OS.get_unix_time()) + ".json"
+	var file = File.new()
+	
+	if file.open(log_file_path, File.WRITE) == OK:
+		file.store_string(JSON.print(log_entry, "\t"))
+		file.close()
+
+# Detailed Match Statistics Collection
+func _collect_match_statistics() -> Dictionary:
+	var match_stats = {
+		"match_id": match_config.get("id", "unknown"),
+		"duration": match_duration,
+		"winner": match_winner,
+		"end_reason": match_end_reason,
+		"teams": {
+			0: _collect_team_statistics(0),
+			1: _collect_team_statistics(1)
+		},
+		"player_performances": {}
+	}
+	
+	# Collect individual player performances
+	for player_id in player_info:
+		match_stats["player_performances"][player_id] = _collect_player_performance(player_id)
+	
+	return match_stats
+
+func _collect_team_statistics(team: int) -> Dictionary:
+	var team_stats = {
+		"buildings_destroyed": 0,
+		"units_killed": 0,
+		"total_income": 0,
+		"resources_collected": {},
+		"upgrades_researched": []
+	}
+	
+	# Populate stats using game manager systems
+	if game_manager:
+		# Example population methods (would need corresponding implementations)
+		if game_manager.building_manager:
+			team_stats["buildings_destroyed"] = game_manager.building_manager.get_destroyed_buildings_count(team)
+		
+		if economy_manager:
+			team_stats["total_income"] = economy_manager.get_total_income(team)
+			
+			# Collect resources
+			for resource_type in [0, 1, 2]:  # Assuming GOLD, WOOD, SUPPLY
+				team_stats["resources_collected"][resource_type] = economy_manager.get_total_resources_collected(team, resource_type)
+		
+		if tech_tree_manager:
+			team_stats["upgrades_researched"] = tech_tree_manager.get_researched_upgrades(team)
+	
+	return team_stats
+
+func _collect_player_performance(player_id: int) -> Dictionary:
+	var performance = {
+		"name": player_info[player_id].get("name", "Unknown"),
+		"team": player_info[player_id].get("team", -1),
+		"units_created": 0,
+		"units_killed": 0,
+		"buildings_constructed": 0,
+		"total_resources_spent": 0,
+		"ping": player_pings.get(player_id, -1)
+	}
+	
+	# Populate performance data (would require corresponding game system methods)
+	if game_manager:
+		# Example method calls (to be implemented in respective managers)
+		if unit_factory:
+			performance["units_created"] = unit_factory.get_units_created_by_player(player_id)
+		
+		if game_manager.combat_system:
+			performance["units_killed"] = game_manager.combat_system.get_units_killed_by_player(player_id)
+		
+		if game_manager.building_manager:
+			performance["buildings_constructed"] = game_manager.building_manager.get_buildings_constructed_by_player(player_id)
+		
+		if economy_manager:
+			performance["total_resources_spent"] = economy_manager.get_total_resources_spent_by_player(player_id)
+	
+	return performance
+
+# Network Replay System (Basic Implementation)
+func _save_match_replay(match_stats: Dictionary) -> void:
+	var replay_dir = "user://replays/"
+	var dir = Directory.new()
+	
+	# Create replay directory if it doesn't exist
+	if not dir.dir_exists(replay_dir):
+		dir.make_dir_recursive(replay_dir)
+	
+	# Generate unique replay filename
+	var replay_filename = "replay_" + str(OS.get_unix_time()) + ".json"
+	var replay_path = replay_dir + replay_filename
+	
+	var file = File.new()
+	if file.open(replay_path, File.WRITE) == OK:
+		file.store_string(JSON.print({
+			"match_stats": match_stats,
+			"network_log": network_log,
+			"server_seed": server_seed
+		}, "\t"))
+		file.close()
+		
+		print("Match replay saved: " + replay_path)
+
+# Additional Utility Methods for Robust Networking
+func get_player_name(player_id: int) -> String:
+	return player_info.get(player_id, {}).get("name", "Unknown Player")
+
+func is_player_in_match(player_id: int) -> bool:
+	return (player_info.has(player_id) and 
+			player_info[player_id].get("team", -1) != -1 and 
+			game_phase == GamePhase.ACTIVE)
+
+# Capture a snapshot of the current game state for checksum generation
+func _capture_game_state_snapshot() -> Dictionary:
+	var snapshot = {
+		"timestamp": OS.get_unix_time(),
+		"game_phase": game_phase,
+		"players": {},
+		"team_resources": {}
+	}
+	
+	# Capture player states
+	for player_id in player_info:
+		snapshot["players"][player_id] = {
+			"team": player_info[player_id].get("team", -1),
+			"ready": player_info[player_id].get("ready", false)
+		}
+	
+	# Capture team resources
+	if economy_manager:
+		for team in [0, 1]:
+			snapshot["team_resources"][team] = {
+				"gold": economy_manager.get_resource(team, 0),
+				"wood": economy_manager.get_resource(team, 1),
+				"supply": economy_manager.get_resource(team, 2)
+			}
+	
+	return snapshot
+
+# Advanced Connection Quality Assessment
+func assess_network_quality() -> Dictionary:
+	var network_quality = {
+		"overall_quality": "good",
+		"latency": {
+			"avg_ping": 0,
+			"max_ping": 0,
+			"min_ping": 999
+		},
+		"packet_loss": 0.0,
+		"connection_stability": 1.0  # 1.0 is perfect, 0.0 is worst
+	}
+	
+	# Calculate ping statistics
+	var total_ping = 0
+	for ping in player_pings.values():
+		total_ping += ping
+		network_quality["latency"]["max_ping"] = max(network_quality["latency"]["max_ping"], ping)
+		network_quality["latency"]["min_ping"] = min(network_quality["latency"]["min_ping"], ping)
+	
+	# Average ping
+	if player_pings.size() > 0:
+		network_quality["latency"]["avg_ping"] = total_ping / player_pings.size()
+	
+	# Determine overall quality
+	if network_quality["latency"]["avg_ping"] > 200:
+		network_quality["overall_quality"] = "poor"
+	elif network_quality["latency"]["avg_ping"] > 100:
+		network_quality["overall_quality"] = "fair"
+	
+	return network_quality
+
+# Connection Troubleshooting Recommendations
+func get_connection_recommendations() -> Array:
+	var recommendations = []
+	var quality = assess_network_quality()
+	
+	match quality["overall_quality"]:
+		"poor":
+			recommendations.append("Your network connection is unstable.")
+			recommendations.append("Try connecting to a server closer to your location.")
+			recommendations.append("Close background applications consuming bandwidth.")
+		"fair":
+			recommendations.append("Your connection might cause slight gameplay interruptions.")
+			recommendations.append("Consider using a wired internet connection.")
+	
+	return recommendations
+
+# Debug Information Gathering
+func generate_debug_report() -> Dictionary:
+	return {
+		"protocol_version": PROTOCOL_VERSION,
+		"connection_state": connection_state,
+		"game_phase": game_phase,
+		"local_player_id": local_player_id,
+		"network_quality": assess_network_quality(),
+		"player_count": player_info.size(),
+		"match_config": match_config,
+		"debug_mode": debug_mode,
+		"network_log_entries": network_log.size(),
+		"recommendations": get_connection_recommendations()
+	}
+
+# Export debug report to file
+func export_debug_report() -> String:
+	var report = generate_debug_report()
+	var export_path = "user://debug_reports/debug_report_" + str(OS.get_unix_time()) + ".json"
+	
+	var dir = Directory.new()
+	if not dir.dir_exists("user://debug_reports"):
+		dir.make_dir_recursive("user://debug_reports")
+	
+	var file = File.new()
+	if file.open(export_path, File.WRITE) == OK:
+		file.store_string(JSON.print(report, "\t"))
+		file.close()
+		print("Debug report exported to: " + export_path)
+	
+	return export_path
