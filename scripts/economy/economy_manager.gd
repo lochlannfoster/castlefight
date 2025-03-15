@@ -17,17 +17,16 @@ enum ResourceType {GOLD, WOOD, SUPPLY}
 export var base_income: float = 10.0  # Base income per tick
 export var income_interval: float = 10.0  # Seconds between income ticks
 
-# Team resources
 var team_resources: Dictionary = {
 	0: {  # Team A
-		ResourceType.GOLD: 100,
-		ResourceType.WOOD: 50,
-		ResourceType.SUPPLY: 10
+		0: 100,  # GOLD - using direct integers instead of enum
+		1: 50,   # WOOD
+		2: 10    # SUPPLY
 	},
 	1: {  # Team B
-		ResourceType.GOLD: 100,
-		ResourceType.WOOD: 50,
-		ResourceType.SUPPLY: 10
+		0: 100,
+		1: 50,
+		2: 10
 	}
 }
 
@@ -180,42 +179,36 @@ func _distribute_income() -> void:
 
 # add_resource to track total collections
 func add_resource(team: int, resource_type: int, amount: float) -> void:
+	# First initialize the team dictionary if it doesn't exist
 	if not team_resources.has(team):
-		# Initialize this team if it doesn't exist
-		team_resources[team] = {
-			ResourceType.GOLD: 0,
-			ResourceType.WOOD: 0,
-			ResourceType.SUPPLY: 0
-		}
+		team_resources[team] = {}
+
+	# Then ensure all resource types exist in the team's dictionary
+	if not team_resources[team].has(resource_type):
+		team_resources[team][resource_type] = 0.0
 		
-		# Also initialize statistics tracking
-		if not total_resources_collected.has(team):
-			total_resources_collected[team] = {
-				ResourceType.GOLD: 0,
-				ResourceType.WOOD: 0,
-				ResourceType.SUPPLY: 0
-			}
-			
-			total_resources_spent[team] = {
-				ResourceType.GOLD: 0,
-				ResourceType.WOOD: 0,
-				ResourceType.SUPPLY: 0
-			}
-	
-	# Update current resources
+	# Now safely update the value
 	team_resources[team][resource_type] += amount
 	
-	# Track resource statistics
+	# Similarly, initialize tracking dictionaries if needed
+	if not total_resources_collected.has(team):
+		total_resources_collected[team] = {}
+		total_resources_spent[team] = {}
+	
+	# Ensure the resource keys exist in these dictionaries too
+	if not total_resources_collected[team].has(resource_type):
+		total_resources_collected[team][resource_type] = 0.0
+	
+	if not total_resources_spent[team].has(resource_type):
+		total_resources_spent[team][resource_type] = 0.0
+		
+	# Track resource collection or spending
 	if amount > 0:
-		# Resource collected
 		total_resources_collected[team][resource_type] += amount
 	else:
-		# Resource spent
 		total_resources_spent[team][resource_type] -= amount  # Convert to positive
 	
 	emit_signal("resources_changed", team, resource_type, team_resources[team][resource_type])
-
-
 
 # Get a team's resource amount
 func get_resource(team: int, resource_type: int) -> float:
