@@ -66,7 +66,25 @@ func initialize_grid() -> void:
 			# Add to valid placement cells (could be adjusted based on game rules)
 			if is_valid_placement_cell(grid_pos):
 				valid_placement_cells.append(grid_pos)
-				
+
+			print("Grid dimensions: " + str(grid_width) + "x" + str(grid_height))
+			print("Team A territory: x < " + str(grid_width / 2 - 5))
+			print("Team B territory: x > " + str(grid_width / 2 + 5))
+
+			var team_a_count = 0
+			var team_b_count = 0
+			var neutral_count = 0
+			for cell in grid_cells.values():
+				if cell.team_territory == Team.TEAM_A:
+					team_a_count += 1
+				elif cell.team_territory == Team.TEAM_B:
+					team_b_count += 1
+				else:
+					neutral_count += 1
+			print("Team A cells: " + str(team_a_count))
+			print("Team B cells: " + str(team_b_count))
+			print("Neutral cells: " + str(neutral_count))
+
 			# Add to lane organization
 			var lane = cell_data.lane
 			if not lane_cells.has(lane):
@@ -78,10 +96,9 @@ func initialize_grid() -> void:
 # Determine which lane a cell belongs to based on its position
 func determine_lane(grid_pos: Vector2) -> int:
 	# Divide the grid into 3 lanes (top, middle, bottom)
-	# This is a simplified example - adjust based on your map design
-	if grid_pos.y < grid_height / 3:
+	if grid_pos.y < float(grid_height) / 3.0:
 		return 0  # Top lane
-	elif grid_pos.y < 2 * grid_height / 3:
+	elif grid_pos.y < 2.0 * float(grid_height) / 3.0:
 		return 1  # Middle lane
 	else:
 		return 2  # Bottom lane
@@ -89,15 +106,15 @@ func determine_lane(grid_pos: Vector2) -> int:
 # Convert grid coordinates to world coordinates
 func grid_to_world(grid_pos: Vector2) -> Vector2:
 	# Isometric conversion
-	var world_x = (grid_pos.x - grid_pos.y) * (cell_size.x / 2)
-	var world_y = (grid_pos.x + grid_pos.y) * (cell_size.y / 2)
+	var world_x = (grid_pos.x - grid_pos.y) * (float(cell_size.x) / 2.0)
+	var world_y = (grid_pos.x + grid_pos.y) * (float(cell_size.y) / 2.0)
 	return Vector2(world_x, world_y)
 
 # Convert world coordinates to grid coordinates
 func world_to_grid(world_pos: Vector2) -> Vector2:
 	# Inverse isometric conversion
-	var grid_x = (world_pos.x / (cell_size.x / 2) + world_pos.y / (cell_size.y / 2)) / 2
-	var grid_y = (world_pos.y / (cell_size.y / 2) - world_pos.x / (cell_size.x / 2)) / 2
+	var grid_x = (world_pos.x / (float(cell_size.x) / 2.0) + world_pos.y / (float(cell_size.y) / 2.0)) / 2.0
+	var grid_y = (world_pos.y / (float(cell_size.y) / 2.0) - world_pos.x / (float(cell_size.x) / 2.0)) / 2.0
 	return Vector2(round(grid_x), round(grid_y))
 
 # Check if a cell is within the grid bounds
@@ -138,7 +155,6 @@ func free_cell(grid_pos: Vector2) -> void:
 	if is_valid_placement_cell(grid_pos):
 		valid_placement_cells.append(grid_pos)
 
-# Check if a building of a specific size can be placed at a given position
 func can_place_building(grid_pos: Vector2, size: Vector2, team: int) -> bool:
 	# Check if all required cells are available
 	for x in range(size.x):
@@ -147,15 +163,19 @@ func can_place_building(grid_pos: Vector2, size: Vector2, team: int) -> bool:
 			
 			# Check if position is within grid
 			if not is_within_grid(check_pos):
+				print("Building placement failed: position out of grid bounds")
 				return false
 				
 			# Check if cell is already occupied
 			if is_cell_occupied(check_pos):
+				print("Building placement failed: cell already occupied")
 				return false
 				
 			# Check if cell belongs to the team's territory
 			var cell_team = grid_cells[check_pos].team_territory
+			print("Checking cell at " + str(check_pos) + " for team " + str(team) + ", cell team: " + str(cell_team))
 			if cell_team != team:
+				print("Building placement failed: cell territory mismatch")
 				return false
 	
 	return true

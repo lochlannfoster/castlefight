@@ -254,14 +254,6 @@ func add_player(player_id, player_name: String, team: int) -> bool:
 	
 	return true
 	
-	# Add to player tracking
-	players[player_id] = player_data
-	team_players[team].append(player_id)
-	
-	emit_signal("player_joined", player_id, team)
-	
-	return true
-
 # Remove a player from the game
 func remove_player(player_id) -> void:
 	if not players.has(player_id):
@@ -376,10 +368,10 @@ func _create_starting_buildings() -> void:
 		print("No building manager available!")
 		return
 	
-	# Try different positions for Team 1's HQ
+	# Use a much larger x-coordinate for Team 1's HQ to ensure it maps to their territory
 	var hq_positions = [
 		Vector2(100, 300),  # Team 0 HQ
-		Vector2(700, 300)   # Team 1 HQ - using 700 instead of 900
+		Vector2(800, 300)   # Team 1 HQ - using 800 to ensure it maps to x > 25 in grid
 	]
 	
 	for team in range(2):  # For both teams
@@ -392,6 +384,10 @@ func _create_starting_buildings() -> void:
 			register_headquarters(hq, team)
 		else:
 			print("Failed to create HQ for team " + str(team))
+
+		# Debug information
+		var grid_pos = grid_system.world_to_grid(hq_position)
+		print("Team " + str(team) + " HQ - World pos: " + str(hq_position) + ", Grid pos: " + str(grid_pos))
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:

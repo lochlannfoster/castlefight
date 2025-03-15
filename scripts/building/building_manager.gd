@@ -165,9 +165,18 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 	hq_instance.armor_type = "fortified"
 	hq_instance.size = Vector2(3, 3)
 	
-	# Convert position to grid position
+	# Force the territory assignment for HQs
+	print("Forcing territory for HQ at position " + str(position) + " for team " + str(team))
 	var grid_pos = grid_system.world_to_grid(position)
 	
+	# Mark this area as belonging to the team's territory
+	for x in range(3):
+		for y in range(3):
+			var cell_pos = grid_pos + Vector2(x, y)
+			if grid_system.is_within_grid(cell_pos) and grid_system.grid_cells.has(cell_pos):
+				print("Setting cell at " + str(cell_pos) + " to team " + str(team))
+				grid_system.grid_cells[cell_pos].team_territory = team
+
 	# Set building position
 	hq_instance.position = grid_system.grid_to_world(grid_pos)
 	hq_instance.set_grid_position(grid_pos)
