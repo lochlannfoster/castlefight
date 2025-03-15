@@ -136,13 +136,17 @@ func _ready() -> void:
 	
 	print("NetworkManager initialized - Protocol Version: " + PROTOCOL_VERSION)
 
-# Core Network Initialization Methods
 func _initialize_game_references() -> void:
 	game_manager = get_node_or_null("/root/GameManager")
 	economy_manager = get_node_or_null("/root/EconomyManager")
 	unit_factory = get_node_or_null("/root/UnitFactory")
 	tech_tree_manager = get_node_or_null("/root/TechTreeManager")
-	ui_manager = get_node_or_null("/root/GameManager/UIManager")
+	
+	# Get UI manager from game manager if available
+	if game_manager:
+		ui_manager = game_manager.get_node_or_null("UIManager")
+		map_manager = game_manager.get_node_or_null("MapManager")
+		fog_of_war_manager = game_manager.get_node_or_null("FogOfWarManager")
 	
 	if debug_mode:
 		print("Game system references initialized")
@@ -433,10 +437,15 @@ remote func _begin_match_preparation() -> void:
 	_client_pre_match_setup()
 
 func _client_pre_match_setup() -> void:
-	# Load map
-	# Initialize game systems
-	# Prepare UI
-	pass
+	# Prepare client-side systems for the upcoming match
+	if ui_manager and ui_manager.has_method("show_match_preparation"):
+		ui_manager.show_match_preparation()
+	
+	# Preload necessary resources
+	if game_manager and game_manager.has_method("prepare_resources"):
+		game_manager.prepare_resources()
+	
+	print("Client pre-match setup completed")
 
 # Match Start and Management
 func start_match() -> void:
@@ -505,7 +514,7 @@ func _spawn_initial_match_units() -> void:
 		return
 	
 	# Get map manager for spawn positions
-	var map_manager = game_manager.get_node_or_null("MapManager")
+	var current_map_manager = game_manager.get_node_or_null("MapManager")
 	
 	# Spawn worker for local player
 	var local_team = -1
@@ -727,6 +736,33 @@ func _client_match_end_processing() -> void:
 	
 	# Transition to post-match lobby or menu
 	get_tree().change_scene("res://scenes/lobby/post_match_screen.tscn")
+
+# Reset game systems to clean state after match
+func _reset_game_systems() -> void:
+	# Reset relevant game systems to prepare for a new match or return to lobby
+	if game_manager:
+		if game_manager.has_method("reset_game_state"):
+			game_manager.reset_game_state()
+	
+	if economy_manager:
+		if economy_manager.has_method("reset_team_resources"):
+			economy_manager.reset_team_resources()
+	
+	if tech_tree_manager:
+		if tech_tree_manager.has_method("reset_tech_trees"):
+			tech_tree_manager.reset_tech_trees()
+		
+	if fog_of_war_manager:
+		if fog_of_war_manager.has_method("reset_visibility"):
+			fog_of_war_manager.reset_visibility()
+	
+	# Reset network-specific state
+	match_start_time = 0.0
+	match_duration = 0.0
+	match_winner = -1
+	match_end_reason = ""
+	input_sequence = 0
+	last_processed_inputs.clear()
 
 # Team Score Calculation
 func _calculate_team_score(team: int) -> float:
@@ -1305,10 +1341,12 @@ func _broadcast_game_state() -> void:
 		if player_id != 1:  # Skip server (ID 1)
 			rpc_id(player_id, "_sync_game_state", state_data)
 
-# Update game state regularly
 func _update_game_state(delta: float) -> void:
 	if not network or game_phase != GamePhase.ACTIVE:
 		return
+		
+	# Update match duration
+	match_duration += delta
 		
 	# Only server broadcasts game state
 	if is_server:
