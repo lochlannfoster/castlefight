@@ -287,7 +287,9 @@ func update_player_lists(player_info: Dictionary) -> void:
 # Update UI state based on network status
 func _update_ui() -> void:
 	var is_connected = network_manager.network != null
-	var is_host = network_manager.is_server
+	var _is_host = network_manager.is_server
+
+
 	
 	# Update Create Game tab
 	create_game_name_edit.editable = !is_connected
@@ -374,7 +376,8 @@ func _on_back_button_pressed() -> void:
 		network_manager.disconnect_from_network()
 	
 	# Return to main menu
-	get_tree().change_scene("res://scenes/main_menu/main_menu.tscn")
+	var _err = get_tree().change_scene("res://scenes/main_menu/main_menu.tscn")
+
 
 func _on_connection_cancel_pressed() -> void:
 	connection_dialog.hide()
@@ -451,7 +454,7 @@ func _on_network_error(error_message: String) -> void:
 	connection_dialog.hide()
 	_show_error(error_message)
 
-func _on_ping_updated(player_id: int, ping: int) -> void:
-	# Update player lists to show updated ping
-	if network_manager.player_info.size() > 0:
-		update_player_lists(network_manager.player_info)
+func _on_ping_updated(_player_id: int, _ping: int) -> void:
+    # Update player lists to show updated ping
+    if network_manager.player_info.size() > 0:
+        update_player_lists(network_manager.player_info)
