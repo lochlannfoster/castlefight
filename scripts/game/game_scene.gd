@@ -5,7 +5,7 @@ extends Node2D
 
 # Called when the scene enters the tree
 func _ready():
-	print("Game scene loaded")
+	print("DEBUG: game_scene _ready() started")
 	
 	# Load the map scene first
 	var map_scene = load("res://scenes/game/map.tscn")
@@ -13,12 +13,13 @@ func _ready():
 		var map_instance = map_scene.instance()
 		add_child(map_instance)
 		print("Map loaded successfully")
-		
+	else:
+		print("ERROR: Failed to load map scene")
+	
 	# Set up camera
 	print("Setting up camera")
 	var camera = get_node_or_null("Camera2D")
 	if camera:
-		# Position camera to see the game area
 		camera.position = Vector2(400, 300)
 		camera.current = true
 		print("Camera positioned at " + str(camera.position))
@@ -32,42 +33,23 @@ func _ready():
 		print("Created new camera at " + str(camera.position))
 	
 	# Call initialization functions to set up the game
+	print("DEBUG: About to call _initialize_game()")
 	_initialize_game()
 	
 	# Call emergency init after a short delay to ensure everything is loaded
+	print("DEBUG: Setting up emergency init timer")
 	var timer = Timer.new()
 	add_child(timer)
 	timer.wait_time = 0.5
 	timer.one_shot = true
 	timer.connect("timeout", self, "_emergency_init")
 	timer.start()
-		
 	
-func _emergency_init():
-	print("Emergency initialization triggered")
-	var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager:
-		game_manager.start_game()
-		
-		# Try to directly create HQs and workers
-		print("Creating emergency game elements...")
-		
-		# Try to create HQs
-		if game_manager.building_manager:
-			for team in range(2):
-				var position = Vector2(200 + team * 400, 300)
-				var hq = game_manager.building_manager._create_headquarters_building(position, team)
-				if hq:
-					print("Successfully created emergency HQ for team " + str(team))
-				else:
-					print("Failed to create emergency HQ for team " + str(team))
-		
-		# Try to create a worker
-		_add_test_worker()
-	
+	print("DEBUG: game_scene _ready() completed")
 
-# Initialize the game after a short delay
 func _initialize_game():
+	print("DEBUG: _initialize_game() started")
+	
 	# Get references to global managers
 	var game_manager = get_node_or_null("/root/GameManager")
 	var grid_system = get_node_or_null("/root/GridSystem")
@@ -78,12 +60,22 @@ func _initialize_game():
 	print("Found grid system: ", grid_system != null)
 	print("Found economy manager: ", economy_manager != null)
 	
+	# Debug game manager state
+	if game_manager:
+		print("DEBUG: Game manager current_state = ", game_manager.current_state)
+		print("DEBUG: Game manager players count = ", game_manager.players.size())
+	else:
+		print("ERROR: Game manager not found")
+	
 	# Initialize grid
 	if grid_system:
 		print("Initializing grid system...")
 		grid_system.initialize_grid()
+	else:
+		print("ERROR: Grid system not found")
 	
 	# Setup simple UI for testing
+	print("DEBUG: About to call _setup_simple_ui()")
 	call_deferred("_setup_simple_ui")
 	
 	# If game wasn't started by NetworkManager, we can start it directly
@@ -93,16 +85,67 @@ func _initialize_game():
 			
 			# Create a player in single-player mode if needed
 			if game_manager.players.empty():
+				print("DEBUG: Adding default player")
 				game_manager.add_player(1, "Player", 0)
 				print("Added default player")
+			else:
+				print("DEBUG: Players already exist, count =", game_manager.players.size())
 			
 			# Start game
+			print("DEBUG: Calling deferred _start_single_player_game()")
 			call_deferred("_start_single_player_game", game_manager)
-
-# Start the game in single player mode
-func _start_single_player_game(game_manager):
+		else:
+			print("DEBUG: Game not in SETUP state, current_state =", game_manager.current_state)
+	else:
+		print("ERROR: Game manager not found for game start")
+	
+	print("DEBUG: _initialize_game() completed")
+		
+func _emergency_init():
+	print("Emergency initialization triggered")
+	var game_manager = get_node_or_null("/root/GameManager")
 	if game_manager:
+		print("DEBUG: Emergency - Game manager found")
+		print("DEBUG: Emergency - Game manager current_state =", game_manager.current_state)
+		print("DEBUG: Emergency - Game manager players count =", game_manager.players.size())
+		
+		if game_manager.current_state == game_manager.GameState.PLAYING:
+			print("DEBUG: Game already in PLAYING state, emergency not needed")
+			return
+			
 		game_manager.start_game()
+		
+		# Try to directly create HQs and workers
+		print("Creating emergency game elements...")
+		
+		# Try to create HQs
+		if game_manager.building_manager:
+			print("DEBUG: Emergency - Building manager found")
+			for team in range(2):
+				var position = Vector2(200 + team * 400, 300)
+				print("DEBUG: Emergency - Creating HQ for team", team, "at", position)
+				var hq = game_manager.building_manager._create_headquarters_building(position, team)
+				if hq:
+					print("Successfully created emergency HQ for team " + str(team))
+				else:
+					print("Failed to create emergency HQ for team " + str(team))
+		else:
+			print("DEBUG: Emergency - Building manager not found")
+		
+		# Try to create a worker
+		print("DEBUG: Emergency - Creating test worker")
+		_add_test_worker()
+	else:
+		print("DEBUG: Emergency - Game manager not found")
+
+func _start_single_player_game(game_manager):
+	print("DEBUG: _start_single_player_game() called with game_manager:", game_manager)
+	if game_manager:
+		print("DEBUG: About to call game_manager.start_game()")
+		game_manager.start_game()
+		print("DEBUG: game_manager.start_game() completed")
+	else:
+		print("ERROR: game_manager is null in _start_single_player_game")
 
 # Setup a simple UI manager for testing
 func _setup_simple_ui():

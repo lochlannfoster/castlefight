@@ -43,10 +43,13 @@ var current_target_building = null
 var is_selected: bool = false
 
 # Process function
+# Add to worker.gd in _physics_process function:
 func _physics_process(delta: float) -> void:
 	# Handle input if this is the local player's worker
 	if is_selected:
 		_handle_input()
+		if velocity != Vector2.ZERO:
+			print("DEBUG: Worker moving with velocity:", velocity)
 	
 	# Movement
 	_handle_movement(delta)
@@ -120,35 +123,35 @@ func _setup_building_ghost() -> void:
 
 # Handle input for the worker
 func _handle_input() -> void:
-    # Get input direction
-    var input_direction = Vector2.ZERO
-    
-    # Check for arrow key input
-    if Input.is_action_pressed("ui_right"):
-        input_direction.x += 1
-    if Input.is_action_pressed("ui_left"):
-        input_direction.x -= 1
-    if Input.is_action_pressed("ui_down"):
-        input_direction.y += 1
-    if Input.is_action_pressed("ui_up"):
-        input_direction.y -= 1
-    
-    # Apply input to velocity
-    if input_direction != Vector2.ZERO:
-        is_moving_to_target = false
-        velocity = input_direction.normalized() * speed
-        print("Moving worker with velocity: " + str(velocity))
-    elif not is_moving_to_target:
-        velocity = velocity.move_toward(Vector2.ZERO, friction)
-    
-    # Building placement - left click to place
-    if is_placing_building and Input.is_action_just_pressed("select"):
-        var mouse_pos = get_global_mouse_position()
-        _try_place_building(mouse_pos)
-    
-    # Cancel building placement - right click or ESC
-    if is_placing_building and (Input.is_action_just_pressed("ui_cancel") or Input.is_mouse_button_pressed(BUTTON_RIGHT)):
-        cancel_building_placement()
+	# Get input direction
+	var input_direction = Vector2.ZERO
+	
+	# Check for arrow key input
+	if Input.is_action_pressed("ui_right"):
+		input_direction.x += 1
+	if Input.is_action_pressed("ui_left"):
+		input_direction.x -= 1
+	if Input.is_action_pressed("ui_down"):
+		input_direction.y += 1
+	if Input.is_action_pressed("ui_up"):
+		input_direction.y -= 1
+	
+	# Apply input to velocity
+	if input_direction != Vector2.ZERO:
+		is_moving_to_target = false
+		velocity = input_direction.normalized() * speed
+		print("Moving worker with velocity: " + str(velocity))
+	elif not is_moving_to_target:
+		velocity = velocity.move_toward(Vector2.ZERO, friction)
+	
+	# Building placement - left click to place
+	if is_placing_building and Input.is_action_just_pressed("select"):
+		var mouse_pos = get_global_mouse_position()
+		_try_place_building(mouse_pos)
+	
+	# Cancel building placement - right click or ESC
+	if is_placing_building and (Input.is_action_just_pressed("ui_cancel") or Input.is_mouse_button_pressed(BUTTON_RIGHT)):
+		cancel_building_placement()
 	
 	# Apply input to velocity
 	if input_direction != Vector2.ZERO:
