@@ -50,6 +50,24 @@ var match_id: String = ""
 # References
 var game_manager: GameManager
 
+func _on_player_connected(player_id: int) -> void:
+    print("Player connected: ", player_id)
+    
+    emit_signal("client_connected", player_id)
+    
+    if is_server:
+        # Add player to player_info with default data if not exists
+        if not player_info.has(player_id):
+            player_info[player_id] = {
+                "name": "Player " + str(player_id),
+                "team": -1,
+                "ready": false
+            }
+        
+        # Broadcast updated player list
+        emit_signal("player_list_changed", player_info)
+        rpc("_update_player_list", player_info)
+
 # Ready function
 func _ready() -> void:
 	# Get game manager reference
@@ -275,7 +293,6 @@ func start_game() -> void:
 	# Start game locally
 	_start_game_locally()
 
-# Add this method to NetworkManager
 remote func _update_team_assignment(new_team: int) -> void:
 	# Client receives team assignment from server
 	if is_server:
@@ -710,9 +727,9 @@ func _on_player_disconnected(player_id: int) -> void:
 				yield(get_tree().create_timer(RECONNECT_TIMEOUT), "timeout")
 				
 				if disconnected_players.has(player_id):
-					# Player didn't reconnect within timeout
-					var _disconnected_result = disconnected_players.erase(player_id)
-					var _player_info_result = player_info.erase(player_id)
+				# Player didn't reconnect within timeout
+					var _ignored1 = disconnected_players.erase(player_id)
+					var _ignored2 = player_info.erase(player_id)
 					
 					# Broadcast updated player list
 					emit_signal("player_list_changed", player_info)
