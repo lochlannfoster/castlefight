@@ -120,13 +120,13 @@ func _physics_process(delta: float) -> void:
 	# Process based on current state
 	match current_state:
 		UnitState.IDLE:
-			_process_idle(delta)
+			_process_idle(_delta)
 		UnitState.MOVING:
-			_process_movement(delta)
+			_process_movement(_delta)
 		UnitState.ATTACKING:
 			_process_attacking(delta)
 		UnitState.CASTING:
-			_process_casting(delta)
+			_process_casting(_delta)
 	
 	# Update modifiers
 	_update_modifiers(delta)
@@ -164,7 +164,7 @@ func _start_attack_move() -> void:
 	current_state = UnitState.MOVING
 
 # Process idle state
-func _process_idle(delta: float) -> void:
+func _process_idle(_delta: float) -> void:
 	# Look for targets
 	var potential_target = find_target()
 	
@@ -179,7 +179,7 @@ func _process_idle(delta: float) -> void:
 			current_state = UnitState.MOVING
 
 # Process movement state
-func _process_movement(delta: float) -> void:
+func _process_movement(_delta: float) -> void:
 	# Check for targets while moving
 	var potential_target = find_target()
 	
@@ -249,7 +249,7 @@ func _process_attacking(delta: float) -> void:
 		_perform_attack()
 
 # Process casting state
-func _process_casting(delta: float) -> void:
+func _process_casting(_delta: float) -> void:
 	# This will be handled by specific unit implementations
 	pass
 
@@ -479,7 +479,7 @@ func _handle_regeneration(delta: float) -> void:
 		if has_mana and mana < max_mana:
 			var old_mana = mana
 			mana = min(mana + mana_regen, max_mana)
-			var mana_gained = mana - old_mana
+			var _mana_gained = mana - old_mana
 			
 			# Could emit a signal for mana changes if needed
 
@@ -531,7 +531,7 @@ func add_ability(ability_name: String, ability_data: Dictionary) -> void:
 	})
 
 # Use an ability
-func use_ability(ability_index: int, target = null) -> bool:
+func use_ability(ability_index: int, other_target = null) -> bool:
 	if ability_index < 0 or ability_index >= abilities.size():
 		return false
 	
@@ -559,7 +559,7 @@ func use_ability(ability_index: int, target = null) -> bool:
 		animation_player.play("cast")
 		current_animation = "cast"
 	
-	emit_signal("ability_used", ability.name, target)
+	emit_signal("ability_used", ability.name, other_target)
 	
 	return true
 

@@ -222,8 +222,6 @@ func _reset_game() -> void:
 		pass
 
 # Add a player to the game
-# Update the add_player method in scripts/core/game_manager.gd
-
 func add_player(player_id, player_name: String, team: int) -> bool:
 	# Ensure team is valid (0 or 1)
 	if team < 0 or team > 1:
@@ -266,7 +264,7 @@ func remove_player(player_id) -> void:
 		team_players[team].erase(player_id)
 	
 	# Remove player data
-	players.erase(player_id)
+	var _removed = players.erase(player_id)
 	
 	emit_signal("player_left", player_id)
 	
@@ -275,18 +273,14 @@ func remove_player(player_id) -> void:
 		emit_signal("team_eliminated", team)
 		
 		# If team is eliminated, other team wins
-		var winning_team = 1 if team == 0 else 0
-		_trigger_game_end(winning_team)
+		var other_team_wins = 1 if team == 0 else 0
+		_trigger_game_end(other_team_wins)
 
 # Start the pregame countdown
 func start_pregame_countdown() -> void:
 	change_game_state(GameState.PREGAME)
 
 # Start the game
-# Update in scripts/core/game_manager.gd
-
-# Update in scripts/core/game_manager.gd
-
 func start_game() -> void:
 	print("GameManager: Attempting to start game")
 	print("Current state: ", current_state)
@@ -296,7 +290,6 @@ func start_game() -> void:
 		countdown_timer = 0  # Skip countdown
 	elif current_state != GameState.PLAYING:
 		change_game_state(GameState.PLAYING)
-		# REMOVE THE RETURN STATEMENT
 	
 	# Create workers for all players
 	print("Creating player workers")
@@ -402,11 +395,11 @@ func _on_headquarters_destroyed(team: int) -> void:
 	headquarters[team] = null
 	
 	# Other team wins
-	var winning_team = 1 if team == 0 else 0
-	_trigger_game_end(winning_team)
+	var other_team_wins = 1 if team == 0 else 0
+	_trigger_game_end(other_team_wins)
 
 # Handle any building being destroyed
-func _on_building_destroyed(building) -> void:
+func _on_building_destroyed(_building) -> void:
 	# This could be used for statistics or other game state updates
 	pass
 
@@ -426,8 +419,8 @@ func _trigger_game_end_by_time() -> void:
 	var team_a_score = _calculate_team_score(0)
 	var team_b_score = _calculate_team_score(1)
 	
-	var winner = 0 if team_a_score > team_b_score else 1
-	_trigger_game_end(winner)
+	var time_winner = 0 if team_a_score > team_b_score else 1
+	_trigger_game_end(time_winner)
 
 # Calculate a team's score for time-based win determination
 func _calculate_team_score(team: int) -> float:

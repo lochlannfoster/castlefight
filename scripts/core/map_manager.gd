@@ -45,7 +45,7 @@ func _ready() -> void:
 	
 	# Connect grid signals
 	if grid_system:
-		grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+		var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
 
 # Generate a new map
 func generate_map() -> void:
@@ -60,10 +60,10 @@ func generate_map() -> void:
 	neutral_zone_rect = Rect2(base_size, 0, map_width - 2 * base_size, map_height)
 	
 	# Define starting positions and HQ positions
-	team_a_start_pos = Vector2(base_size / 2, map_height / 2)
-	team_b_start_pos = Vector2(map_width - base_size / 2, map_height / 2)
-	team_a_hq_pos = Vector2(base_size / 4, map_height / 2)
-	team_b_hq_pos = Vector2(map_width - base_size / 4, map_height / 2)
+	team_a_start_pos = Vector2(float(base_size) / 2.0, float(map_height) / 2.0)
+	team_b_start_pos = Vector2(float(map_width) - float(base_size) / 2.0, float(map_height) / 2.0)
+	team_a_hq_pos = Vector2(float(base_size) / 4.0, float(map_height) / 2.0)
+	team_b_hq_pos = Vector2(float(map_width) - float(base_size) / 4.0, float(map_height) / 2.0)
 	
 	# Define lanes
 	_generate_lanes()
@@ -284,7 +284,7 @@ func _generate_lanes() -> void:
 	lanes.clear()
 	
 	# Calculate lane height
-	var lane_height = map_height / lane_count
+	var lane_height = float(map_height) / float(lane_count)
 	
 	for i in range(lane_count):
 		var start_y = i * lane_height
@@ -296,16 +296,16 @@ func _generate_lanes() -> void:
 			"name": "Lane " + str(i + 1),
 			"start_y": start_y,
 			"end_y": end_y,
-			"team_a_entry": Vector2(base_size, start_y + lane_height / 2),
-			"team_b_entry": Vector2(map_width - base_size, start_y + lane_height / 2),
-			"waypoints": _generate_lane_waypoints(base_size, start_y + lane_height / 2, map_width - base_size, start_y + lane_height / 2)
+			"team_a_entry": Vector2(base_size, start_y + lane_height / 2.0),
+			"team_b_entry": Vector2(map_width - base_size, start_y + lane_height / 2.0),
+			"waypoints": _generate_lane_waypoints(base_size, start_y + lane_height / 2.0, map_width - base_size, start_y + lane_height / 2.0)
 		}
 		
 		lanes.append(lane_data)
 		emit_signal("lane_created", i, lane_data)
 
 # Generate waypoints for a lane
-func _generate_lane_waypoints(start_x: int, start_y: int, end_x: int, end_y: int) -> Array:
+func _generate_lane_waypoints(start_x: int, start_y: int, end_x: int, _end_y: int) -> Array:
 	var waypoints = []
 	
 	# Simple straight lane for now
@@ -342,7 +342,7 @@ func _get_terrain_type(pos: Vector2) -> String:
 
 # Get lane ID for a position
 func _get_lane_for_position(pos: Vector2) -> int:
-	var lane_height = map_height / lane_count
+	var lane_height = float(map_height) / float(lane_count)
 	
 	for i in range(lane_count):
 		var start_y = i * lane_height

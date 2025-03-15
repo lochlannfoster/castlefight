@@ -284,15 +284,15 @@ func _update_fog_textures() -> void:
 	fog_material.set_shader_param("team_b_fog", team_b_texture)
 
 # Signal handlers
-func _on_building_placed(building_type, position, team) -> void:
-	print("Building placed: " + building_type)
+func _on_building_placed(_building_type: String, _position: Vector2, _team: int) -> void:
+	print("Building placed: " + _building_type)
 
 func _on_building_destroyed(building) -> void:
 	var building_id = building.get_instance_id()
 	all_buildings.erase(building_id)
 	
 	for team in visible_buildings.keys():
-		visible_buildings[team].erase(building_id)
+		var _result = visible_buildings[team].erase(building_id)
 
 # Set current player team (for single-player or client-side view)
 func set_current_player_team(team: int) -> void:

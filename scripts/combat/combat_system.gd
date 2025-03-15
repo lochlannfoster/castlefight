@@ -176,7 +176,7 @@ func calculate_effective_dps(unit, armor_type: String) -> float:
 	return attack_damage * type_modifier * attack_speed
 
 # Process a spell cast from a unit to a target or area
-func process_spell(caster, spell_id: String, target = null, position: Vector2 = Vector2.ZERO) -> void:
+func process_spell(_caster, spell_id: String, _target = null, _position: Vector2 = Vector2.ZERO) -> void:
 	# This would need to be implemented based on your spell system
 	# For now, just a placeholder function
 	print("Spell cast: " + spell_id)

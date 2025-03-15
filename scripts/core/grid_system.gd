@@ -61,11 +61,11 @@ func initialize_grid() -> void:
 			var grid_pos = Vector2(x, y)
 			
 			# Team A gets the left third of the map
-			if x < int(grid_width / 3):
+			if x < int(grid_width / 3.0):
 				grid_cells[grid_pos].team_territory = Team.TEAM_A
 				team_a_cells.append(grid_pos)
 			# Team B gets the right third of the map
-			elif x >= int(2 * grid_width / 3):
+			elif x >= int(2.0 * grid_width / 3.0):
 				grid_cells[grid_pos].team_territory = Team.TEAM_B
 				team_b_cells.append(grid_pos)
 			# Middle third remains neutral
@@ -86,8 +86,8 @@ func initialize_grid() -> void:
 	# Print debug info
 	if debug_verbose:
 		print("Grid dimensions: " + str(grid_width) + "x" + str(grid_height))
-		print("Team A territory boundary: x < " + str(int(grid_width / 3)))
-		print("Team B territory boundary: x >= " + str(int(2 * grid_width / 3)))
+		print("Team A territory boundary: x < " + str(int(grid_width / 3.0)))
+		print("Team B territory boundary: x >= " + str(int(2.0 * grid_width / 3.0)))
 		
 		var team_a_count = 0
 		var team_b_count = 0

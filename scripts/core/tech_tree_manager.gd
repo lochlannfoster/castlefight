@@ -414,7 +414,7 @@ func _on_game_started() -> void:
 	for team in team_unlocked_buildings.keys():
 		_initialize_team_tech(team)
 
-func _on_game_ended(winning_team: int) -> void:
+func _on_game_ended(_winning_team: int) -> void:
 	# Reset tech trees when game ends
 	for team in team_unlocked_buildings.keys():
 		team_unlocked_buildings[team].clear()
