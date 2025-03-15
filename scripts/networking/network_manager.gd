@@ -137,6 +137,77 @@ func _ready() -> void:
 	
 	print("NetworkManager initialized - Protocol Version: " + PROTOCOL_VERSION)
 
+	_verify_required_scenes()
+
+func _verify_required_scenes() -> void:
+	var required_scenes = [
+		"res://scenes/game/game.tscn",
+		"res://scenes/game/map.tscn"
+	]
+	
+	for scene_path in required_scenes:
+		var file = File.new()
+		if file.file_exists(scene_path):
+			print("Scene exists: " + scene_path)
+		else:
+			print("WARNING: Required scene does not exist: " + scene_path)
+			# Try to create a minimal version of the scene
+			_create_minimal_scene(scene_path)
+
+func _create_minimal_scene(scene_path: String) -> void:
+	var dir_path = scene_path.get_base_dir()
+	var dir = Directory.new()
+	
+	# Create directory if needed
+	if not dir.dir_exists(dir_path):
+		dir.make_dir_recursive(dir_path)
+	
+	# Create a basic scene based on the scene type
+	if scene_path.ends_with("game.tscn"):
+		# Create a basic game scene
+		var scene = PackedScene.new()
+		var root = Node2D.new()
+		root.name = "game"
+		
+		# Add script
+		var script = load("res://scripts/game/game_scene.gd")
+		if script:
+			root.set_script(script)
+		
+		# Save the scene
+		var result = scene.pack(root)
+		if result == OK:
+			ResourceSaver.save(scene_path, scene)
+			print("Created minimal game scene at: " + scene_path)
+	
+	elif scene_path.ends_with("map.tscn"):
+		# Create a basic map scene
+		var scene = PackedScene.new()
+		var root = Node2D.new()
+		root.name = "Map"
+		
+		# Add child nodes
+		var ground = Node2D.new()
+		ground.name = "Ground"
+		root.add_child(ground)
+		ground.owner = root
+		
+		var units = Node2D.new()
+		units.name = "Units"
+		root.add_child(units)
+		units.owner = root
+		
+		var buildings = Node2D.new()
+		buildings.name = "Buildings"
+		root.add_child(buildings)
+		buildings.owner = root
+		
+		# Save the scene
+		var result = scene.pack(root)
+		if result == OK:
+			ResourceSaver.save(scene_path, scene)
+			print("Created minimal map scene at: " + scene_path)
+
 func _initialize_game_references() -> void:
 	game_manager = get_node_or_null("/root/GameManager")
 	economy_manager = get_node_or_null("/root/EconomyManager")
@@ -548,6 +619,7 @@ func _client_pre_match_setup() -> void:
 
 func start_match() -> void:
 	if not is_server or game_phase != GamePhase.PREGAME:
+		print("Cannot start game: Not server or wrong game phase")
 		return
 	
 	# Set match start time and phase
@@ -562,9 +634,11 @@ func start_match() -> void:
 	# Broadcast match start to all clients
 	rpc("_match_started")
 	
-	# ADDED: Change to game scene
+	# Change to game scene
 	print("Server changing to game scene...")
-	var _error = get_tree().change_scene("res://scenes/game/game.tscn")
+	var error = get_tree().change_scene("res://scenes/game/game.tscn")
+	if error != OK:
+		print("ERROR: Failed to change to game scene with error code: " + str(error))
 	
 	emit_signal("match_started")
 
@@ -574,9 +648,10 @@ remote func _match_started() -> void:
 	
 	game_phase = GamePhase.ACTIVE
 	
-	# ADDED: Change to game scene
 	print("Client changing to game scene...")
-	var _error = get_tree().change_scene("res://scenes/game/game.tscn")
+	var error = get_tree().change_scene("res://scenes/game/game.tscn")
+	if error != OK:
+		print("ERROR: Failed to change to game scene with error code: " + str(error))
 
 func _client_match_start_setup() -> void:
 	# Ensure game manager exists

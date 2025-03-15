@@ -4,47 +4,41 @@ extends Node2D
 # Path: scripts/game/game_scene.gd
 
 # Called when the scene enters the tree
-func _ready():
-	print("DEBUG: game_scene _ready() started")
+func _ready() -> void:
+	print("Game scene is initializing...")
 	
-	# Load the map scene first
+	# Load the map scene
 	var map_scene = load("res://scenes/game/map.tscn")
 	if map_scene:
 		var map_instance = map_scene.instance()
 		add_child(map_instance)
 		print("Map loaded successfully")
-		
-	# Set up camera
-	print("Setting up camera")
-	var camera = get_node_or_null("Camera2D")
-	if camera:
-		# Position camera to see the game area
-		camera.position = Vector2(400, 300)
-		camera.current = true
-		print("Camera positioned at " + str(camera.position))
 	else:
-		print("Creating new camera")
-		camera = Camera2D.new()
-		camera.name = "Camera2D"
-		camera.position = Vector2(400, 300)
-		camera.current = true
-		add_child(camera)
-		print("Created new camera at " + str(camera.position))
+		print("ERROR: Failed to load map scene")
 	
-	# Call initialization functions to set up the game
-	print("DEBUG: About to call _initialize_game()")
+	# Setup camera
+	var camera = Camera2D.new()
+	camera.position = Vector2(400, 300)
+	camera.current = true
+	add_child(camera)
+	
+	# Initialize game
 	_initialize_game()
 	
-	# Call emergency init after a short delay to ensure everything is loaded
-	print("DEBUG: Setting up emergency init timer")
-	var timer = Timer.new()
-	add_child(timer)
-	timer.wait_time = 0.5
-	timer.one_shot = true
-	timer.connect("timeout", self, "_emergency_init")
-	timer.start()
+func _initialize_game() -> void:
+	print("Initializing game...")
 	
-	print("DEBUG: game_scene _ready() completed")
+	# Get references to global managers
+	var game_manager = get_node_or_null("/root/GameManager")
+	var grid_system = get_node_or_null("/root/GridSystem")
+	
+	# Initialize grid if available
+	if grid_system:
+		grid_system.initialize_grid()
+	
+	# Start game via game manager if available
+	if game_manager and game_manager.has_method("start_game"):
+		game_manager.start_game()
 		
 	
 func _emergency_init():

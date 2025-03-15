@@ -285,26 +285,18 @@ func start_game() -> void:
 	print("GameManager: Attempting to start game")
 	print("Current state: ", current_state)
 	
-	# Force the game to start from any state
-	if current_state == GameState.PREGAME:
-		countdown_timer = 0  # Skip countdown
-	elif current_state != GameState.PLAYING:
+	# Start the game properly
+	if current_state == GameState.SETUP or current_state == GameState.PREGAME:
 		change_game_state(GameState.PLAYING)
-	
-	# Create workers for all players
-	print("Creating player workers")
-	_create_player_workers()
-	
-	# Create initial buildings (HQs)
-	print("Creating starting buildings")
-	_create_starting_buildings()
-	
-	# Start the game if not already in PLAYING state
-	if current_state != GameState.PLAYING:
-		change_game_state(GameState.PLAYING)
-	
-	emit_signal("game_started")
-	print("GameManager: Game started signal emitted")
+		
+		# Create player workers
+		_create_player_workers()
+		
+		# Create initial buildings (HQs)
+		_create_starting_buildings()
+		
+		emit_signal("game_started")
+		print("GameManager: Game started signal emitted")
 	
 # Make _create_player_workers more robust
 func _create_player_workers() -> void:
