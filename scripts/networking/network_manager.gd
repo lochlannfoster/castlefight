@@ -258,8 +258,11 @@ func start_game() -> void:
 				elif player_info[pid].team == 1:
 					team1_count += 1
 			
-			# Assign to team with fewer players
-			var new_team = 0 if team0_count <= team1_count else 1
+			# Use explicit assignment instead of ternary
+			var new_team = 0
+			if team1_count < team0_count:
+				new_team = 1
+			
 			player_info[player_id].team = new_team
 			
 			# Notify the player of team change
@@ -685,46 +688,54 @@ func _validate_checksums() -> void:
 	var mismatch_players = []
 	
 	# Check for mismatches
-	for player_id in player_checksums.keys():
-		if player_checksums[player_id] != server_checksum:
-			mismatch_players.append(player_id)
+func start_game() -> void:
+	if not is_server:
+		return
 	
-	if not mismatch_players.empty():
-		print("Game state mismatch detected for players: ", mismatch_players)
-		
-		# Force resync for those players
-		for player_id in mismatch_players:
-			_send_game_state_to_player(player_id)
+	# Make sure all players are ready
+	for player_id in player_info.keys():
+		if not player_info[player_id].ready:
+			return
+	
+	# Set game started flag
+	game_started = true
+	
+	# Reset timers
+	server_tick_timer = 0
+	checksum_timer = 0
+	
+	# Make sure all players have valid teams before starting
+	# A player with team = -1 should be assigned to team 0 or 1
+	for player_id in player_info.keys():
+		if player_info[player_id].team < 0 or player_info[player_id].team > 1:
+			# Assign to the team with fewer players
+			var team0_count = 0
+			var team1_count = 0
+			
+			for pid in player_info.keys():
+				if player_info[pid].team == 0:
+					team0_count += 1
+				elif player_info[pid].team == 1:
+					team1_count += 1
+			
+			# Explicit team assignment instead of ternary
+			var new_team = 0
+			if team1_count < team0_count:
+				new_team = 1
+			
+			player_info[player_id].team = new_team
+			
+			# Notify the player of team change
+			if player_id != local_player_id:
+				rpc_id(player_id, "_update_team_assignment", new_team)
+	
+	# Notify all clients to start game
+	rpc("_start_game_on_client", match_id)
+	
+	# Start game locally
+	_start_game_locally()
 
-# Signal handlers
-func _on_player_connected(player_id: int) -> void:
-	print("Player connected: ", player_id)
-	
-	# If this player was previously disconnected during an active game, handle reconnection
-	if game_started and disconnected_players.has(player_id):
-		_handle_reconnection(player_id)
-	else:
-		# New player, wait for their info
-		player_info[player_id] = {
-			"name": "Player " + str(player_id),
-			"team": 0,  # Default team
-			"ready": false,
-			"is_host": false,
-			"ping": 0
-		}
-	
-	emit_signal("client_connected", player_id)
-	
-	# Send current player list if we're the server
-	if is_server:
-		# Send player list to the new player
-		rpc_id(player_id, "_update_player_list", player_info)
-		
-		# Send game state if game is in progress
-		if game_started:
-			_send_game_state_to_player(player_id)
-
-# Handle player disconnection
+# Modify _on_player_disconnected to handle erase() return values
 func _on_player_disconnected(player_id: int) -> void:
 	print("Player disconnected: ", player_id)
 	
@@ -751,24 +762,19 @@ func _on_player_disconnected(player_id: int) -> void:
 				
 				if disconnected_players.has(player_id):
 					# Player didn't reconnect within timeout
-					var _removed = disconnected_players.erase(player_id)
-					player_info.erase(player_id)
+					var _disconnected_result = disconnected_players.erase(player_id)
+					var _player_info_result = player_info.erase(player_id)
 					
 					# Broadcast updated player list
 					emit_signal("player_list_changed", player_info)
 					rpc("_update_player_list", player_info)
 			else:
-				player_info.erase(player_id)
+				var _player_info_result = player_info.erase(player_id)
 				emit_signal("player_list_changed", player_info)
-				rpc("_update_player_list", player_info)
-		else:
-			# Remove player immediately
-			player_info.erase(player_id)
-			emit_signal("player_list_changed", player_info)
-			
-			if network:  # Make sure we're still connected
-				rpc("_update_player_list", player_info)
-
+				
+				if network:  # Make sure we're still connected
+					rpc("_update_player_list", player_info)
+					
 # Handle reconnection of a player
 func _handle_reconnection(player_id: int) -> void:
 	if not is_server or not disconnected_players.has(player_id):
