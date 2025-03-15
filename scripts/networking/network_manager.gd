@@ -157,7 +157,6 @@ func _verify_required_scenes() -> void:
 func _create_minimal_scene(scene_path: String) -> void:
 	var dir_path = scene_path.get_base_dir()
 	var dir = Directory.new()
-	
 	# Create directory if needed
 	if not dir.dir_exists(dir_path):
 		dir.make_dir_recursive(dir_path)
@@ -174,15 +173,18 @@ func _create_minimal_scene(scene_path: String) -> void:
 		if script:
 			root.set_script(script)
 		
+		# Pack the root node into the scene
+		scene.pack(root)
+		
 		# Save the scene
-		var save_result = ResourceSaver.save(scene_path, packed_scene)
+		var save_result = ResourceSaver.save(scene_path, scene)
 		if save_result == OK:
 			print("Successfully created scene at: " + scene_path)
 		else:
 			push_error("Failed to save scene with error: " + str(save_result))
 	
 	elif scene_path.ends_with("map.tscn"):
-		# Create a basic map scene
+		# Similar changes for the map scene...
 		var scene = PackedScene.new()
 		var root = Node2D.new()
 		root.name = "Map"
@@ -203,12 +205,15 @@ func _create_minimal_scene(scene_path: String) -> void:
 		root.add_child(buildings)
 		buildings.owner = root
 		
+		# Pack the root node into the scene
+		scene.pack(root)
+		
 		# Save the scene
 		var save_result = ResourceSaver.save(scene_path, scene)
 		if save_result == OK:
-			print("Created minimal " + scene_type + " scene at: " + scene_path)
+			print("Created minimal scene at: " + scene_path)
 		else:
-			push_error("Failed to save " + scene_type + " scene: " + str(save_result))
+			push_error("Failed to save scene: " + str(save_result))
 
 func _initialize_game_references() -> void:
 	game_manager = get_node_or_null("/root/GameManager")
