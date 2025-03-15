@@ -120,13 +120,13 @@ func _physics_process(delta: float) -> void:
 	# Process based on current state
 	match current_state:
 		UnitState.IDLE:
-			_process_idle(_delta)
+			_process_idle(delta)
 		UnitState.MOVING:
-			_process_movement(_delta)
+			_process_movement(delta)
 		UnitState.ATTACKING:
 			_process_attacking(delta)
 		UnitState.CASTING:
-			_process_casting(_delta)
+			_process_casting(delta)
 	
 	# Update modifiers
 	_update_modifiers(delta)
@@ -221,21 +221,21 @@ func _process_movement(_delta: float) -> void:
 func _process_attacking(delta: float) -> void:
 	# Check if target is still valid
 	if not is_instance_valid(target) or target.current_state == UnitState.DEAD:
-		target = null
+		target = null  
 		current_state = UnitState.IDLE
 		return
-	
-	# Check if target is in range
+
+	# Check if target is in range  
 	var distance_to_target = global_position.distance_to(target.global_position)
-	
+
 	if distance_to_target > attack_range:
 		# Move toward target
-		set_target_position(target.global_position)
+		set_target_position(target.global_position) 
 		current_state = UnitState.MOVING
 		return
-	
+
 	# Look at target
-	var direction = global_position.direction_to(target.global_position)
+	var direction = global_position.direction_to(target.global_position)  
 	if direction.x < 0:
 		sprite.flip_h = true
 	else:
@@ -243,8 +243,8 @@ func _process_attacking(delta: float) -> void:
 	
 	# Attack timer
 	attack_timer += delta
-	
-	if attack_timer >= 1.0 / attack_speed:
+
+	if attack_timer >= 1.0 / attack_speed:  
 		attack_timer = 0
 		_perform_attack()
 

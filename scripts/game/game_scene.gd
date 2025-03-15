@@ -62,36 +62,19 @@ func _emergency_init():
 		print("ERROR: No building manager available")
 		return
 	
-	# Get grid system reference through game_manager
-	var grid_system = game_manager.grid_system
+	# Define positions that are definitely within valid territories
+	var team_positions = [
+		Vector2(50.0, 300.0),  # Team 0 HQ 
+		Vector2(690.0, 300.0)   # Team 1 HQ
+	]
 	
-	if grid_system:
-		# Define positions that are definitely within valid territories
-		var team_positions = [
-			Vector2(float(grid_system.grid_width) * 0.25, float(grid_system.grid_height) * 0.5),  # 25% across, 50% down
-			Vector2(float(grid_system.grid_width) * 0.75, float(grid_system.grid_height) * 0.5)   # 75% across, 50% down
-		]
-		
-		for team in range(2):
-			var position = grid_system.grid_to_world(team_positions[team])
-			var building = game_manager.building_manager._create_headquarters_building(position, team)
-			if building:
-				print("Successfully created emergency HQ for team " + str(team))
-			else:
-				print("Failed to create emergency HQ for team " + str(team))
-	else:
-		# Fallback if grid_system is not available
-		var safe_positions = [
-			Vector2(-160.0, 400.0),  # Safe position for Team 0
-			Vector2(480.0, 720.0)   # Safe position for Team 1
-		]
-		
-		for team in range(2):
-			var building = game_manager.building_manager._create_headquarters_building(safe_positions[team], team)
-			if building:
-				print("Successfully created emergency HQ for team " + str(team) + " using fallback positions")
-			else:
-				print("Failed to create emergency HQ for team " + str(team) + " using fallback positions")
+	for team in range(2):
+		var position = team_positions[team]
+		var building = game_manager.building_manager.place_building("headquarters", position, team)
+		if building:
+			print("Successfully created emergency HQ for team " + str(team))
+		else:
+			print("Failed to create emergency HQ for team " + str(team))
 	
 	# Try to create a worker
 	_add_test_worker()
@@ -181,14 +164,14 @@ func _setup_simple_ui():
 	else:
 		push_error("Failed to load simple_ui_manager.gd script")
 
-# Add the UI manager to the scene
+# Add the UI manager to the scene  
 func _add_ui_manager(ui_manager):
 	add_child(ui_manager)
 	
 	# Set up a timer to add the worker after the UI manager is initialized
 	var worker_timer = Timer.new()
 	add_child(worker_timer)
-	worker_timer.wait_time = 0.2
+	worker_timer.wait_time = 0.2  
 	worker_timer.one_shot = true
 	worker_timer.autostart = true
 	worker_timer.connect("timeout", self, "_add_test_worker")
@@ -211,7 +194,7 @@ func _add_test_worker():
 	worker.position = Vector2(400, 300)
 	worker.team = 0  # Team A
 	
-	# Add directly to the scene
+	# Add directly to the scene 
 	add_child(worker)
 	print("DEBUG: Worker added to scene at " + str(worker.position))
 	
@@ -228,10 +211,10 @@ func _add_test_worker():
 		worker.select()
 		print("DEBUG: Worker select() method called")
 	
-	# Select via UI manager too
+	# Select via UI manager too  
 	var ui_manager = get_node_or_null("SimpleUIManager")
 	if ui_manager and ui_manager.has_method("select_worker"):
-		ui_manager.select_worker(worker)
+		ui_manager.select_worker(worker) 
 		print("DEBUG: UI manager select_worker() called")
 
 func _input(event):
@@ -239,7 +222,7 @@ func _input(event):
 		print("Key pressed: " + str(event.scancode))
 		
 		if event.scancode == KEY_B:
-			print("B key pressed - opening building menu")
+			print("B key pressed - opening building menu")  
 			var ui_manager = get_node_or_null("SimpleUIManager")
 			if ui_manager and ui_manager.has_method("toggle_building_menu"):
 				ui_manager.toggle_building_menu()
@@ -252,8 +235,8 @@ func _input(event):
 				for team in range(2):
 					# Use different positions that work with the grid system
 					var positions = [
-						Vector2(-160.0, 400.0),  # Team 0
-						Vector2(480.0, 720.0)    # Team 1
+						Vector2(50.0, 300.0),  # Team 0
+						Vector2(690.0, 300.0)    # Team 1 
 					]
 					var building = game_manager.building_manager.place_building("headquarters", positions[team], team)
 					if building:

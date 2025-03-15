@@ -44,7 +44,7 @@ func initialize_grid() -> void:
 			# Create a new cell data structure with no territory initially
 			var cell_data = {
 				"grid_position": grid_pos,
-				"world_position": world_pos,
+				"world_position": world_pos, 
 				"occupied": false,
 				"building": null,
 				"walkable": true,
@@ -64,13 +64,13 @@ func initialize_grid() -> void:
 			if x < int(grid_width / 3.0):
 				grid_cells[grid_pos].team_territory = Team.TEAM_A
 				team_a_cells.append(grid_pos)
-			# Team B gets the right third of the map
+			# Team B gets the right third of the map  
 			elif x >= int(2.0 * grid_width / 3.0):
 				grid_cells[grid_pos].team_territory = Team.TEAM_B
 				team_b_cells.append(grid_pos)
 			# Middle third remains neutral
 			
-			# Add to lane organization
+			# Add to lane organization  
 			var lane = grid_cells[grid_pos].lane
 			if not lane_cells.has(lane):
 				lane_cells[lane] = []
@@ -82,27 +82,7 @@ func initialize_grid() -> void:
 			var grid_pos = Vector2(x, y)
 			if is_valid_placement_cell(grid_pos):
 				valid_placement_cells.append(grid_pos)
-	
-	# Print debug info
-	if debug_verbose:
-		print("Grid dimensions: " + str(grid_width) + "x" + str(grid_height))
-		print("Team A territory boundary: x < " + str(int(grid_width / 3.0)))
-		print("Team B territory boundary: x >= " + str(int(2.0 * grid_width / 3.0)))
-		
-		var team_a_count = 0
-		var team_b_count = 0
-		var neutral_count = 0
-		for cell in grid_cells.values():
-			if cell.team_territory == Team.TEAM_A:
-				team_a_count += 1
-			elif cell.team_territory == Team.TEAM_B:
-				team_b_count += 1
-			else:
-				neutral_count += 1
-		print("Team A cells: " + str(team_a_count))
-		print("Team B cells: " + str(team_b_count))
-		print("Neutral cells: " + str(neutral_count))
-	
+				
 	emit_signal("grid_initialized")
 
 # Determine which lane a cell belongs to based on its position
