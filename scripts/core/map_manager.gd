@@ -431,3 +431,70 @@ func _update_map_display() -> void:
 # Signal handlers
 func _on_grid_initialized() -> void:
 	apply_map_to_grid()
+
+func load_map_config(map_name: String = "default_map") -> bool:
+    var file_path = "res://data/maps/" + map_name + ".json"
+    var file = File.new()
+    
+    if not file.file_exists(file_path):
+        push_error("Map configuration file not found: " + file_path)
+        return false
+    
+    if file.open(file_path, File.READ) != OK:
+        push_error("Could not open map configuration file: " + file_path)
+        return false
+    
+    var json_text = file.get_as_text()
+    file.close()
+    
+    var json_result = JSON.parse(json_text)
+    if json_result.error != OK:
+        push_error("Error parsing map configuration: " + json_result.error_string)
+        return false
+    
+    var config = json_result.result
+    
+    # Set map dimensions
+    map_width = config.size.width
+    map_height = config.size.height
+    
+    # Set territories
+    team_a_base_rect = Rect2(
+        config.territories.team_a.start_x,
+        config.territories.team_a.start_y,
+        config.territories.team_a.end_x - config.territories.team_a.start_x,
+        config.territories.team_a.end_y - config.territories.team_a.start_y
+    )
+    
+    team_b_base_rect = Rect2(
+        config.territories.team_b.start_x,
+        config.territories.team_b.start_y,
+        config.territories.team_b.end_x - config.territories.team_b.start_x,
+        config.territories.team_b.end_y - config.territories.team_b.start_y
+    )
+    
+    # Set spawn points
+    team_a_start_pos = Vector2(config.spawn_points.team_a.x, config.spawn_points.team_a.y)
+    team_b_start_pos = Vector2(config.spawn_points.team_b.x, config.spawn_points.team_b.y)
+    
+    # Set HQ positions
+    team_a_hq_pos = Vector2(config.hq_positions.team_a.x, config.hq_positions.team_a.y)
+    team_b_hq_pos = Vector2(config.hq_positions.team_b.x, config.hq_positions.team_b.y)
+    
+    # Load lanes
+    lanes = []
+    for lane_data in config.lanes:
+        var lane = {
+            "id": lane_data.id,
+            "name": lane_data.name,
+            "start_y": lane_data.start_y,
+            "end_y": lane_data.end_y,
+            "waypoints": []
+        }
+        
+        for waypoint in lane_data.waypoints:
+            lane.waypoints.append(Vector2(waypoint.x, waypoint.y))
+        
+        lanes.append(lane)
+    
+    return true

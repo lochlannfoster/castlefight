@@ -1,3 +1,4 @@
+# Create res://scenes/ui/building_menu.tscn
 [gd_scene load_steps=2 format=2]
 
 [ext_resource path="res://scripts/ui/building_menu.gd" type="Script" id=1]

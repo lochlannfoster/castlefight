@@ -202,3 +202,36 @@ func get_unit_effective_dps(unit_type: String, armor_type: String) -> float:
 		return attack_damage * type_modifier * attack_speed
 	
 	return attack_damage * attack_speed
+
+func load_default_unit_data(unit_type: String) -> Dictionary:
+    var default_path = "res://data/defaults/units/default_unit.json"
+    var file = File.new()
+    
+    if file.file_exists(default_path):
+        if file.open(default_path, File.READ) == OK:
+            var text = file.get_as_text()
+            file.close()
+            
+            var parse_result = JSON.parse(text)
+            if parse_result.error == OK:
+                var data = parse_result.result
+                data["unit_id"] = unit_type
+                return data
+    
+    # If loading fails, return a hardcoded minimum default
+    return {
+        "unit_id": unit_type,
+        "display_name": unit_type.capitalize(),
+        "health": 100,
+        "max_health": 100,
+        "armor": 0,
+        "armor_type": "medium",
+        "attack_damage": 10,
+        "attack_type": "normal",
+        "attack_range": 60,
+        "attack_speed": 1.0,
+        "movement_speed": 100,
+        "collision_radius": 16,
+        "vision_range": 250,
+        "health_regen": 0.25
+    }

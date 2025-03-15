@@ -1,0 +1,33 @@
+{
+    "name": "Default Map",
+    "width": 40,
+    "height": 30,
+    "team_a_base": {
+        "x": 0,
+        "y": 0,
+        "width": 12,
+        "height": 30
+    },
+    "team_b_base": {
+        "x": 28,
+        "y": 0,
+        "width": 12,
+        "height": 30
+    },
+    "team_a_start": {
+        "x": 6,
+        "y": 15
+    },
+    "team_b_start": {
+        "x": 34,
+        "y": 15
+    },
+    "team_a_hq": {
+        "x": 3,
+        "y": 15
+    },
+    "team_b_hq": {
+        "x": 37,
+        "y": 15
+    }
+}

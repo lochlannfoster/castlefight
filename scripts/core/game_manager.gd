@@ -586,3 +586,70 @@ func _on_race_selection_complete() -> void:
     
     # Start the game
     start_game()
+
+# Validate the current game state and try to restore it if corrupted
+func validate_and_restore_game_state() -> bool:
+    var state_valid = true
+    
+    # Check if grid system is initialized
+    if not grid_system or grid_system.grid_cells.empty():
+        push_warning("Grid system not initialized, attempting to restore")
+        if grid_system:
+            grid_system.initialize_grid()
+        state_valid = false
+    
+    # Check if headquarters exist
+    for team in range(2):
+        if not headquarters.has(team) or headquarters[team] == null:
+            push_warning("Headquarters missing for team " + str(team) + ", attempting to restore")
+            _create_headquarters_for_team(team)
+            state_valid = false
+    
+    # Check player workers
+    for player_id in players.keys():
+        var player_data = players[player_id]
+        if not player_data.has("worker") or player_data.worker == null:
+            push_warning("Worker missing for player " + str(player_id) + ", attempting to restore")
+            _create_worker_for_player(player_id)
+            state_valid = false
+    
+    return state_valid
+
+# Helper method to create headquarters
+func _create_headquarters_for_team(team: int) -> void:
+    if not building_manager or not map_manager:
+        push_error("Cannot create headquarters: Missing required managers")
+        return
+    
+    var hq_position = map_manager.get_team_hq_position(team)
+    var hq = building_manager.place_building("headquarters", hq_position, team)
+    
+    if hq:
+        register_headquarters(hq, team)
+        push_warning("Successfully restored headquarters for team " + str(team))
+    else:
+        push_error("Failed to restore headquarters for team " + str(team))
+
+# Helper method to create a worker
+func _create_worker_for_player(player_id: int) -> void:
+    if not players.has(player_id):
+        push_error("Cannot create worker: Player ID not found: " + str(player_id))
+        return
+    
+    var player_data = players[player_id]
+    var team = player_data.team
+    
+    var worker_scene = load("res://scenes/units/worker.tscn")
+    if not worker_scene:
+        push_error("Cannot create worker: Scene not found")
+        return
+    
+    var worker = worker_scene.instance()
+    worker.team = team
+    
+    var spawn_position = map_manager.get_team_start_position(team)
+    worker.position = spawn_position
+    
+    get_tree().current_scene.add_child(worker)
+    player_data.worker = worker
+    push_warning("Successfully restored worker for player " + str(player_id))

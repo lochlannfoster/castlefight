@@ -1,0 +1,22 @@
+{
+    "display_name": "Default Unit",
+    "health": 100,
+    "max_health": 100,
+    "armor": 0,
+    "armor_type": "medium",
+    "attack_damage": 10,
+    "attack_type": "normal",
+    "attack_range": 60,
+    "attack_speed": 1.0,
+    "movement_speed": 100,
+    "collision_radius": 16,
+    "vision_range": 250,
+    "health_regen": 0.25,
+    "animations": {
+        "idle": "res://assets/units/default/idle/idle.png",
+        "move": "res://assets/units/default/move/move1.png",
+        "attack": "res://assets/units/default/attack/attack1.png",
+        "death": "res://assets/units/default/death/death1.png",
+        "hurt": "res://assets/units/default/hurt/hurt1.png"
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "display_name": "Default Building",
+    "health": 500,
+    "max_health": 500,
+    "armor": 5,
+    "armor_type": "fortified",
+    "vision_range": 300,
+    "construction": {
+        "time": 30,
+        "gold_cost": 100,
+        "wood_cost": 50,
+        "supply_cost": 0,
+        "size_x": 2,
+        "size_y": 2
+    },
+    "animations": {
+        "construction": "res://assets/buildings/default/construction/construction1.png",
+        "idle": "res://assets/buildings/default/idle/idle.png",
+        "damaged": "res://assets/buildings/default/damaged/damaged.png",
+        "destroyed": "res://assets/buildings/default/destroyed/destroyed.png"
+    }
+}
