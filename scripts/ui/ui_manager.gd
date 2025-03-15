@@ -313,7 +313,8 @@ func _create_floating_text_container() -> void:
 	floating_text_container = Control.new()
 	floating_text_container.name = "FloatingTextContainer"
 	floating_text_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	floating_text_container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	floating_text_container.anchor_right = 1.0
+	floating_text_container.anchor_bottom = 1.0
 	add_child(floating_text_container)
 
 # Create tooltip
@@ -760,3 +761,20 @@ func _on_match_countdown_updated(time_remaining: float) -> void:
 func _process(_delta: float) -> void:
 	if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
 		update_game_time(game_manager.match_timer)
+
+func show_match_preparation():
+	# Show match preparation screen
+	var label = Label.new()
+	label.text = "Preparing Match..."
+	label.align = Label.ALIGN_CENTER
+	label.valign = Label.VALIGN_CENTER
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	label.rect_position = Vector2(viewport_rect.size.x / 2 - 100, viewport_rect.size.y / 2 - 25)
+	label.rect_size = Vector2(200, 50)
+	
+	floating_text_container.add_child(label)
+	
+	# Remove after delay
+	yield(get_tree().create_timer(2.0), "timeout")
+	label.queue_free()

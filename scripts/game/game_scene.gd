@@ -108,7 +108,7 @@ func _start_single_player_game(game_manager):
 
 # Setup a simple UI manager for testing
 func _setup_simple_ui():
-	print("Setting up simple UI for testing...")
+	print("Setting up UI manager for game...")
 	
 	# First check if a UI manager already exists
 	var existing_ui = get_node_or_null("/root/GameManager/UIManager")
@@ -116,31 +116,26 @@ func _setup_simple_ui():
 		print("Game already has a UI manager, using that")
 		return
 	
-	# Create directory if needed
-	var dir = Directory.new()
-	if not dir.dir_exists("res://scripts/ui"):
-		dir.make_dir_recursive("res://scripts/ui")
-	
-	# Check if the simple UI script exists, create it if not
-	var simple_ui_path = "res://scripts/ui/simple_ui_manager.gd"
+	# Load the comprehensive UI manager script
+	var ui_manager_path = "res://scripts/ui/ui_manager.gd"
 	var file = File.new()
 	
-	if !file.file_exists(simple_ui_path):
-		print("Simple UI manager script not found, it should be created automatically")
+	if !file.file_exists(ui_manager_path):
+		print("UI manager script not found, please create it first")
+		return
 	
-	# Load the script
-	var simple_ui_script = load(simple_ui_path)
+	# Load the script and create proper UIManager instance
+	var ui_manager_script = load(ui_manager_path)
 	
-	if simple_ui_script:
+	if ui_manager_script:
 		print("Creating UI manager instance")
-		var ui_manager = CanvasLayer.new()
-		ui_manager.name = "SimpleUIManager"
-		ui_manager.set_script(simple_ui_script)
+		var ui_manager = ui_manager_script.new()
+		ui_manager.name = "UIManager"
 		
 		# Add to scene tree - use call_deferred to avoid errors
 		call_deferred("_add_ui_manager", ui_manager)
 	else:
-		push_error("Failed to load simple_ui_manager.gd script")
+		push_error("Failed to load UI manager script")
 
 # Add the UI manager to the scene  
 func _add_ui_manager(ui_manager):
@@ -190,18 +185,19 @@ func _add_test_worker():
 		print("DEBUG: Worker select() method called")
 	
 	# Select via UI manager too  
-	var ui_manager = get_node_or_null("SimpleUIManager")
+	var ui_manager = get_node_or_null("UIManager")
 	if ui_manager and ui_manager.has_method("select_worker"):
 		ui_manager.select_worker(worker) 
 		print("DEBUG: UI manager select_worker() called")
 
 func _input(event):
+	# Only check for scancode on keyboard events
 	if event is InputEventKey and event.pressed:
 		print("Key pressed: " + str(event.scancode))
 		
 		if event.scancode == KEY_B:
 			print("B key pressed - opening building menu")  
-			var ui_manager = get_node_or_null("SimpleUIManager")
+			var ui_manager = get_node_or_null("UIManager")
 			if ui_manager and ui_manager.has_method("toggle_building_menu"):
 				ui_manager.toggle_building_menu()
 			
@@ -221,3 +217,8 @@ func _input(event):
 						print("Created HQ for team " + str(team))
 					else:
 						print("Failed to create HQ for team " + str(team))
+	
+	# Handle other input types if needed
+	elif event is InputEventMouseButton:
+		# Mouse button code here
+		pass
