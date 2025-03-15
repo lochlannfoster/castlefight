@@ -221,7 +221,14 @@ func set_ready(ready: bool) -> void:
 func start_game() -> void:
 	print("LobbyUI: Starting game")
 	print("Network manager debug mode: ", network_manager.debug_mode)
-	network_manager.start_match() 
+	print("Network manager is_server: ", network_manager.is_server)
+	print("Network manager game_phase: ", network_manager.game_phase)
+	
+	# Try to ensure conditions are correct
+	if network_manager.debug_mode:
+		network_manager.game_phase = network_manager.GamePhase.PREGAME
+	
+	network_manager.start_match()
 
 # Update player lists based on current player info
 func update_player_lists(player_info: Dictionary) -> void:

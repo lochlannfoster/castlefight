@@ -270,7 +270,8 @@ func start_server(server_name: String = "Castle Fight Server",
 	get_tree().network_peer = network
 	connection_state = ConnectionState.SERVER_RUNNING
 	local_player_id = 1  # Server always has ID 1
-	is_server = true  # Set is_server to true
+	is_server = true
+	game_phase = GamePhase.LOBBY  # Start in LOBBY phase
 	
 	# Initialize players dictionary properly
 	players = {
@@ -564,13 +565,20 @@ func _check_match_start_conditions() -> void:
 	var team_1_ready = _team_all_ready(1)
 	
 	# Check team sizes and readiness
-	if (team_0_ready and team_1_ready and 
-		players[0].size() > 0 and players[1].size() > 0):
+	var both_teams_ready = team_0_ready and team_1_ready
+	var has_enough_players = players[0].size() > 0 and players[1].size() > 0
+	
+	# In debug mode, we just need one team to be ready
+	if debug_mode:
+		has_enough_players = players[0].size() > 0 or players[1].size() > 0
+		both_teams_ready = (players[0].size() > 0 and team_0_ready) or (players[1].size() > 0 and team_1_ready)
+	
+	# Set the game phase if conditions are met
+	if both_teams_ready and has_enough_players:
+		# Make sure to change the game phase to PREGAME
+		game_phase = GamePhase.PREGAME
 		# Emit match ready signal before starting match preparation
 		emit_signal("match_ready")
-		
-		# Begin match preparation
-		_prepare_match_start()
 
 func _team_all_ready(team: int) -> bool:
 	if not players.has(team):
@@ -618,8 +626,17 @@ func _client_pre_match_setup() -> void:
 	print("Client pre-match setup completed")
 
 func start_match() -> void:
+	# Print more debug info
+	print("Starting match - is_server: " + str(is_server) + ", game_phase: " + str(game_phase))
+	
+	# In debug mode, force the game to start regardless of phase
+	if debug_mode:
+		print("Debug mode enabled - forcing game start")
+		game_phase = GamePhase.PREGAME
+		is_server = true
+	
 	if not is_server or game_phase != GamePhase.PREGAME:
-		print("Cannot start game: Not server or wrong game phase")
+		print("Cannot start game: Not server or wrong game phase. Current phase: " + str(game_phase))
 		return
 	
 	# Set match start time and phase
@@ -631,7 +648,7 @@ func start_match() -> void:
 	match_winner = -1
 	match_end_reason = ""
 	
-	# Broadcast match start to all clients
+	# Broadcast match start to all client
 	rpc("_match_started")
 	
 	# Change to game scene
@@ -639,7 +656,6 @@ func start_match() -> void:
 	var error = get_tree().change_scene("res://scenes/game/game.tscn")
 	if error != OK:
 		print("ERROR: Failed to change to game scene with error code: " + str(error))
-	
 	emit_signal("match_started")
 
 remote func _match_started() -> void:

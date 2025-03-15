@@ -24,23 +24,7 @@ func _ready() -> void:
 	
 	# Initialize game
 	_initialize_game()
-	
-func _initialize_game() -> void:
-	print("Initializing game...")
-	
-	# Get references to global managers
-	var game_manager = get_node_or_null("/root/GameManager")
-	var grid_system = get_node_or_null("/root/GridSystem")
-	
-	# Initialize grid if available
-	if grid_system:
-		grid_system.initialize_grid()
-	
-	# Start game via game manager if available
-	if game_manager and game_manager.has_method("start_game"):
-		game_manager.start_game()
-		
-	
+			
 func _emergency_init():
 	print("Emergency initialization triggered")
 	var game_manager = get_node_or_null("/root/GameManager")
