@@ -54,46 +54,61 @@ func _load_unit_file(unit_id: String, file_path: String) -> void:
 
 # Create a unit instance
 func create_unit(unit_type: String, position: Vector2, team: int):
-	# Check if unit type exists
-	if not unit_data.has(unit_type):
-		print("Unknown unit type: " + unit_type)
-		emit_signal("unit_creation_failed", unit_type, "Unknown unit type")
-		return null
-	
-	# Get unit data
-	var data = unit_data[unit_type]
-	
-	unit.add_child(unit_sprite)
-	
-	# Add collision
-	var collision = CollisionShape2D.new()
-	collision.name = "CollisionShape2D"
-	var shape = CircleShape2D.new()
-	shape.radius = 16.0
-	collision.shape = shape
-	unit.add_child(collision)
-	
-	# Set position
-	unit.position = position
-	
-	# Add to scene
-	var scene = get_tree().current_scene
-	if scene:
-		scene.add_child(unit)
-	
-	# Try to load unit texture
-	var texture_path = "res://assets/units/" + unit_type + "/idle/idle.png"
-	var texture = load(texture_path)
-	if texture:
-		unit_sprite.texture = texture
-	else:
-		push_error("CRITICAL: Unit texture failed to load for " + unit_type)
-		get_tree().quit()
-	
-	print("Created unit: " + unit_type)
-	emit_signal("unit_created", unit, unit_type, team)
-	
-	return unit
+    # Check if unit type exists
+    if not unit_data.has(unit_type):
+        print("Unknown unit type: " + unit_type)
+        emit_signal("unit_creation_failed", unit_type, "Unknown unit type")
+        return null
+    
+    # Get unit data
+    var data = unit_data[unit_type]
+    
+    # Create unit instance from scene
+    var unit_scene = load("res://scenes/units/base_unit.tscn")
+    if not unit_scene:
+        push_error("Could not load base unit scene")
+        emit_signal("unit_creation_failed", unit_type, "Could not load base unit scene")
+        return null
+    
+    var unit = unit_scene.instance()
+    
+    # Create sprite for the unit
+    var unit_sprite = Sprite.new()
+    unit_sprite.name = "Sprite"
+    unit.add_child(unit_sprite)
+    
+    # Add collision
+    var collision = CollisionShape2D.new()
+    collision.name = "CollisionShape2D"
+    var shape = CircleShape2D.new()
+    shape.radius = 16.0
+    collision.shape = shape
+    unit.add_child(collision)
+    
+    # Set position
+    unit.position = position
+    
+    # Configure the unit with data
+    _configure_unit(unit, unit_type, data, team)
+    
+    # Add to scene
+    var scene = get_tree().current_scene
+    if scene:
+        scene.add_child(unit)
+    
+    # Try to load unit texture
+    var texture_path = "res://assets/units/" + unit_type + "/idle/idle.png"
+    var texture = load(texture_path)
+    if texture:
+        unit_sprite.texture = texture
+    else:
+        push_error("CRITICAL: Unit texture failed to load for " + unit_type)
+        get_tree().quit()
+    
+    print("Created unit: " + unit_type)
+    emit_signal("unit_created", unit, unit_type, team)
+    
+    return unit
 	
 # Configure a unit instance with data
 func _configure_unit(unit: Unit, unit_type: String, data: Dictionary, team: int) -> void:

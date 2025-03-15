@@ -306,3 +306,74 @@ func notify_unit_revealed(unit, team) -> void:
 	
 func notify_building_revealed(building, team) -> void: 
 	emit_signal("fog_building_revealed", building, team)
+
+# Update visibility based on unit and building positions
+func _update_visibility() -> void:
+    # Skip if no teams are initialized
+    if visibility_grid.empty():
+        return
+    
+    # Reset current visibility to "previously seen" (1)
+    for team in visibility_grid.keys():
+        for cell_key in visibility_grid[team].keys():
+            if visibility_grid[team][cell_key] == 2:  # If currently visible
+                visibility_grid[team][cell_key] = 1   # Set to previously seen
+    
+    # Update visibility from units
+    for unit_id in all_units.keys():
+        var unit = all_units[unit_id]
+        if not is_instance_valid(unit):
+            # Remove invalid unit references
+            var _erased = all_units.erase(unit_id)
+            continue
+            
+        var unit_team = unit.team if "team" in unit else 0
+        var unit_pos = unit.global_position
+        var vision_range = unit.vision_range if "vision_range" in unit else 300.0
+        
+        # Make cells visible for this unit's team
+        _update_cells_visibility(unit_team, unit_pos, vision_range)
+        
+    # Update visibility from buildings
+    for building_id in all_buildings.keys():
+        var building = all_buildings[building_id]
+        if not is_instance_valid(building):
+            # Remove invalid building references
+            var _erased = all_buildings.erase(building_id)
+            continue
+            
+        var building_team = building.team if "team" in building else 0
+        var building_pos = building.global_position
+        var vision_range = building.vision_range if "vision_range" in building else 300.0
+        
+        # Make cells visible for this building's team
+        _update_cells_visibility(building_team, building_pos, vision_range)
+    
+    # Update fog textures after visibility changes
+    _update_fog_textures()
+
+# Update cells visibility within a vision range
+func _update_cells_visibility(team: int, position: Vector2, vision_range: float) -> void:
+    if not visibility_grid.has(team):
+        return
+        
+    # Convert world position to grid cell
+    var cell_x = int(position.x / cell_size.x)
+    var cell_y = int(position.y / cell_size.y)
+    
+    # Calculate cell radius based on vision range
+    var cell_radius = int(vision_range / cell_size.x)
+    
+    # Update all cells within the vision radius
+    for x in range(cell_x - cell_radius, cell_x + cell_radius + 1):
+        for y in range(cell_y - cell_radius, cell_y + cell_radius + 1):
+            # Skip if out of bounds
+            if x < 0 or y < 0 or x >= map_width or y >= map_height:
+                continue
+                
+            # Calculate distance from center
+            var distance = Vector2(x, y).distance_to(Vector2(cell_x, cell_y))
+            if distance <= cell_radius:
+                # Set cell to visible (2)
+                var cell_key = str(x) + "_" + str(y)
+                visibility_grid[team][cell_key] = 2

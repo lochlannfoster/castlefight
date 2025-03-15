@@ -344,6 +344,7 @@ func safe_get_node(path):
     return null
 
 # Create starting buildings (HQs)
+# Create starting buildings (HQs)
 func _create_starting_buildings() -> void:
     print("Creating starting buildings...")
     if not building_manager:
@@ -369,20 +370,29 @@ func _create_starting_buildings() -> void:
         
         print("Team territories initialized")
     
-    for team in range(2):
-        var hq_position = hq_positions[team]
-        print("Attempting to create HQ at " + str(hq_position) + " for team " + str(team))
-        
-        var hq = building_manager.place_building("headquarters", hq_position, team)
-        if hq:
-            print("HQ successfully created for team " + str(team))
-            register_headquarters(hq, team)
+    # Create headquarters for each team
+    for current_team in range(2):
+        # Determine HQ position
+        var position_to_use
+        if map_manager and map_manager.has_method("get_team_hq_position"):
+            position_to_use = map_manager.get_team_hq_position(current_team)
         else:
-            print("Failed to create HQ for team " + str(team))
+            # Default positions if map_manager isn't available
+            position_to_use = Vector2(100, 400) if current_team == 0 else Vector2(1500, 400)
+        
+        print("Attempting to create HQ at " + str(position_to_use) + " for team " + str(current_team))
+        
+        var hq = building_manager.place_building("headquarters", position_to_use, current_team)
+        if hq:
+            print("HQ successfully created for team " + str(current_team))
+            register_headquarters(hq, current_team)
+        else:
+            print("Failed to create HQ for team " + str(current_team))
 
         # Debug information
-        var grid_pos = grid_system.world_to_grid(hq_position)
-        print("Team " + str(team) + " HQ - World pos: " + str(hq_position) + ", Grid pos: " + str(grid_pos))
+        if grid_system:
+            var grid_pos = grid_system.world_to_grid(position_to_use)
+            print("Team " + str(current_team) + " HQ - World pos: " + str(position_to_use) + ", Grid pos: " + str(grid_pos))
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:

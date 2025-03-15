@@ -1,4 +1,7 @@
-static func load_resource_with_fallback(primary_path: String, fallback_path: String, error_message: String = ""):
+extends Reference
+
+# Load a resource with a fallback option
+static func load_resource_with_fallback(primary_path: String, fallback_path: String, error_message: String = "") -> Resource:
     var resource = load(primary_path)
     
     if resource:
@@ -12,8 +15,10 @@ static func load_resource_with_fallback(primary_path: String, fallback_path: Str
         return resource
     
     # Both primary and fallback failed
-    push_error("Failed to load resource: " + primary_path + 
-               " or fallback: " + fallback_path + 
-               (error_message.empty() ? "" : " - " + error_message))
+    var error_text = "Failed to load resource: " + primary_path + " or fallback: " + fallback_path
+    if !error_message.empty():
+        error_text += " - " + error_message
+        
+    push_error(error_text)
     
     return null
