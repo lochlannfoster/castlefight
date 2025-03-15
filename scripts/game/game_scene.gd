@@ -50,48 +50,51 @@ func _ready():
 func _emergency_init():
 	print("Emergency initialization triggered")
 	var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager:
-		game_manager.start_game()
+	if not game_manager:
+		print("ERROR: Could not find GameManager")
+		return
 		
-		# Try to directly create HQs and workers
-		print("Creating emergency game elements...")
-		
-	# Try to create HQs
-	if game_manager and game_manager.building_manager:
-		# Get grid system reference through game_manager
-		var grid_system = game_manager.grid_system
-		
-		if grid_system:
-			# Define positions that are definitely within valid territories
-			var team_positions = [
-				Vector2(float(grid_system.grid_width) * 0.25, float(grid_system.grid_height) * 0.5),  # 25% across, 50% down
-				Vector2(float(grid_system.grid_width) * 0.75, float(grid_system.grid_height) * 0.5)   # 75% across, 50% down
-			]
-			
-			for team in range(2):
-				var position = grid_system.grid_to_world(team_positions[team])
-				var building = game_manager.building_manager._create_headquarters_building(position, team)
-				if building:
-					print("Successfully created emergency HQ for team " + str(team))
-				else:
-					print("Failed to create emergency HQ for team " + str(team))
-		else:
-			# Fallback if grid_system is not available
-			var safe_positions = [
-				Vector2(200.0, 300.0),  # Safe position for Team 0
-				Vector2(600.0, 300.0)   # Safe position for Team 1
-			]
-			
-			for team in range(2):
-				var building = game_manager.building_manager._create_headquarters_building(safe_positions[team], team)
-				if building:
-					print("Successfully created emergency HQ for team " + str(team) + " using fallback positions")
-				else:
-					print("Failed to create emergency HQ for team " + str(team) + " using fallback positions")
-			
-			# Try to create a worker
-			_add_test_worker()
+	game_manager.start_game()
 	
+	# Try to create HQs directly
+	print("Creating emergency game elements...")
+	if not game_manager.building_manager:
+		print("ERROR: No building manager available")
+		return
+	
+	# Get grid system reference through game_manager
+	var grid_system = game_manager.grid_system
+	
+	if grid_system:
+		# Define positions that are definitely within valid territories
+		var team_positions = [
+			Vector2(float(grid_system.grid_width) * 0.25, float(grid_system.grid_height) * 0.5),  # 25% across, 50% down
+			Vector2(float(grid_system.grid_width) * 0.75, float(grid_system.grid_height) * 0.5)   # 75% across, 50% down
+		]
+		
+		for team in range(2):
+			var position = grid_system.grid_to_world(team_positions[team])
+			var building = game_manager.building_manager._create_headquarters_building(position, team)
+			if building:
+				print("Successfully created emergency HQ for team " + str(team))
+			else:
+				print("Failed to create emergency HQ for team " + str(team))
+	else:
+		# Fallback if grid_system is not available
+		var safe_positions = [
+			Vector2(-160.0, 400.0),  # Safe position for Team 0
+			Vector2(480.0, 720.0)   # Safe position for Team 1
+		]
+		
+		for team in range(2):
+			var building = game_manager.building_manager._create_headquarters_building(safe_positions[team], team)
+			if building:
+				print("Successfully created emergency HQ for team " + str(team) + " using fallback positions")
+			else:
+				print("Failed to create emergency HQ for team " + str(team) + " using fallback positions")
+	
+	# Try to create a worker
+	_add_test_worker()
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -247,9 +250,12 @@ func _input(event):
 			var game_manager = get_node_or_null("/root/GameManager")
 			if game_manager and game_manager.building_manager:
 				for team in range(2):
-					# Use 400 instead of 600 for team 1 to ensure it's in valid territory
-					var position = Vector2(200 + team * 400, 300)
-					var building = game_manager.building_manager.place_building("headquarters", position, team)
+					# Use different positions that work with the grid system
+					var positions = [
+						Vector2(-160.0, 400.0),  # Team 0
+						Vector2(480.0, 720.0)    # Team 1
+					]
+					var building = game_manager.building_manager.place_building("headquarters", positions[team], team)
 					if building:
 						print("Created HQ for team " + str(team))
 					else:

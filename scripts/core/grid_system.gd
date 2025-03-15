@@ -5,6 +5,9 @@ extends Node2D
 signal cell_highlighted(grid_pos, is_valid)
 signal grid_initialized
 
+# Debug settings
+var debug_verbose = true  # Set to true for initial debugging
+
 # Grid dimensions
 var grid_width: int = 40  # Number of cells horizontally
 var grid_height: int = 30  # Number of cells vertically
@@ -30,14 +33,15 @@ func initialize_grid() -> void:
 	valid_placement_cells.clear()
 	team_a_cells.clear()
 	team_b_cells.clear()
+	lane_cells.clear()
 	
-	# Create cells for the entire grid
+	# First create all cells
 	for x in range(grid_width):
 		for y in range(grid_height):
 			var grid_pos = Vector2(x, y)
 			var world_pos = grid_to_world(grid_pos)
 			
-			# Create a new cell data structure
+			# Create a new cell data structure with no territory initially
 			var cell_data = {
 				"grid_position": grid_pos,
 				"world_position": world_pos,
@@ -47,50 +51,57 @@ func initialize_grid() -> void:
 				"team_territory": null,
 				"lane": determine_lane(grid_pos)
 			}
-						
-
-			# Assign the cell to its team territory based on position
-			# Assuming Team A is on the left side, Team B on right side
-			if x < float(grid_width) / 2.0 - 5.0:  # Left side with 5-cell buffer
-				cell_data.team_territory = Team.TEAM_A
-				team_a_cells.append(grid_pos)
-			elif x >= float(grid_width) / 2.0 + 5.0:  # Changed from ">" to ">="
-				cell_data.team_territory = Team.TEAM_B
-				team_b_cells.append(grid_pos)
-			else:
-				# Neutral territory in the middle
-				cell_data.team_territory = null
-				
+			
 			# Store the cell in our grid
 			grid_cells[grid_pos] = cell_data
+	
+	# Second pass: assign territories
+	for x in range(grid_width):
+		for y in range(grid_height):
+			var grid_pos = Vector2(x, y)
 			
-			# Add to valid placement cells (could be adjusted based on game rules)
-			if is_valid_placement_cell(grid_pos):
-				valid_placement_cells.append(grid_pos)
-
-			print("Grid dimensions: " + str(grid_width) + "x" + str(grid_height))
-			print("Team A territory: x < " + str(grid_width / 2 - 5))
-			print("Team B territory: x > " + str(grid_width / 2 + 5))
-
-			var team_a_count = 0
-			var team_b_count = 0
-			var neutral_count = 0
-			for cell in grid_cells.values():
-				if cell.team_territory == Team.TEAM_A:
-					team_a_count += 1
-				elif cell.team_territory == Team.TEAM_B:
-					team_b_count += 1
-				else:
-					neutral_count += 1
-			print("Team A cells: " + str(team_a_count))
-			print("Team B cells: " + str(team_b_count))
-			print("Neutral cells: " + str(neutral_count))
-
+			# Team A gets the left third of the map
+			if x < int(grid_width / 3):
+				grid_cells[grid_pos].team_territory = Team.TEAM_A
+				team_a_cells.append(grid_pos)
+			# Team B gets the right third of the map
+			elif x >= int(2 * grid_width / 3):
+				grid_cells[grid_pos].team_territory = Team.TEAM_B
+				team_b_cells.append(grid_pos)
+			# Middle third remains neutral
+			
 			# Add to lane organization
-			var lane = cell_data.lane
+			var lane = grid_cells[grid_pos].lane
 			if not lane_cells.has(lane):
 				lane_cells[lane] = []
 			lane_cells[lane].append(grid_pos)
+	
+	# Third pass: determine valid placement cells
+	for x in range(grid_width):
+		for y in range(grid_height):
+			var grid_pos = Vector2(x, y)
+			if is_valid_placement_cell(grid_pos):
+				valid_placement_cells.append(grid_pos)
+	
+	# Print debug info
+	if debug_verbose:
+		print("Grid dimensions: " + str(grid_width) + "x" + str(grid_height))
+		print("Team A territory boundary: x < " + str(int(grid_width / 3)))
+		print("Team B territory boundary: x >= " + str(int(2 * grid_width / 3)))
+		
+		var team_a_count = 0
+		var team_b_count = 0
+		var neutral_count = 0
+		for cell in grid_cells.values():
+			if cell.team_territory == Team.TEAM_A:
+				team_a_count += 1
+			elif cell.team_territory == Team.TEAM_B:
+				team_b_count += 1
+			else:
+				neutral_count += 1
+		print("Team A cells: " + str(team_a_count))
+		print("Team B cells: " + str(team_b_count))
+		print("Neutral cells: " + str(neutral_count))
 	
 	emit_signal("grid_initialized")
 
@@ -116,11 +127,11 @@ func world_to_grid(world_pos: Vector2) -> Vector2:
 	var grid_x = (world_pos.x / (float(cell_size.x) / 2.0) + world_pos.y / (float(cell_size.y) / 2.0)) / 2.0
 	var grid_y = (world_pos.y / (float(cell_size.y) / 2.0) - world_pos.x / (float(cell_size.x) / 2.0)) / 2.0
 	
-	# Clamp to valid grid range
-	grid_x = clamp(round(grid_x), 0.0, float(grid_width - 1))
-	grid_y = clamp(round(grid_y), 0.0, float(grid_height - 1))
+	# Round to nearest integer and clamp to valid grid range
+	var final_x = clamp(round(grid_x), 0.0, float(grid_width - 1))
+	var final_y = clamp(round(grid_y), 0.0, float(grid_height - 1))
 	
-	return Vector2(grid_x, grid_y)
+	return Vector2(final_x, final_y)
 
 # Check if a cell is within the grid bounds
 func is_within_grid(grid_pos: Vector2) -> bool:

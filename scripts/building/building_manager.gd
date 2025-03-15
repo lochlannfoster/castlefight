@@ -31,7 +31,7 @@ func _ready() -> void:
 	_load_building_data()
 
 # Process function
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# Check for building selection via input
 	if Input.is_action_just_pressed("ui_select"):
 		_handle_selection()
@@ -126,7 +126,9 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 	for x in range(size.x):
 		for y in range(size.y):
 			var cell_pos = grid_pos + Vector2(x, y)
-			grid_system.occupy_cell(cell_pos, building_instance)
+			var occupied = grid_system.occupy_cell(cell_pos, building_instance)
+			if not occupied:
+				print("Warning: Failed to occupy cell at " + str(cell_pos))
 	
 	# Add building to scene
 	get_parent().add_child(building_instance)
@@ -145,9 +147,25 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 
 # Create a headquarters building (fallback method)
 func _create_headquarters_building(position: Vector2, team: int) -> Building:
+	print("Creating HQ for team " + str(team) + " at position " + str(position))
+	
+	# Get grid position
+	var grid_pos = grid_system.world_to_grid(position)
+	
+	# Force the territory assignment for HQs
+	print("Forcing territory for HQ at position " + str(position) + " for team " + str(team))
+	
+	# Mark a 3x3 area as belonging to the team's territory
+	for x in range(3):
+		for y in range(3):
+			var cell_pos = grid_pos + Vector2(x, y)
+			if grid_system.is_within_grid(cell_pos) and grid_system.grid_cells.has(cell_pos):
+				print("Setting cell at " + str(cell_pos) + " to team " + str(team))
+				grid_system.grid_cells[cell_pos].team_territory = team
+	
 	# First try to load headquarters data
-	var building_data = {}
-	if building_data.has("headquarters"):
+	var local_building_data = {}
+	if local_building_data.has("headquarters"):
 		return place_building("headquarters", position, team)
 	
 	# Use the HQ building scene directly
@@ -159,7 +177,6 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 	# Create the instance
 	var hq_instance = hq_scene.instance()
 	print("Creating HQ for team " + str(team) + " at position " + str(position))
-
 	
 	# Set up basic HQ properties
 	hq_instance.building_id = "hq"
@@ -171,18 +188,6 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 	hq_instance.armor_type = "fortified"
 	hq_instance.size = Vector2(3, 3)
 	
-	# Force the territory assignment for HQs
-	print("Forcing territory for HQ at position " + str(position) + " for team " + str(team))
-	var grid_pos = grid_system.world_to_grid(position)
-	
-	# Mark this area as belonging to the team's territory
-	for x in range(3):
-		for y in range(3):
-			var cell_pos = grid_pos + Vector2(x, y)
-			if grid_system.is_within_grid(cell_pos) and grid_system.grid_cells.has(cell_pos):
-				print("Setting cell at " + str(cell_pos) + " to team " + str(team))
-				grid_system.grid_cells[cell_pos].team_territory = team
-
 	# Set building position
 	hq_instance.position = grid_system.grid_to_world(grid_pos)
 	hq_instance.set_grid_position(grid_pos)
@@ -191,7 +196,9 @@ func _create_headquarters_building(position: Vector2, team: int) -> Building:
 	for x in range(3):
 		for y in range(3):
 			var cell_pos = grid_pos + Vector2(x, y)
-			grid_system.occupy_cell(cell_pos, hq_instance)
+			var occupied = grid_system.occupy_cell(cell_pos, hq_instance)
+			if not occupied:
+				print("Warning: Failed to occupy cell at " + str(cell_pos))
 	
 	# Add building to scene
 	get_parent().add_child(hq_instance)
@@ -305,7 +312,8 @@ func _on_building_destroyed(building: Building) -> void:
 			break
 	
 	if building_id_to_remove:
-		buildings.erase(building_id_to_remove)
+		# Use the return value to silence the warning
+		var _result = buildings.erase(building_id_to_remove)
 	
 	emit_signal("building_destroyed", building)
 	
