@@ -371,7 +371,7 @@ func _create_starting_buildings() -> void:
 	# Use a much larger x-coordinate for Team 1's HQ to ensure it maps to their territory
 	var hq_positions = [
 		Vector2(100, 300),  # Team 0 HQ
-		Vector2(800, 300)   # Team 1 HQ - using 800 to ensure it maps to x > 25 in grid
+		Vector2(600, 300)   # Team 1 HQ - using 800 to ensure it maps to x > 25 in grid
 	]
 	
 	for team in range(2):  # For both teams

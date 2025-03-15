@@ -74,7 +74,6 @@ func _load_building_file(building_id: String, file_path: String) -> void:
 		push_error("Error opening building file: " + file_path)
 
 # Place a new building at the given position
-# Place a new building at the given position
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
 	# Check if building type exists
 	if not building_data.has(building_type):
@@ -91,14 +90,21 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
 	
 	# Convert position to grid position
 	var grid_pos = grid_system.world_to_grid(position)
-	
+	print("Attempting to place " + building_type + " at world position " + str(position) + 
+		", grid position " + str(grid_pos) + " for team " + str(team))
+
 	# Get building size
 	var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1, 
-					   data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
-	
+					data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
+	print("Building size: " + str(size))
+
 	# Check if placement is valid
 	if not grid_system.can_place_building(grid_pos, size, team):
-		print("Invalid building placement position")
+		print("Invalid placement: grid_pos=" + str(grid_pos) + ", size=" + str(size) + ", team=" + str(team))
+		# Additional check to see specific reason
+		if not grid_system.is_within_grid(grid_pos):
+			print("Position is outside grid boundaries")
+		# Add more specific checks...
 		return null
 	
 	# Create building scene instance

@@ -47,19 +47,20 @@ func initialize_grid() -> void:
 				"team_territory": null,
 				"lane": determine_lane(grid_pos)
 			}
-			
+						
+
 			# Assign the cell to its team territory based on position
 			# Assuming Team A is on the left side, Team B on right side
-			if x < grid_width / 2 - 5:  # Left side with 5-cell buffer
+			if x < float(grid_width) / 2.0 - 5.0:  # Left side with 5-cell buffer
 				cell_data.team_territory = Team.TEAM_A
 				team_a_cells.append(grid_pos)
-			elif x > grid_width / 2 + 5:  # Right side with 5-cell buffer
+			elif x >= float(grid_width) / 2.0 + 5.0:  # Changed from ">" to ">="
 				cell_data.team_territory = Team.TEAM_B
 				team_b_cells.append(grid_pos)
 			else:
 				# Neutral territory in the middle
 				cell_data.team_territory = null
-			
+				
 			# Store the cell in our grid
 			grid_cells[grid_pos] = cell_data
 			
@@ -110,12 +111,16 @@ func grid_to_world(grid_pos: Vector2) -> Vector2:
 	var world_y = (grid_pos.x + grid_pos.y) * (float(cell_size.y) / 2.0)
 	return Vector2(world_x, world_y)
 
-# Convert world coordinates to grid coordinates
 func world_to_grid(world_pos: Vector2) -> Vector2:
 	# Inverse isometric conversion
 	var grid_x = (world_pos.x / (float(cell_size.x) / 2.0) + world_pos.y / (float(cell_size.y) / 2.0)) / 2.0
 	var grid_y = (world_pos.y / (float(cell_size.y) / 2.0) - world_pos.x / (float(cell_size.x) / 2.0)) / 2.0
-	return Vector2(round(grid_x), round(grid_y))
+	
+	# Clamp to valid grid range
+	grid_x = clamp(round(grid_x), 0.0, float(grid_width - 1))
+	grid_y = clamp(round(grid_y), 0.0, float(grid_height - 1))
+	
+	return Vector2(grid_x, grid_y)
 
 # Check if a cell is within the grid bounds
 func is_within_grid(grid_pos: Vector2) -> bool:

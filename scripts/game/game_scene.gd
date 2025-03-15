@@ -56,19 +56,41 @@ func _emergency_init():
 		# Try to directly create HQs and workers
 		print("Creating emergency game elements...")
 		
-		# Try to create HQs
-		if game_manager.building_manager:
+	# Try to create HQs
+	if game_manager and game_manager.building_manager:
+		# Get grid system reference through game_manager
+		var grid_system = game_manager.grid_system
+		
+		if grid_system:
+			# Define positions that are definitely within valid territories
+			var team_positions = [
+				Vector2(float(grid_system.grid_width) * 0.25, float(grid_system.grid_height) * 0.5),  # 25% across, 50% down
+				Vector2(float(grid_system.grid_width) * 0.75, float(grid_system.grid_height) * 0.5)   # 75% across, 50% down
+			]
+			
 			for team in range(2):
-				# Use 400 instead of 600 for team 1 to ensure it's within valid grid territory
-				var position = Vector2(200 + team * 400, 300)
+				var position = grid_system.grid_to_world(team_positions[team])
 				var building = game_manager.building_manager._create_headquarters_building(position, team)
 				if building:
 					print("Successfully created emergency HQ for team " + str(team))
 				else:
 					print("Failed to create emergency HQ for team " + str(team))
-		
-		# Try to create a worker
-		_add_test_worker()
+		else:
+			# Fallback if grid_system is not available
+			var safe_positions = [
+				Vector2(200.0, 300.0),  # Safe position for Team 0
+				Vector2(600.0, 300.0)   # Safe position for Team 1
+			]
+			
+			for team in range(2):
+				var building = game_manager.building_manager._create_headquarters_building(safe_positions[team], team)
+				if building:
+					print("Successfully created emergency HQ for team " + str(team) + " using fallback positions")
+				else:
+					print("Failed to create emergency HQ for team " + str(team) + " using fallback positions")
+			
+			# Try to create a worker
+			_add_test_worker()
 	
 
 # Initialize the game after a short delay
