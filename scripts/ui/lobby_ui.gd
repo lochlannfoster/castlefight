@@ -122,7 +122,7 @@ func create_game() -> void:
 	var game_name = create_game_name_edit.text
 	var player_name = create_player_name_edit.text
 	var port = int(create_port_edit.text)
-	
+
 	# Validate input
 	if game_name.empty() or player_name.empty():
 		_show_error("Game name and player name cannot be empty.")
@@ -133,7 +133,7 @@ func create_game() -> void:
 		return
 	
 	# Get max players based on selection
-	var max_players = 2
+	var max_players = 6
 	match max_players_options.selected:
 		0: max_players = 2
 		1: max_players = 4
@@ -143,10 +143,10 @@ func create_game() -> void:
 	network_manager.debug_mode = debug_mode_checkbox.pressed
 	
 	# Try to start server
-	var success = network_manager.start_server(game_name, max_players, port)
-	
+	var success = network_manager.start_server(game_name, port, max_players)
+		
 	if success:
-		# Set player info
+		# Set player info AFTER server creation
 		network_manager.set_player_info(player_name, current_team)
 		
 		create_status_label.text = "Server started. Waiting for players..."
@@ -208,7 +208,7 @@ func join_selected_game() -> void:
 # Set player ready status
 func set_ready(ready: bool) -> void:
 	is_ready = ready
-	network_manager.set_player_ready(ready)
+	network_manager.set_player_ready(network_manager.local_player_id, is_ready)
 	
 	if ready:
 		ready_button.text = "Not Ready"

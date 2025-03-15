@@ -45,7 +45,6 @@ signal client_connected(player_id)
 signal client_disconnected(player_id)
 signal connection_failed
 signal connection_succeeded
-signal player_list_updated(players)
 signal player_joined(player_id)
 signal player_left(player_id)
 signal team_changed(player_id, old_team, new_team)
@@ -54,6 +53,8 @@ signal match_started
 signal match_ended(winner, reason)
 signal network_error(error_message)
 signal ping_updated(player_id, ping)
+signal player_list_changed(players)  # Add this signal
+signal match_ready  # Add this signal
 
 # Core Networking Properties
 var network: NetworkedMultiplayerENet = null
@@ -165,8 +166,8 @@ func _generate_server_seed() -> void:
 
 # Server Creation Method
 func start_server(server_name: String = "Castle Fight Server", 
-				  port: int = DEFAULT_PORT, 
-				  max_players: int = MAX_PLAYERS) -> bool:
+				 port: int = DEFAULT_PORT, 
+				 max_players: int = MAX_PLAYERS) -> bool:
 	# Prevent multiple server instances
 	if network:
 		print("Server already running!")
@@ -177,16 +178,22 @@ func start_server(server_name: String = "Castle Fight Server",
 	
 	# Configure network compression if enabled
 	if network_compression_enabled:
-		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_FASTLZ)
+		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESS_FASTLZ)
 	
 	# Attempt to create server
 	var result = network.create_server(port, max_players)
 	
 	if result != OK:
-		print("Failed to create server on port " + str(port))
-		network = null
-		emit_signal("network_error", "Server creation failed")
-		return false
+		var error_message = "Failed to create server on port " + str(port)
+		if result == ERR_CANT_CREATE:
+			error_message += ": Port may be in use"
+		elif result == ERR_ALREADY_EXISTS:
+			error_message += ": Server already exists"
+			
+			print(error_message)
+			network = null
+			emit_signal("network_error", error_message)
+			return false
 	
 	# Set network peer and update connection state
 	get_tree().network_peer = network
@@ -225,7 +232,7 @@ func connect_to_server(ip: String,
 	
 	# Configure network compression if enabled
 	if network_compression_enabled:
-		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_FASTLZ)
+		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESS_FASTLZ)
 	
 	# Attempt to connect to server
 	var result = network.create_client(ip, port)
@@ -305,6 +312,9 @@ func _on_player_connected(player_id: int) -> void:
 		# Broadcast updated player list
 		rpc("_update_player_list", player_info)
 		
+		# Emit player list changed signal for local UI update
+		emit_signal("player_list_changed", player_info)
+		
 		# Emit player joined signal
 		emit_signal("player_joined", player_id)
 
@@ -353,8 +363,24 @@ func _on_connection_failed() -> void:
 
 func _on_server_disconnected() -> void:
 	print("Disconnected from server")
-	disconnect_from_network()
-	emit_signal("network_error", "Server connection lost")
+	
+	# Try to reconnect if in active game
+	if game_phase == GamePhase.ACTIVE:
+		# Store game state for potential reconnection
+		var saved_state = _capture_game_state_snapshot()
+		
+		# Try reconnecting
+		var reconnect_timer = Timer.new()
+		reconnect_timer.one_shot = true
+		reconnect_timer.wait_time = 5.0
+		reconnect_timer.connect("timeout", self, "_attempt_reconnect", [saved_state])
+		add_child(reconnect_timer)
+		reconnect_timer.start()
+		
+		emit_signal("network_error", "Server connection lost. Attempting to reconnect...")
+	else:
+		disconnect_from_network()
+		emit_signal("network_error", "Server connection lost")
 
 # Team and Player Management Methods
 func change_player_team(player_id: int, new_team: int) -> bool:
@@ -387,6 +413,26 @@ func change_player_team(player_id: int, new_team: int) -> bool:
 	
 	return true
 
+# Add this to the NetworkManager class
+func set_player_info(player_name: String, team: int) -> void:
+	if not network:
+		print("Cannot set player info: No active network connection")
+		return
+		
+	if is_server:
+		# For server, directly set info
+		player_info[local_player_id] = {
+			"name": player_name,
+			"team": team,
+			"is_host": true,
+			"ready": true,
+			"ping": 0
+		}
+		emit_signal("player_list_changed", player_info)
+	else:
+		# For client, send info to server
+		rpc_id(1, "_request_set_player_info", player_name, team)
+
 func set_player_ready(player_id: int, is_ready: bool) -> void:
 	if not is_server:
 		return
@@ -400,7 +446,23 @@ func set_player_ready(player_id: int, is_ready: bool) -> void:
 	# Check match start conditions
 	_check_match_start_conditions()
 
-# Match Start Condition Checking
+# Also add this to NetworkManager
+remote func _request_set_player_info(player_name: String, team: int) -> void:
+	if not is_server:
+		return
+		
+	var player_id = get_tree().get_rpc_sender_id()
+	if player_info.has(player_id):
+		player_info[player_id]["name"] = player_name
+		player_info[player_id]["team"] = team
+		
+		# Update team assignment
+		change_player_team(player_id, team)
+		
+		# Broadcast updated player list
+		rpc("_update_player_list", player_info)
+		emit_signal("player_list_changed", player_info)
+
 func _check_match_start_conditions() -> void:
 	# Ensure both teams have players and all are ready
 	var team_0_ready = _team_all_ready(0)
@@ -409,6 +471,10 @@ func _check_match_start_conditions() -> void:
 	# Check team sizes and readiness
 	if (team_0_ready and team_1_ready and 
 		players[0].size() > 0 and players[1].size() > 0):
+		# Emit match ready signal before starting match preparation
+		emit_signal("match_ready")
+		
+		# Begin match preparation
 		_prepare_match_start()
 
 func _team_all_ready(team: int) -> bool:
@@ -514,7 +580,7 @@ func _spawn_initial_match_units() -> void:
 		return
 	
 	# Get map manager for spawn positions
-	var current_map_manager = game_manager.get_node_or_null("MapManager")
+	var _current_map_manager = game_manager.get_node_or_null("MapManager")
 	
 	# Spawn worker for local player
 	var local_team = -1
@@ -604,6 +670,14 @@ func _sync_initial_game_state() -> void:
 	fallback_timer.connect("timeout", self, "_on_sync_timeout")
 	add_child(fallback_timer)
 	fallback_timer.start()
+
+# Remote function called when player list is updated
+remote func _update_player_list(updated_player_info: Dictionary) -> void:
+	# Update the local player info
+	player_info = updated_player_info
+	
+	# Emit signal to update UI
+	emit_signal("player_list_changed", player_info)
 
 # Request handler for initial state
 remote func _request_initial_state(requester_id: int) -> void:
@@ -735,7 +809,7 @@ func _client_match_end_processing() -> void:
 	_reset_game_systems()
 	
 	# Transition to post-match lobby or menu
-	get_tree().change_scene("res://scenes/lobby/post_match_screen.tscn")
+	var _scene_change = get_tree().change_scene("res://scenes/lobby/post_match_screen.tscn")
 
 # Reset game systems to clean state after match
 func _reset_game_systems() -> void:
@@ -839,14 +913,61 @@ func _process_player_input(player_id: int, input_data: Dictionary) -> void:
 	# Broadcast input to other clients
 	_broadcast_input(player_id, input_data)
 
-# Input Handling Stub Methods
-func _validate_player_input(_player_id: int, _input_data: Dictionary) -> bool:
-	# Implement input validation logic
+func _validate_player_input(player_id: int, input_data: Dictionary) -> bool:
+	# Verify player exists and is in the correct team
+	if not player_info.has(player_id):
+		return false
+		
+	# Verify player is in the match
+	if game_phase != GamePhase.ACTIVE:
+		return false
+		
+	# Verify input sequence is reasonable (anti-cheat)
+	var last_seq = last_processed_inputs.get(player_id, 0)
+	if input_data.sequence <= last_seq:
+		return false
+		
+	# Verify input type is valid
+	if not input_data.has("type") or not InputType.values().has(input_data.type):
+		return false
+		
+	# Store sequence number
+	last_processed_inputs[player_id] = input_data.sequence
+		
 	return true
 
-func _handle_move_input(_player_id: int, _input_data: Dictionary) -> void:
-	# Implement move input handling
-	pass
+# Get a player's worker unit by player ID
+func _get_player_worker(player_id: int):
+	# Check if player exists in player info
+	if not player_info.has(player_id):
+		return null
+		
+	# Get player's team
+	var team = player_info[player_id].get("team", -1)
+	if team < 0:
+		return null
+		
+	# Try to get worker from game manager's players dictionary
+	if game_manager and game_manager.players.has(player_id):
+		return game_manager.players[player_id].get("worker")
+		
+	# Alternative approach if game_manager doesn't have that property
+	if game_manager and game_manager.has_method("get_player_worker"):
+		return game_manager.get_player_worker(player_id)
+		
+	return null
+
+func _handle_move_input(player_id: int, input_data: Dictionary) -> void:
+	# Get player worker
+	var worker = _get_player_worker(player_id)
+	if not worker:
+		return
+		
+	# Extract position data
+	var position = Vector2(input_data.position.x, input_data.position.y)
+	
+	# Command worker to move
+	worker.move_to(position)
 
 func _handle_attack_input(_player_id: int, _input_data: Dictionary) -> void:
 	# Implement attack input handling
@@ -923,10 +1044,10 @@ func _generate_network_checksum() -> int:
 	
 	# Use a robust checksum generation method
 	var checksum = hash(JSON.print(checksum_data))
-	return abs(checksum) % 100000  # Normalize to a smaller range
+	return int(abs(checksum)) % 100000  # Normalize to a smaller range
 
 func _validate_network_checksum(client_checksum: int) -> bool:
-	var server_checksum = _generate_network_checksum()
+	var _current_checksum = _generate_network_checksum()
 	
 	# Allow small variance to account for network latency
 	var checksum_tolerance = 5
@@ -1038,6 +1159,14 @@ func _collect_player_performance(player_id: int) -> Dictionary:
 			performance["total_resources_spent"] = economy_manager.get_total_resources_spent_by_player(player_id)
 	
 	return performance
+
+func _connect_signals() -> void:
+	if game_manager:
+		game_manager.connect("game_started", self, "_on_game_started")
+		game_manager.connect("game_ended", self, "_on_game_ended")
+		
+	if economy_manager:
+		economy_manager.connect("resources_changed", self, "_on_resources_changed")
 
 # Network Replay System (Basic Implementation)
 func _save_match_replay(match_stats: Dictionary) -> void:
