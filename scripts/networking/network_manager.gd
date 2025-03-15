@@ -684,57 +684,6 @@ func _validate_checksums() -> void:
 	if not is_server:
 		return
 	
-	var server_checksum = player_checksums[local_player_id]
-	var mismatch_players = []
-	
-	# Check for mismatches
-func start_game() -> void:
-	if not is_server:
-		return
-	
-	# Make sure all players are ready
-	for player_id in player_info.keys():
-		if not player_info[player_id].ready:
-			return
-	
-	# Set game started flag
-	game_started = true
-	
-	# Reset timers
-	server_tick_timer = 0
-	checksum_timer = 0
-	
-	# Make sure all players have valid teams before starting
-	# A player with team = -1 should be assigned to team 0 or 1
-	for player_id in player_info.keys():
-		if player_info[player_id].team < 0 or player_info[player_id].team > 1:
-			# Assign to the team with fewer players
-			var team0_count = 0
-			var team1_count = 0
-			
-			for pid in player_info.keys():
-				if player_info[pid].team == 0:
-					team0_count += 1
-				elif player_info[pid].team == 1:
-					team1_count += 1
-			
-			# Explicit team assignment instead of ternary
-			var new_team = 0
-			if team1_count < team0_count:
-				new_team = 1
-			
-			player_info[player_id].team = new_team
-			
-			# Notify the player of team change
-			if player_id != local_player_id:
-				rpc_id(player_id, "_update_team_assignment", new_team)
-	
-	# Notify all clients to start game
-	rpc("_start_game_on_client", match_id)
-	
-	# Start game locally
-	_start_game_locally()
-
 # Modify _on_player_disconnected to handle erase() return values
 func _on_player_disconnected(player_id: int) -> void:
 	print("Player disconnected: ", player_id)
