@@ -175,10 +175,11 @@ func _create_minimal_scene(scene_path: String) -> void:
 			root.set_script(script)
 		
 		# Save the scene
-		var result = scene.pack(root)
-		if result == OK:
-			ResourceSaver.save(scene_path, scene)
-			print("Created minimal game scene at: " + scene_path)
+		var save_result = ResourceSaver.save(scene_path, packed_scene)
+		if save_result == OK:
+			print("Successfully created scene at: " + scene_path)
+		else:
+			push_error("Failed to save scene with error: " + str(save_result))
 	
 	elif scene_path.ends_with("map.tscn"):
 		# Create a basic map scene
@@ -203,10 +204,11 @@ func _create_minimal_scene(scene_path: String) -> void:
 		buildings.owner = root
 		
 		# Save the scene
-		var result = scene.pack(root)
-		if result == OK:
-			ResourceSaver.save(scene_path, scene)
-			print("Created minimal map scene at: " + scene_path)
+		var save_result = ResourceSaver.save(scene_path, scene)
+		if save_result == OK:
+			print("Created minimal " + scene_type + " scene at: " + scene_path)
+		else:
+			push_error("Failed to save " + scene_type + " scene: " + str(save_result))
 
 func _initialize_game_references() -> void:
 	game_manager = get_node_or_null("/root/GameManager")

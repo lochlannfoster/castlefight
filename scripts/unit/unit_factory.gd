@@ -73,16 +73,16 @@ func create_unit(unit_type: String, position: Vector2, team: int):
 	unit.team = team
 	
 	# Add a sprite
-	var sprite = Sprite.new()
-	sprite.name = "Sprite"
+	var unit_sprite = Sprite.new()
+	unit_sprite.name = "Sprite"
 	
 	# Set color based on team
 	if team == 0:
-		sprite.modulate = Color(0, 0, 1)  # Blue for Team A
+		unit_sprite.modulate = Color(0, 0, 1)  # Blue for Team A
 	else:
-		sprite.modulate = Color(1, 0, 0)  # Red for Team B
+		unit_sprite.modulate = Color(1, 0, 0)  # Red for Team B
 	
-	unit.add_child(sprite)
+	unit.add_child(unit_sprite)
 	
 	# Add collision
 	var collision = CollisionShape2D.new()
@@ -96,17 +96,19 @@ func create_unit(unit_type: String, position: Vector2, team: int):
 	unit.position = position
 	
 	# Add to scene
-# Add to scene
 	var scene = get_tree().current_scene
 	if scene:
 		scene.add_child(unit)
-		
-	# Verify sprite has texture
-	var sprite = unit.get_node_or_null("Sprite")
-	if sprite and not sprite.texture:
+	
+	# Try to load unit texture
+	var texture_path = "res://assets/units/" + unit_type + "/idle/idle.png"
+	var texture = load(texture_path)
+	if texture:
+		unit_sprite.texture = texture
+	else:
 		push_error("CRITICAL: Unit texture failed to load for " + unit_type)
 		get_tree().quit()
-		
+	
 	print("Created unit: " + unit_type)
 	emit_signal("unit_created", unit, unit_type, team)
 	

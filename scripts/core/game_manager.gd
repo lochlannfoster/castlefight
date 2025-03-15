@@ -353,13 +353,32 @@ func _create_starting_buildings() -> void:
 		print("No building manager available!")
 		return
 	
-	# Use a much larger x-coordinate for Team 1's HQ to ensure it maps to their territory
+	# First, ensure territories are properly set up for both teams
+	if grid_system:
+		# Define territories for both teams
+		var team_0_area = Rect2(0, 0, grid_system.grid_width / 3, grid_system.grid_height)
+		var team_1_area = Rect2(grid_system.grid_width * 2 / 3, 0, grid_system.grid_width / 3, grid_system.grid_height)
+		
+		# Assign territories
+		for x in range(grid_system.grid_width):
+			for y in range(grid_system.grid_height):
+				var pos = Vector2(x, y)
+				if team_0_area.has_point(pos):
+					if grid_system.grid_cells.has(pos):
+						grid_system.grid_cells[pos].team_territory = 0
+				elif team_1_area.has_point(pos):
+					if grid_system.grid_cells.has(pos):
+						grid_system.grid_cells[pos].team_territory = 1
+		
+		print("Team territories initialized")
+	
+	# Use positions that work with the grid system
 	var hq_positions = [
 		Vector2(50, 300),  # Team 0 HQ
 		Vector2(750, 300)   # Team 1 HQ 
 	]
 	
-	for team in range(2):  # For both teams
+	for team in range(2):
 		var hq_position = hq_positions[team]
 		print("Attempting to create HQ at " + str(hq_position) + " for team " + str(team))
 		

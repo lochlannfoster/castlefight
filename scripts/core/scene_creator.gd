@@ -91,15 +91,19 @@ func ensure_scene_exists(scene_path: String) -> void:
 	# Create root node
 	var root_node = create_node_from_def(scene_def)
 	
-	# Pack and save the scene
+	# Create a PackedScene
 	var packed_scene = PackedScene.new()
-	packed_scene.pack(root_node)
+	var save_result = packed_scene.pack(root_node)
 	
-	var save_result = ResourceSaver.save(scene_path, packed_scene)
 	if save_result == OK:
-		print("Successfully created scene at: " + scene_path)
+		save_result = ResourceSaver.save(scene_path, packed_scene)
+		
+		if save_result == OK:
+			print("Successfully created scene at: " + scene_path)
+		else:
+			push_error("Failed to save scene with error: " + str(save_result))
 	else:
-		push_error("Failed to save scene with error: " + str(save_result))
+		push_error("Failed to pack scene with error: " + str(save_result))
 
 # Create a node from definition
 func create_node_from_def(node_def: Dictionary) -> Node:

@@ -127,7 +127,7 @@ func complete_construction() -> void:
 	
 	# Update appearance
 	if completed_texture:
-    sprite.texture = completed_texture
+		sprite.texture = completed_texture
 	else:
 		push_error("CRITICAL: Failed to load building texture for " + building_id)
 		get_tree().quit()  # Force quit the game
