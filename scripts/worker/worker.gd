@@ -23,10 +23,10 @@ var can_place: bool = false
 var placement_range: float = 100.0  # How far the worker can place a building from itself
 
 enum CommandType {
-    MOVE,
-    BUILD,
-    REPAIR,
-    STOP
+	MOVE,
+	BUILD,
+	REPAIR,
+	STOP
 }
 
 # Add with the other property declarations
@@ -57,19 +57,19 @@ var is_selected: bool = false
 # Process function
 # Add to worker.gd in _physics_process function:
 func _physics_process(delta: float) -> void:
-    # Existing code...
-    
-    # Check if we need to continue processing a command
-    if current_command == CommandType.REPAIR and command_target != null:
-        # Check if we're in range of repair target
-        var distance = global_position.distance_to(command_target.global_position)
-        if distance <= repair_range:
-            # We're in range, start repairing
-            auto_repair = true
-            _handle_auto_repair(delta)
-        elif !is_moving_to_target:
-            # We're not in range and not moving, start moving to target
-            move_to(command_target.global_position)
+	# Existing code...
+	
+	# Check if we need to continue processing a command
+	if current_command == CommandType.REPAIR and command_target != null:
+		# Check if we're in range of repair target
+		var distance = global_position.distance_to(command_target.global_position)
+		if distance <= repair_range:
+			# We're in range, start repairing
+			auto_repair = true
+			_handle_auto_repair(delta)
+		elif !is_moving_to_target:
+			# We're not in range and not moving, start moving to target
+			move_to(command_target.global_position)
 
 # Get references to manager nodes
 func _get_manager_references() -> void:
@@ -179,47 +179,47 @@ func _handle_input() -> void:
 		cancel_building_placement()
 
 func handle_command(command_type, params = {}) -> void:
-    # Reset current command
-    current_command = command_type
-    command_params = params
-    
-    match command_type:
-        CommandType.MOVE:
-            if params.has("position"):
-                move_to(params.position)
-                
-        CommandType.BUILD:
-            if params.has("building_type") and params.has("size"):
-                # Start building placement
-                start_building_placement(params.building_type, params.size)
-                # If position is specified, try to place it there
-                if params.has("position"):
-                    _try_place_building(params.position)
-                    
-        CommandType.REPAIR:
-            if params.has("building"):
-                command_target = params.building
-                # Move to building first if not in range
-                var distance = global_position.distance_to(command_target.global_position)
-                if distance > repair_range:
-                    move_to(command_target.global_position)
-                # Otherwise start repairing
-                else:
-                    # Start auto-repair temporarily
-                    var was_auto_repair = auto_repair
-                    auto_repair = true
-                    _handle_auto_repair(0.1) # Try immediate repair
-                    auto_repair = was_auto_repair
-                    
-        CommandType.STOP:
-            # Stop current action
-            is_moving_to_target = false
-            velocity = Vector2.ZERO
-            current_command = null
-            command_target = null
-            command_params = {}
-            if is_placing_building:
-                cancel_building_placement()
+	# Reset current command
+	current_command = command_type
+	command_params = params
+	
+	match command_type:
+		CommandType.MOVE:
+			if params.has("position"):
+				move_to(params.position)
+				
+		CommandType.BUILD:
+			if params.has("building_type") and params.has("size"):
+				# Start building placement
+				start_building_placement(params.building_type, params.size)
+				# If position is specified, try to place it there
+				if params.has("position"):
+					_try_place_building(params.position)
+					
+		CommandType.REPAIR:
+			if params.has("building"):
+				command_target = params.building
+				# Move to building first if not in range
+				var distance = global_position.distance_to(command_target.global_position)
+				if distance > repair_range:
+					move_to(command_target.global_position)
+				# Otherwise start repairing
+				else:
+					# Start auto-repair temporarily
+					var was_auto_repair = auto_repair
+					auto_repair = true
+					_handle_auto_repair(0.1) # Try immediate repair
+					auto_repair = was_auto_repair
+					
+		CommandType.STOP:
+			# Stop current action
+			is_moving_to_target = false
+			velocity = Vector2.ZERO
+			current_command = null
+			command_target = null
+			command_params = {}
+			if is_placing_building:
+				cancel_building_placement()
 
 # Handle movement
 func _handle_movement(_delta: float) -> void:

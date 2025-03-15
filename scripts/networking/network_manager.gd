@@ -142,13 +142,13 @@ func _initialize_game_references() -> void:
 	
 	if debug_mode:
 		print("Game system references initialized")
-
+		
 func _setup_network_signals() -> void:
-    var _err1 = get_tree().connect("network_peer_connected", self, "_on_player_connected")
-    var _err2 = get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
-    var _err3 = get_tree().connect("connected_to_server", self, "_on_connected_to_server")
-    var _err4 = get_tree().connect("connection_failed", self, "_on_connection_failed")
-    var _err5 = get_tree().connect("server_disconnected", self, "_on_server_disconnected")
+	var _err1 = get_tree().connect("network_peer_connected", self, "_on_player_connected")
+	var _err2 = get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
+	var _err3 = get_tree().connect("connected_to_server", self, "_on_connected_to_server")
+	var _err4 = get_tree().connect("connection_failed", self, "_on_connection_failed")
+	var _err5 = get_tree().connect("server_disconnected", self, "_on_server_disconnected")
 
 func _generate_server_seed() -> void:
 	var rng = RandomNumberGenerator.new()
@@ -231,6 +231,7 @@ func connect_to_server(ip: String,
 	# Set network peer and update connection state
 	get_tree().network_peer = network
 	connection_state = ConnectionState.CONNECTING
+	is_server = false  # Set is_server to false
 	
 	# Store temporary player info
 	player_info[0] = {
@@ -245,9 +246,6 @@ func connect_to_server(ip: String,
 		print("Connecting to server: " + ip + ":" + str(port))
 	
 	return true
-
-connection_state = ConnectionState.CONNECTING
-is_server = false  # Set is_server to false
 
 # Disconnect from Network
 func disconnect_from_network() -> void:
@@ -697,10 +695,10 @@ func _optimize_network_bandwidth() -> void:
 		network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_RANGE)
 
 func _process(delta: float) -> void:
-    # Update game state
-    if game_phase == GamePhase.ACTIVE:
-        _update_game_state(delta)
-        
+	# Update game state
+	if game_phase == GamePhase.ACTIVE:
+		_update_game_state(delta)
+		
 
 # Advanced Anti-Cheat Mechanisms
 func _generate_network_checksum() -> int:
@@ -970,215 +968,215 @@ func export_debug_report() -> String:
 
 # Collect the current state of a building for network synchronization
 func _collect_building_state(building) -> Dictionary:
-    return {
-        "id": building.get_instance_id(),
-        "type": building.building_id,
-        "team": building.team,
-        "health": building.health,
-        "max_health": building.max_health,
-        "position": {
-            "x": building.global_position.x,
-            "y": building.global_position.y
-        },
-        "grid_position": {
-            "x": building.grid_position.x if "grid_position" in building else 0,
-            "y": building.grid_position.y if "grid_position" in building else 0
-        },
-        "is_constructed": building.is_constructed if "is_constructed" in building else true,
-        "construction_progress": building.construction_progress if "construction_progress" in building else 100.0
-    }
+	return {
+		"id": building.get_instance_id(),
+		"type": building.building_id,
+		"team": building.team,
+		"health": building.health,
+		"max_health": building.max_health,
+		"position": {
+			"x": building.global_position.x,
+			"y": building.global_position.y
+		},
+		"grid_position": {
+			"x": building.grid_position.x if "grid_position" in building else 0,
+			"y": building.grid_position.y if "grid_position" in building else 0
+		},
+		"is_constructed": building.is_constructed if "is_constructed" in building else true,
+		"construction_progress": building.construction_progress if "construction_progress" in building else 100.0
+	}
 
 # Collect the current state of a unit for network synchronization
 func _collect_unit_state(unit) -> Dictionary:
-    return {
-        "id": unit.get_instance_id(),
-        "type": unit.unit_id if "unit_id" in unit else "generic_unit",
-        "team": unit.team,
-        "health": unit.health if "health" in unit else 100,
-        "max_health": unit.max_health if "max_health" in unit else 100,
-        "position": {
-            "x": unit.global_position.x,
-            "y": unit.global_position.y
-        },
-        "velocity": {
-            "x": unit.velocity.x if "velocity" in unit else 0,
-            "y": unit.velocity.y if "velocity" in unit else 0
-        },
-        "state": unit.current_state if "current_state" in unit else 0,
-        "target_id": unit.target.get_instance_id() if "target" in unit and unit.target != null else 0
-    }
+	return {
+		"id": unit.get_instance_id(),
+		"type": unit.unit_id if "unit_id" in unit else "generic_unit",
+		"team": unit.team,
+		"health": unit.health if "health" in unit else 100,
+		"max_health": unit.max_health if "max_health" in unit else 100,
+		"position": {
+			"x": unit.global_position.x,
+			"y": unit.global_position.y
+		},
+		"velocity": {
+			"x": unit.velocity.x if "velocity" in unit else 0,
+			"y": unit.velocity.y if "velocity" in unit else 0
+		},
+		"state": unit.current_state if "current_state" in unit else 0,
+		"target_id": unit.target.get_instance_id() if "target" in unit and unit.target != null else 0
+	}
 
 # Synchronize game state between clients
 remote func _sync_game_state(state_data: Dictionary) -> void:
-    if is_server:
-        # Server shouldn't receive this
-        return
-        
-    # Apply received state data to local game state
-    if game_manager:
-        # Update resource state
-        if state_data.has("resources") and economy_manager:
-            for team_str in state_data.resources:
-                var team = int(team_str)
-                for resource_type_str in state_data.resources[team_str]:
-                    var resource_type = int(resource_type_str)
-                    economy_manager.set_resource(team, resource_type, 
-                                               state_data.resources[team_str][resource_type_str])
-        
-        # Update building state
-        if state_data.has("buildings") and game_manager.building_manager:
-            for building_data in state_data.buildings:
-                # Find building by ID or create if not exists
-                var building = instance_from_id(building_data.id) if instance_exists(building_data.id) else null
-                
-                if building == null and building_data.has("type") and building_data.has("position"):
-                    # Create building if it doesn't exist
-                    var position = Vector2(building_data.position.x, building_data.position.y)
-                    building = game_manager.building_manager.place_building(
-                        building_data.type, position, building_data.team
-                    )
-                    
-                if building != null:
-                    # Update building properties
-                    building.health = building_data.health
-                    
-                    # Update construction progress if applicable
-                    if "is_constructed" in building and not building.is_constructed:
-                        building.construction_progress = building_data.construction_progress
-                        
-                        # Complete construction if needed
-                        if building.construction_progress >= 100.0:
-                            building.complete_construction()
-        
-        # Update unit state
-        if state_data.has("units"):
-            for unit_data in state_data.units:
-                # Find unit by ID or create if not exists
-                var unit = instance_from_id(unit_data.id) if instance_exists(unit_data.id) else null
-                
-                if unit == null and unit_data.has("type") and unit_data.has("position"):
-                    # Create unit if it doesn't exist
-                    var position = Vector2(unit_data.position.x, unit_data.position.y)
-                    unit = unit_factory.create_unit(unit_data.type, position, unit_data.team)
-                    
-                if unit != null:
-                    # Update unit properties
-                    unit.health = unit_data.health
-                    
-                    # Update unit state if applicable
-                    if "current_state" in unit:
-                        unit.current_state = unit_data.state
-                    
-                    # Update target if applicable
-                    if "target" in unit and unit_data.target_id != 0:
-                        unit.target = instance_from_id(unit_data.target_id) if instance_exists(unit_data.target_id) else null
+	if is_server:
+		# Server shouldn't receive this
+		return
+		
+	# Apply received state data to local game state
+	if game_manager:
+		# Update resource state
+		if state_data.has("resources") and economy_manager:
+			for team_str in state_data.resources:
+				var team = int(team_str)
+				for resource_type_str in state_data.resources[team_str]:
+					var resource_type = int(resource_type_str)
+					economy_manager.set_resource(team, resource_type, 
+											   state_data.resources[team_str][resource_type_str])
+		
+		# Update building state
+		if state_data.has("buildings") and game_manager.building_manager:
+			for building_data in state_data.buildings:
+				# Find building by ID or create if not exists
+				var building = instance_from_id(building_data.id) if instance_exists(building_data.id) else null
+				
+				if building == null and building_data.has("type") and building_data.has("position"):
+					# Create building if it doesn't exist
+					var position = Vector2(building_data.position.x, building_data.position.y)
+					building = game_manager.building_manager.place_building(
+						building_data.type, position, building_data.team
+					)
+					
+				if building != null:
+					# Update building properties
+					building.health = building_data.health
+					
+					# Update construction progress if applicable
+					if "is_constructed" in building and not building.is_constructed:
+						building.construction_progress = building_data.construction_progress
+						
+						# Complete construction if needed
+						if building.construction_progress >= 100.0:
+							building.complete_construction()
+		
+		# Update unit state
+		if state_data.has("units"):
+			for unit_data in state_data.units:
+				# Find unit by ID or create if not exists
+				var unit = instance_from_id(unit_data.id) if instance_exists(unit_data.id) else null
+				
+				if unit == null and unit_data.has("type") and unit_data.has("position"):
+					# Create unit if it doesn't exist
+					var position = Vector2(unit_data.position.x, unit_data.position.y)
+					unit = unit_factory.create_unit(unit_data.type, position, unit_data.team)
+					
+				if unit != null:
+					# Update unit properties
+					unit.health = unit_data.health
+					
+					# Update unit state if applicable
+					if "current_state" in unit:
+						unit.current_state = unit_data.state
+					
+					# Update target if applicable
+					if "target" in unit and unit_data.target_id != 0:
+						unit.target = instance_from_id(unit_data.target_id) if instance_exists(unit_data.target_id) else null
 
 # Helper function to check if instance exists
 func instance_exists(instance_id: int) -> bool:
-    return instance_from_id(instance_id) != null
+	return instance_from_id(instance_id) != null
 
 # Send current game state to clients (server only)
 func _broadcast_game_state() -> void:
-    if not is_server or game_phase != GamePhase.ACTIVE:
-        return
-    
-    # Collect current game state
-    var state_data = {
-        "timestamp": OS.get_ticks_msec(),
-        "resources": {},
-        "buildings": [],
-        "units": []
-    }
-    
-    # Collect resource state
-    if economy_manager:
-        for team in range(2):
-            state_data.resources[str(team)] = {
-                "0": economy_manager.get_resource(team, 0), # Gold
-                "1": economy_manager.get_resource(team, 1), # Wood
-                "2": economy_manager.get_resource(team, 2)  # Supply
-            }
-    
-    # Collect building state
-    if game_manager and game_manager.building_manager:
-        # Get all buildings for both teams
-        var all_buildings = []
-        for team in range(2):
-            all_buildings.append_array(game_manager.building_manager.get_team_buildings(team))
-            
-        # Collect state for each building
-        for building in all_buildings:
-            state_data.buildings.append(_collect_building_state(building))
-    
-    # Collect unit state
-    # Find all units in the scene
-    var units = get_tree().get_nodes_in_group("units")
-    if units.empty() and game_manager:
-        # If no units in group, try to find them in the scene
-        var main_scene = get_tree().current_scene
-        if main_scene:
-            var units_node = main_scene.get_node_or_null("Units")
-            if units_node:
-                units = units_node.get_children()
-    
-    # Collect state for each unit
-    for unit in units:
-        state_data.units.append(_collect_unit_state(unit))
-    
-    # Broadcast state to all clients
-    for player_id in player_info.keys():
-        if player_id != 1:  # Skip server (ID 1)
-            rpc_id(player_id, "_sync_game_state", state_data)
+	if not is_server or game_phase != GamePhase.ACTIVE:
+		return
+	
+	# Collect current game state
+	var state_data = {
+		"timestamp": OS.get_ticks_msec(),
+		"resources": {},
+		"buildings": [],
+		"units": []
+	}
+	
+	# Collect resource state
+	if economy_manager:
+		for team in range(2):
+			state_data.resources[str(team)] = {
+				"0": economy_manager.get_resource(team, 0), # Gold
+				"1": economy_manager.get_resource(team, 1), # Wood
+				"2": economy_manager.get_resource(team, 2)  # Supply
+			}
+	
+	# Collect building state
+	if game_manager and game_manager.building_manager:
+		# Get all buildings for both teams
+		var all_buildings = []
+		for team in range(2):
+			all_buildings.append_array(game_manager.building_manager.get_team_buildings(team))
+			
+		# Collect state for each building
+		for building in all_buildings:
+			state_data.buildings.append(_collect_building_state(building))
+	
+	# Collect unit state
+	# Find all units in the scene
+	var units = get_tree().get_nodes_in_group("units")
+	if units.empty() and game_manager:
+		# If no units in group, try to find them in the scene
+		var main_scene = get_tree().current_scene
+		if main_scene:
+			var units_node = main_scene.get_node_or_null("Units")
+			if units_node:
+				units = units_node.get_children()
+	
+	# Collect state for each unit
+	for unit in units:
+		state_data.units.append(_collect_unit_state(unit))
+	
+	# Broadcast state to all clients
+	for player_id in player_info.keys():
+		if player_id != 1:  # Skip server (ID 1)
+			rpc_id(player_id, "_sync_game_state", state_data)
 
 # Update game state regularly
 func _update_game_state(delta: float) -> void:
-    if not network or game_phase != GamePhase.ACTIVE:
-        return
-        
-    # Only server broadcasts game state
-    if is_server:
-        server_tick_timer += delta
-        
-        # Broadcast state at regular intervals
-        if server_tick_timer >= 1.0 / SERVER_TICK_RATE:
-            server_tick_timer = 0
-            _broadcast_game_state()
-    
-    # Update ping for all players
-    ping_timer += delta
-    if ping_timer >= ping_interval:
-        ping_timer = 0
-        _update_pings()
+	if not network or game_phase != GamePhase.ACTIVE:
+		return
+		
+	# Only server broadcasts game state
+	if is_server:
+		server_tick_timer += delta
+		
+		# Broadcast state at regular intervals
+		if server_tick_timer >= 1.0 / SERVER_TICK_RATE:
+			server_tick_timer = 0
+			_broadcast_game_state()
+	
+	# Update ping for all players
+	ping_timer += delta
+	if ping_timer >= ping_interval:
+		ping_timer = 0
+		_update_pings()
 
 # Add ping update functionality
 func _update_pings() -> void:
-    # Update ping measurements for all connected players
-    if is_server:
-        # Server measures ping to all clients
-        for player_id in player_info.keys():
-            if player_id != 1:  # Skip server
-                # Send ping request to client
-                rpc_id(player_id, "_ping_request", OS.get_ticks_msec())
-    else:
-        # Client measures ping to server
-        rpc_id(1, "_ping_request", OS.get_ticks_msec())
+	# Update ping measurements for all connected players
+	if is_server:
+		# Server measures ping to all clients
+		for player_id in player_info.keys():
+			if player_id != 1:  # Skip server
+				# Send ping request to client
+				rpc_id(player_id, "_ping_request", OS.get_ticks_msec())
+	else:
+		# Client measures ping to server
+		rpc_id(1, "_ping_request", OS.get_ticks_msec())
 
 # Ping request handler
 remote func _ping_request(timestamp: int) -> void:
-    # Send ping response back to sender
-    var sender_id = get_tree().get_rpc_sender_id()
-    rpc_id(sender_id, "_ping_response", timestamp)
+	# Send ping response back to sender
+	var sender_id = get_tree().get_rpc_sender_id()
+	rpc_id(sender_id, "_ping_response", timestamp)
 
 # Ping response handler
 remote func _ping_response(timestamp: int) -> void:
-    # Calculate ping time
-    var ping_time = OS.get_ticks_msec() - timestamp
-    var sender_id = get_tree().get_rpc_sender_id()
-    
-    # Update player ping information
-    if player_info.has(sender_id):
-        player_info[sender_id]["ping"] = ping_time
-        player_pings[sender_id] = ping_time
-        
-        # Emit signal for UI updates
-        emit_signal("ping_updated", sender_id, ping_time)
+	# Calculate ping time
+	var ping_time = OS.get_ticks_msec() - timestamp
+	var sender_id = get_tree().get_rpc_sender_id()
+	
+	# Update player ping information
+	if player_info.has(sender_id):
+		player_info[sender_id]["ping"] = ping_time
+		player_pings[sender_id] = ping_time
+		
+		# Emit signal for UI updates
+		emit_signal("ping_updated", sender_id, ping_time)

@@ -385,112 +385,114 @@ func get_item_gold_cost(item_type: String) -> float:
 	# Allow directly setting a resource value (needed for network synchronization)
 # Allow directly setting a resource value (needed for network synchronization)
 func set_resource(team: int, resource_type: int, amount: float) -> void:
-    if not team_resources.has(team):
-        # Initialize this team if it doesn't exist
-        team_resources[team] = {
-            ResourceType.GOLD: 0,
-            ResourceType.WOOD: 0,
-            ResourceType.SUPPLY: 0
-        }
-        
-        # Also initialize statistics tracking if needed
-        if not total_resources_collected.has(team):
-            total_resources_collected[team] = {
-                ResourceType.GOLD: 0,
-                ResourceType.WOOD: 0,
-                ResourceType.SUPPLY: 0
-            }
-            
-            total_resources_spent[team] = {
-                ResourceType.GOLD: 0,
-                ResourceType.WOOD: 0,
-                ResourceType.SUPPLY: 0
-            }
-    
-    # Update the resource value
-    team_resources[team][resource_type] = amount
-    
-    # Emit signal for UI updates
-    emit_signal("resources_changed", team, resource_type, amount)
+	if not team_resources.has(team):
+		# Initialize this team if it doesn't exist
+		team_resources[team] = {
+			ResourceType.GOLD: 0,
+			ResourceType.WOOD: 0,
+			ResourceType.SUPPLY: 0
+		}
+		
+		# Also initialize statistics tracking if needed
+		if not total_resources_collected.has(team):
+			total_resources_collected[team] = {
+				ResourceType.GOLD: 0,
+				ResourceType.WOOD: 0,
+				ResourceType.SUPPLY: 0
+			}
+			
+			total_resources_spent[team] = {
+				ResourceType.GOLD: 0,
+				ResourceType.WOOD: 0,
+				ResourceType.SUPPLY: 0
+			}
+	
+	# Update the resource value
+	team_resources[team][resource_type] = amount
+	
+	# Emit signal for UI updates
+	emit_signal("resources_changed", team, resource_type, amount)
 
 # Get total income across game for a team
 func get_total_income(team: int) -> float:
-    if not total_resources_collected.has(team):
-        return 0.0
-    
-    return total_resources_collected[team][ResourceType.GOLD]
+	if not total_resources_collected.has(team):
+		return 0.0
+	
+	return total_resources_collected[team][ResourceType.GOLD]
 
 # Register a player with a team
 func register_player(player_id: int, team: int) -> void:
-    player_teams[player_id] = team
-    player_resources_spent[player_id] = {
-        ResourceType.GOLD: 0,
-        ResourceType.WOOD: 0,
-        ResourceType.SUPPLY: 0
-    }
+	player_teams[player_id] = team
+	player_resources_spent[player_id] = {
+		ResourceType.GOLD: 0,
+		ResourceType.WOOD: 0,
+		ResourceType.SUPPLY: 0
+	}
 
 # Track resource spending by player
 func track_player_spending(player_id: int, resource_type: int, amount: float) -> void:
-    if not player_resources_spent.has(player_id):
-        player_resources_spent[player_id] = {
-            ResourceType.GOLD: 0,
-            ResourceType.WOOD: 0,
-            ResourceType.SUPPLY: 0
-        }
-    
-    player_resources_spent[player_id][resource_type] += amount
+	if not player_resources_spent.has(player_id):
+		player_resources_spent[player_id] = {
+			ResourceType.GOLD: 0,
+			ResourceType.WOOD: 0,
+			ResourceType.SUPPLY: 0
+		}
+	
+	player_resources_spent[player_id][resource_type] += amount
 
 # Get total resources spent by a player
 func get_total_resources_spent_by_player(player_id: int) -> float:
-    if not player_resources_spent.has(player_id):
-        return 0.0
-    
-    var total = 0.0
-    for resource_type in player_resources_spent[player_id]:
-        total += player_resources_spent[player_id][resource_type]
-    
-    return total
+	if not player_resources_spent.has(player_id):
+		return 0.0
+	
+	var total = 0.0
+	for resource_type in player_resources_spent[player_id]:
+		total += player_resources_spent[player_id][resource_type]
+	
+	return total
 
 # Get total of a specific resource collected by a team
 func get_total_resources_collected(team: int, resource_type: int) -> float:
-    if not total_resources_collected.has(team) or 
-       not total_resources_collected[team].has(resource_type):
-        return 0.0
-    
-    return total_resources_collected[team][resource_type]
+	if not total_resources_collected.has(team) or 
+	   not total_resources_collected[team].has(resource_type):
+		return 0.0
+	
+	return total_resources_collected[team][resource_type]
 
 # Modify add_resource to track total collections
+# Modify add_resource to track total collections
 func add_resource(team: int, resource_type: int, amount: float) -> void:
-    if not team_resources.has(team):
-        # Initialize this team if it doesn't exist
-        team_resources[team] = {
-            ResourceType.GOLD: 0,
-            ResourceType.WOOD: 0,
-            ResourceType.SUPPLY: 0
-        }
-        
-        # Also initialize statistics tracking
-        total_resources_collected[team] = {
-            ResourceType.GOLD: 0,
-            ResourceType.WOOD: 0,
-            ResourceType.SUPPLY: 0
-        }
-        
-        total_resources_spent[team] = {
-            ResourceType.GOLD: 0,
-            ResourceType.WOOD: 0,
-            ResourceType.SUPPLY: 0
-        }
-    
-    # Update current resources
-    team_resources[team][resource_type] += amount
-    
-    # Track resource statistics
-    if amount > 0:
-        # Resource collected
-        total_resources_collected[team][resource_type] += amount
-    else:
-        # Resource spent
-        total_resources_spent[team][resource_type] -= amount  # Convert to positive
-    
-    emit_signal("resources_changed", team, resource_type, team_resources[team][resource_type])
+	if not team_resources.has(team):
+		# Initialize this team if it doesn't exist
+		team_resources[team] = {
+			ResourceType.GOLD: 0,
+			ResourceType.WOOD: 0,
+			ResourceType.SUPPLY: 0
+		}
+		
+		# Also initialize statistics tracking
+		if not total_resources_collected.has(team):
+			total_resources_collected[team] = {
+				ResourceType.GOLD: 0,
+				ResourceType.WOOD: 0,
+				ResourceType.SUPPLY: 0
+			}
+			
+			total_resources_spent[team] = {
+				ResourceType.GOLD: 0,
+				ResourceType.WOOD: 0,
+				ResourceType.SUPPLY: 0
+			}
+	
+	# Update current resources
+	team_resources[team][resource_type] += amount
+	
+	# Track resource statistics
+	if amount > 0:
+		# Resource collected
+		total_resources_collected[team][resource_type] += amount
+	else:
+		# Resource spent
+		total_resources_spent[team][resource_type] -= amount  # Convert to positive
+	
+	emit_signal("resources_changed", team, resource_type, team_resources[team][resource_type])

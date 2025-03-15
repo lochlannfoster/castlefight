@@ -455,6 +455,6 @@ func _on_network_error(error_message: String) -> void:
 	_show_error(error_message)
 
 func _on_ping_updated(_player_id: int, _ping: int) -> void:
-    # Update player lists to show updated ping
-    if network_manager.player_info.size() > 0:
-        update_player_lists(network_manager.player_info)
+	# Update player lists to show updated ping
+	if network_manager.player_info.size() > 0:
+		update_player_lists(network_manager.player_info)

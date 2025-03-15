@@ -339,50 +339,50 @@ func _create_tooltip() -> void:
 # Connect signals
 # Connect signals between systems
 func _connect_signals() -> void:
-    # Connect to Economy Manager
-    if economy_manager:
-        economy_manager.connect("resources_changed", self, "_on_resources_changed")
-        economy_manager.connect("income_changed", self, "_on_income_changed")
-        economy_manager.connect("income_tick", self, "_on_income_tick")
-        economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
-    
-    # Connect to Building Manager
-    if building_manager:
-        building_manager.connect("building_selected", self, "_on_building_selected")
-        building_manager.connect("building_deselected", self, "_on_building_deselected")
-    
-    # Connect to Game Manager
-    if game_manager:
-        game_manager.connect("game_started", self, "_on_game_started")
-        game_manager.connect("game_ended", self, "_on_game_ended")
-        game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
-    
-    # Connect our own worker_command_issued signal to _emit_worker_command
-    if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
-        var _err = connect("worker_command_issued", self, "_emit_worker_command")
+	# Connect to Economy Manager
+	if economy_manager:
+		economy_manager.connect("resources_changed", self, "_on_resources_changed")
+		economy_manager.connect("income_changed", self, "_on_income_changed")
+		economy_manager.connect("income_tick", self, "_on_income_tick")
+		economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+	
+	# Connect to Building Manager
+	if building_manager:
+		building_manager.connect("building_selected", self, "_on_building_selected")
+		building_manager.connect("building_deselected", self, "_on_building_deselected")
+	
+	# Connect to Game Manager
+	if game_manager:
+		game_manager.connect("game_started", self, "_on_game_started")
+		game_manager.connect("game_ended", self, "_on_game_ended")
+		game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+	
+	# Connect our own worker_command_issued signal to _emit_worker_command
+	if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
+		var _err = connect("worker_command_issued", self, "_emit_worker_command")
 		
 # Implement worker command functionality
 func _emit_worker_command(command_type: String, params: Dictionary = {}) -> void:
-    emit_signal("worker_command_issued", command_type, params)
-    
-    # If we have a selected worker, send the command directly to it
-    if selected_worker != null:
-        # Convert string command type to enum if worker has a CommandType enum
-        var cmd_type = command_type
-        if "CommandType" in selected_worker:
-            match command_type:
-                "move":
-                    cmd_type = selected_worker.CommandType.MOVE
-                "build":
-                    cmd_type = selected_worker.CommandType.BUILD
-                "repair":
-                    cmd_type = selected_worker.CommandType.REPAIR
-                "stop":
-                    cmd_type = selected_worker.CommandType.STOP
-        
-        # Call handle_command if it exists
-        if selected_worker.has_method("handle_command"):
-            selected_worker.handle_command(cmd_type, params)		
+	emit_signal("worker_command_issued", command_type, params)
+	
+	# If we have a selected worker, send the command directly to it
+	if selected_worker != null:
+		# Convert string command type to enum if worker has a CommandType enum
+		var cmd_type = command_type
+		if "CommandType" in selected_worker:
+			match command_type:
+				"move":
+					cmd_type = selected_worker.CommandType.MOVE
+				"build":
+					cmd_type = selected_worker.CommandType.BUILD
+				"repair":
+					cmd_type = selected_worker.CommandType.REPAIR
+				"stop":
+					cmd_type = selected_worker.CommandType.STOP
+		
+		# Call handle_command if it exists
+		if selected_worker.has_method("handle_command"):
+			selected_worker.handle_command(cmd_type, params)		
 
 # Input handling
 func _input(event) -> void:
@@ -640,12 +640,12 @@ func select_worker(worker) -> void:
 
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:
-    if team == current_team:
-        update_resource_display()
+	if team == current_team:
+		update_resource_display()
 
 func _on_income_changed(team: int, _amount: float) -> void:
-    if team == current_team:
-        update_income_display()
+	if team == current_team:
+		update_income_display()
 
 func _on_income_tick(team: int, amount: float) -> void:
 	show_income_popup(team, amount)
@@ -674,24 +674,24 @@ func _on_building_menu_close() -> void:
 	building_menu.visible = false
 
 func _on_building_button_pressed(building_type: String) -> void:
-    # Close menu
-    _on_building_menu_close()
-    
-    # Emit signal for selected building
-    emit_signal("building_selected", building_type)
-    
-    # Start building placement if we have a selected worker
-    if selected_worker != null:
-        var building_data = building_manager.get_building_data(building_type)
-        var size = Vector2(
-            building_data.size_x if building_data.has("size_x") else 1,
-            building_data.size_y if building_data.has("size_y") else 1
-        )
-        
-        selected_worker.start_building_placement(building_type, size)
-        
-        # Emit the worker_command_issued signal
-        emit_signal("worker_command_issued", "build", {"building_type": building_type, "size": size})
+	# Close menu
+	_on_building_menu_close()
+	
+	# Emit signal for selected building
+	emit_signal("building_selected", building_type)
+	
+	# Start building placement if we have a selected worker
+	if selected_worker != null:
+		var building_data = building_manager.get_building_data(building_type)
+		var size = Vector2(
+			building_data.size_x if building_data.has("size_x") else 1,
+			building_data.size_y if building_data.has("size_y") else 1
+		)
+		
+		selected_worker.start_building_placement(building_type, size)
+		
+		# Emit the worker_command_issued signal
+		emit_signal("worker_command_issued", "build", {"building_type": building_type, "size": size})
 
 func _on_pause_button_pressed() -> void:
 	is_game_paused = !is_game_paused
@@ -758,5 +758,5 @@ func _on_match_countdown_updated(time_remaining: float) -> void:
 
 # Process function to update game time
 func _process(_delta: float) -> void:
-    if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
-        update_game_time(game_manager.match_timer)
+	if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
+		update_game_time(game_manager.match_timer)
