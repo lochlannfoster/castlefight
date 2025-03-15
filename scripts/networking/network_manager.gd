@@ -50,6 +50,53 @@ var match_id: String = ""
 # References
 var game_manager: GameManager
 
+# Helper method to safely determine game winner
+func _calculate_game_end_winner(team_a_score: float, team_b_score: float) -> int:
+	# Explicitly determine winner
+	if team_b_score > team_a_score:
+		return 1  # Team B wins
+	return 0  # Team A wins (or in case of a tie)
+
+# Safely remove player from player info
+func _safely_remove_player(player_id: int) -> void:
+	if player_info.has(player_id):
+		player_info.erase(player_id)
+	
+	if disconnected_players.has(player_id):
+		disconnected_players.erase(player_id)
+	
+	emit_signal("player_list_changed", player_info)
+
+# Calculate a team's score for time-based win determination
+func _calculate_team_score(team: int) -> float:
+	var score = 0.0
+	
+	# Score based on buildings
+	if game_manager and game_manager.building_manager:
+		var team_buildings = game_manager.building_manager.get_team_buildings(team)
+		score += team_buildings.size() * 100
+		
+		# Bonus for specialized buildings
+		for building in team_buildings:
+			if building.building_id == "bank_vault":
+				score += 500
+	
+	# Score based on economy
+	if game_manager and game_manager.economy_manager:
+		score += game_manager.economy_manager.get_income(team) * 10
+	
+	return score
+
+# Trigger game end by time limit
+func _trigger_game_end_by_time() -> void:
+	# Determine winner based on team scores
+	var team_a_score = _calculate_team_score(0)
+	var team_b_score = _calculate_team_score(1)
+	
+	# Use explicit method to determine winner
+	var time_winner = _calculate_game_end_winner(team_a_score, team_b_score)
+	_trigger_game_end(time_winner)
+
 func _on_player_connected(player_id: int) -> void:
     print("Player connected: ", player_id)
     
@@ -245,7 +292,6 @@ func change_team(team: int) -> void:
 		emit_signal("player_list_changed", player_info)
 		rpc("_update_player_list", player_info)
 
-# Start game for all players
 func start_game() -> void:
 	if not is_server:
 		return
@@ -266,7 +312,7 @@ func start_game() -> void:
 	# A player with team = -1 should be assigned to team 0 or 1
 	for player_id in player_info.keys():
 		if player_info[player_id].team < 0 or player_info[player_id].team > 1:
-			# Assign to the team with fewer players
+			# Determine team based on current team counts
 			var team0_count = 0
 			var team1_count = 0
 			
@@ -276,7 +322,7 @@ func start_game() -> void:
 				elif player_info[pid].team == 1:
 					team1_count += 1
 			
-			# Use explicit assignment instead of ternary
+			# Explicitly assign team based on count comparison
 			var new_team = 0
 			if team1_count < team0_count:
 				new_team = 1
@@ -701,7 +747,6 @@ func _validate_checksums() -> void:
 	if not is_server:
 		return
 	
-# Modify _on_player_disconnected to handle erase() return values
 func _on_player_disconnected(player_id: int) -> void:
 	print("Player disconnected: ", player_id)
 	
@@ -726,20 +771,26 @@ func _on_player_disconnected(player_id: int) -> void:
 				# Start a timer to remove the player if they don't reconnect
 				yield(get_tree().create_timer(RECONNECT_TIMEOUT), "timeout")
 				
-				if disconnected_players.has(player_id):
-				# Player didn't reconnect within timeout
-					var _ignored1 = disconnected_players.erase(player_id)
-					var _ignored2 = player_info.erase(player_id)
-					
-					# Broadcast updated player list
-					emit_signal("player_list_changed", player_info)
+				# Safely remove the player
+				_safely_remove_player(player_id)
+				
+				# Broadcast updated player list if still connected
+				if network:
 					rpc("_update_player_list", player_info)
 			else:
-				var _player_info_result = player_info.erase(player_id)
-				emit_signal("player_list_changed", player_info)
+				# Safely remove player info
+				_safely_remove_player(player_id)
 				
 				if network:  # Make sure we're still connected
 					rpc("_update_player_list", player_info)
+
+# Placeholder for checksum validation
+func _validate_checksums() -> void:
+	if not is_server:
+		return
+	
+	# Placeholder: Implement actual checksum validation logic
+	print("Validating game state checksums")
 					
 # Handle reconnection of a player
 func _handle_reconnection(player_id: int) -> void:
