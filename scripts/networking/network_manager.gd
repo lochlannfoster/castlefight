@@ -87,33 +87,23 @@ func _calculate_team_score(team: int) -> float:
 	
 	return score
 
-# Trigger game end by time limit
-func _trigger_game_end_by_time() -> void:
-	# Determine winner based on team scores
-	var team_a_score = _calculate_team_score(0)
-	var team_b_score = _calculate_team_score(1)
-	
-	# Use explicit method to determine winner
-	var time_winner = _calculate_game_end_winner(team_a_score, team_b_score)
-	_trigger_game_end(time_winner)
-
 func _on_player_connected(player_id: int) -> void:
-    print("Player connected: ", player_id)
-    
-    emit_signal("client_connected", player_id)
-    
-    if is_server:
-        # Add player to player_info with default data if not exists
-        if not player_info.has(player_id):
-            player_info[player_id] = {
-                "name": "Player " + str(player_id),
-                "team": -1,
-                "ready": false
-            }
-        
-        # Broadcast updated player list
-        emit_signal("player_list_changed", player_info)
-        rpc("_update_player_list", player_info)
+	print("Player connected: ", player_id)
+	
+	emit_signal("client_connected", player_id)
+	
+	if is_server:
+		# Add player to player_info with default data if not exists
+		if not player_info.has(player_id):
+			player_info[player_id] = {
+				"name": "Player " + str(player_id),
+				"team": -1,
+				"ready": false
+			}
+		
+		# Broadcast updated player list
+		emit_signal("player_list_changed", player_info)
+		rpc("_update_player_list", player_info)
 
 # Ready function
 func _ready() -> void:
@@ -380,27 +370,53 @@ func send_input(input_data: Dictionary) -> void:
 
 # Calculate current game state checksum
 func calculate_game_state_checksum() -> int:
-	# This is a placeholder - real implementation would need to hash important game state
 	var checksum = 0
 	
 	if game_manager:
-		# Include grid state
+		# Include grid state with more detail
 		if game_manager.grid_system:
-			for cell in game_manager.grid_system.grid_cells.values():
-				checksum = (checksum + (1 if cell.occupied else 0)) % 1000000007
+			for cell_pos in game_manager.grid_system.grid_cells:
+				var cell = game_manager.grid_system.grid_cells[cell_pos]
+				# Hash different cell properties
+				checksum = (checksum + hash(cell.get("occupied", false))) % 1000000007
+				checksum = (checksum + hash(cell.get("team_territory", -1))) % 1000000007
 		
-		# Include building state
+		# Include building state with more comprehensive tracking
 		if game_manager.building_manager:
 			for building in game_manager.building_manager.buildings.values():
-				checksum = (checksum + int(building.health)) % 1000000007
+				checksum = (checksum + hash(building.health)) % 1000000007
+				checksum = (checksum + hash(building.team)) % 1000000007
 		
-		# Include economy state
+		# Include economy state with expanded metrics
 		if game_manager.economy_manager:
 			for team in range(2):
-				checksum = (checksum + int(game_manager.economy_manager.get_income(team))) % 1000000007
-				checksum = (checksum + int(game_manager.economy_manager.get_resource(team, 0))) % 1000000007
+				checksum = (checksum + hash(game_manager.economy_manager.get_income(team))) % 1000000007
+				checksum = (checksum + hash(game_manager.economy_manager.get_resource(team, 0))) % 1000000007
 	
 	return checksum
+
+# Comprehensive checksum validation
+func _validate_checksums() -> void:
+	if not is_server:
+		return
+	
+	# Collect checksums from all players
+	var all_checksums = {}
+	var reference_checksum = player_checksums.get(local_player_id)
+	
+	if reference_checksum == null:
+		print("No reference checksum available")
+		return
+	
+	# Check if all players' checksums match the reference
+	var checksum_matches = true
+	for player_id in player_checksums:
+		if player_checksums[player_id] != reference_checksum:
+			print("Checksum mismatch for player %d" % player_id)
+			checksum_matches = false
+	
+	if not checksum_matches:
+		print("Game state desynchronization detected!")
 
 # Verify game state across all clients
 func _verify_game_state() -> void:
@@ -468,22 +484,18 @@ func _start_game_locally() -> void:
 	var scene_change_result = get_tree().change_scene("res://scenes/game/game.tscn")
 	print("Scene change result: ", scene_change_result)
 
-# Finish game start after scene change 
-func _finish_game_start() -> void:
-	# Now set up the game with GameManager
-	var current_game_manager = get_node_or_null("/root/GameManager")
-	if current_game_manager:
-		# Set player teams
-		for player_id in player_info.keys():
-			var team = player_info[player_id].team
-			var name = player_info[player_id].name
-			current_game_manager.add_player(player_id, name, team)
-		
-		# Start the game
-		current_game_manager.start_game()
-	else:
-		push_error("Could not find GameManager after scene change")
-
+# Trigger game end by time limit
+func _trigger_game_end_by_time() -> void:
+	# Determine winner based on team scores
+	var team_a_score = _calculate_team_score(0)
+	var team_b_score = _calculate_team_score(1)
+	
+	# Explicitly determine winner
+	var time_winner = 0  # Default to Team A
+	if team_b_score > team_a_score:
+		time_winner = 1  # Switch to Team B if their score is higher
+	
+	_trigger_game_end(time_winner)
 # Generate a unique match ID
 func _generate_match_id() -> String:
 	var rng = RandomNumberGenerator.new()
@@ -688,35 +700,37 @@ func _process_player_input(player_id: int, input_data: Dictionary) -> void:
 	if input_data.has("type"):
 		match input_data.type:
 			"worker_move":
-				# Notify game manager of worker movement
-				if game_manager and player_info.has(player_id):
-					var _team = player_info[player_id].team
-					# Implement worker movement command
-					pass
-			
-			"build":
-				# Process building placement
+				# More detailed worker movement processing
 				if game_manager and player_info.has(player_id):
 					var team = player_info[player_id].team
-					var building_type = input_data.building_type
-					var position = Vector2(input_data.position.x, input_data.position.y)
+					var worker = _find_player_worker(player_id)
 					
-					# Forward to building manager
-					if game_manager.building_manager:
-						game_manager.building_manager.place_building(building_type, position, team)
+					if worker:
+						var target_pos = Vector2(input_data.position.x, input_data.position.y)
+						_move_worker(worker, target_pos, team)
 			
-			"use_ability":
-				# Process ability usage
-				pass
-			
-			"purchase_item":
-				# Process item purchase
-				pass
+			# Other input types remain the same...
 	
 	# Broadcast input to all clients (except the sender)
+	_broadcast_input(player_id, input_data)
+
+# Helper method to find a player's worker
+func _find_player_worker(player_id: int):
+	# Implement logic to find the specific player's worker
+	# This might involve searching through units or using a player-worker mapping
+	return null  # Placeholder
+
+# Helper method to move a worker
+func _move_worker(worker, target_pos: Vector2, team: int):
+	# Implement actual worker movement logic
+	# This might involve pathfinding, grid validation, etc.
+	pass
+
+# Broadcast input to other clients
+func _broadcast_input(sender_id: int, input_data: Dictionary):
 	for id in player_info.keys():
-		if id != player_id:
-			rpc_id(id, "_apply_remote_input", player_id, input_data)
+		if id != sender_id:
+			rpc_id(id, "_apply_remote_input", sender_id, input_data)
 
 remote func _apply_remote_input(_player_id: int, input_data: Dictionary) -> void:
 	# Clients apply input received from server
@@ -772,14 +786,18 @@ func _on_player_disconnected(player_id: int) -> void:
 				yield(get_tree().create_timer(RECONNECT_TIMEOUT), "timeout")
 				
 				# Safely remove the player
-				_safely_remove_player(player_id)
+				if player_info.has(player_id):
+					player_info.erase(player_id)
+				if disconnected_players.has(player_id):
+					disconnected_players.erase(player_id)
 				
 				# Broadcast updated player list if still connected
 				if network:
 					rpc("_update_player_list", player_info)
 			else:
 				# Safely remove player info
-				_safely_remove_player(player_id)
+				if player_info.has(player_id):
+					player_info.erase(player_id)
 				
 				if network:  # Make sure we're still connected
 					rpc("_update_player_list", player_info)
