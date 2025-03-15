@@ -546,7 +546,6 @@ func _client_pre_match_setup() -> void:
 	
 	print("Client pre-match setup completed")
 
-# Match Start and Management
 func start_match() -> void:
 	if not is_server or game_phase != GamePhase.PREGAME:
 		return
@@ -563,6 +562,10 @@ func start_match() -> void:
 	# Broadcast match start to all clients
 	rpc("_match_started")
 	
+	# ADDED: Change to game scene
+	print("Server changing to game scene...")
+	var _error = get_tree().change_scene("res://scenes/game/game.tscn")
+	
 	emit_signal("match_started")
 
 remote func _match_started() -> void:
@@ -571,8 +574,9 @@ remote func _match_started() -> void:
 	
 	game_phase = GamePhase.ACTIVE
 	
-	# Client-side match start preparations
-	_client_match_start_setup()
+	# ADDED: Change to game scene
+	print("Client changing to game scene...")
+	var _error = get_tree().change_scene("res://scenes/game/game.tscn")
 
 func _client_match_start_setup() -> void:
 	# Ensure game manager exists
