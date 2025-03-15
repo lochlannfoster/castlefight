@@ -54,21 +54,6 @@ func initialize_grid() -> void:
 			
 			# Store the cell in our grid
 			grid_cells[grid_pos] = cell_data
-	
-	# Second pass: assign territories
-	for x in range(grid_width):
-		for y in range(grid_height):
-			var grid_pos = Vector2(x, y)
-			
-			# Team A gets the left third of the map
-			if x < int(grid_width / 3.0):
-				grid_cells[grid_pos].team_territory = Team.TEAM_A
-				team_a_cells.append(grid_pos)
-			# Team B gets the right third of the map  
-			elif x >= int(2.0 * grid_width / 3.0):
-				grid_cells[grid_pos].team_territory = Team.TEAM_B
-				team_b_cells.append(grid_pos)
-			# Middle third remains neutral
 			
 			# Add to lane organization  
 			var lane = grid_cells[grid_pos].lane

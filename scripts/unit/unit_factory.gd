@@ -63,10 +63,6 @@ func create_unit(unit_type: String, position: Vector2, team: int):
 	# Get unit data
 	var data = unit_data[unit_type]
 	
-	# Create a default unit if scene isn't available
-	var unit = KinematicBody2D.new()
-	unit.name = unit_type
-	
 	# Set basic properties
 	unit.unit_id = unit_type
 	unit.display_name = data.display_name if data.has("display_name") else unit_type

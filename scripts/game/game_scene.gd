@@ -24,38 +24,6 @@ func _ready() -> void:
 	
 	# Initialize game
 	_initialize_game()
-			
-func _emergency_init():
-	print("Emergency initialization triggered")
-	var game_manager = get_node_or_null("/root/GameManager")
-	if not game_manager:
-		print("ERROR: Could not find GameManager")
-		return
-		
-	game_manager.start_game()
-	
-	# Try to create HQs directly
-	print("Creating emergency game elements...")
-	if not game_manager.building_manager:
-		print("ERROR: No building manager available")
-		return
-	
-	# Define positions that are definitely within valid territories
-	var team_positions = [
-		Vector2(50.0, 300.0),  # Team 0 HQ 
-		Vector2(690.0, 300.0)   # Team 1 HQ
-	]
-	
-	for team in range(2):
-		var position = team_positions[team]
-		var building = game_manager.building_manager.place_building("headquarters", position, team)
-		if building:
-			print("Successfully created emergency HQ for team " + str(team))
-		else:
-			print("Failed to create emergency HQ for team " + str(team))
-	
-	# Try to create a worker
-	_add_test_worker()
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -78,23 +46,6 @@ func _initialize_game():
 	# Setup simple UI for testing
 	print("DEBUG: About to call _setup_simple_ui()")
 	call_deferred("_setup_simple_ui")
-	
-	# If game wasn't started by NetworkManager, we can start it directly
-	if game_manager:
-		print("DEBUG: Game manager current_state = " + str(game_manager.current_state))
-		print("DEBUG: Game manager players count = " + str(game_manager.players.size()))
-		if game_manager.current_state == game_manager.GameState.SETUP:
-			print("Starting game in single player mode")
-			
-			# Create a player in single-player mode if needed
-			if game_manager.players.empty():
-				print("DEBUG: Adding default player")
-				game_manager.add_player(1, "Player", 0)
-				print("Added default player")
-			
-			# Start game
-			print("DEBUG: Calling deferred _start_single_player_game()")
-			call_deferred("_start_single_player_game", game_manager)
 	
 	print("DEBUG: _initialize_game() completed")
 
@@ -150,46 +101,6 @@ func _add_ui_manager(ui_manager):
 	worker_timer.connect("timeout", self, "_add_test_worker")
 	worker_timer.connect("timeout", worker_timer, "queue_free")
 
-func _add_test_worker():
-	print("DEBUG: Creating test worker...")
-	
-	var worker_scene = load("res://scenes/units/worker.tscn")
-	if not worker_scene:
-		print("DEBUG: Worker scene file could not be loaded!")
-		return
-		
-	var worker = worker_scene.instance()
-	if not worker:
-		print("DEBUG: Failed to instance worker scene!")
-		return
-		
-	print("DEBUG: Worker instance created")
-	worker.position = Vector2(400, 300)
-	worker.team = 0  # Team A
-	
-	# Add directly to the scene 
-	add_child(worker)
-	print("DEBUG: Worker added to scene at " + str(worker.position))
-	
-	# Make worker stand out
-	print("Making worker visible for team " + str(worker.team))
-	var sprite = worker.get_node_or_null("Sprite")
-	if sprite:
-		# Make sprite bright green or red depending on team
-		sprite.modulate = Color(0, 1, 0) if worker.team == 0 else Color(1, 0, 0)  
-		sprite.scale = Vector2(2, 2)  # Make it twice as big
-	
-	# Select the worker
-	if worker.has_method("select"):
-		worker.select()
-		print("DEBUG: Worker select() method called")
-	
-	# Select via UI manager too  
-	var ui_manager = get_node_or_null("UIManager")
-	if ui_manager and ui_manager.has_method("select_worker"):
-		ui_manager.select_worker(worker) 
-		print("DEBUG: UI manager select_worker() called")
-
 func _input(event):
 	# Only check for scancode on keyboard events
 	if event is InputEventKey and event.pressed:
@@ -201,23 +112,6 @@ func _input(event):
 			if ui_manager and ui_manager.has_method("toggle_building_menu"):
 				ui_manager.toggle_building_menu()
 			
-		elif event.scancode == KEY_H:
-			print("H key pressed - creating emergency HQ")
-			# Create an HQ manually
-			var game_manager = get_node_or_null("/root/GameManager")
-			if game_manager and game_manager.building_manager:
-				for team in range(2):
-					# Use different positions that work with the grid system
-					var positions = [
-						Vector2(50.0, 300.0),  # Team 0
-						Vector2(690.0, 300.0)    # Team 1 
-					]
-					var building = game_manager.building_manager.place_building("headquarters", positions[team], team)
-					if building:
-						print("Created HQ for team " + str(team))
-					else:
-						print("Failed to create HQ for team " + str(team))
-	
 	# Handle other input types if needed
 	elif event is InputEventMouseButton:
 		# Mouse button code here

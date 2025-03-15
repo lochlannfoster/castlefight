@@ -636,12 +636,6 @@ func start_match() -> void:
 	# Print more debug info
 	print("Starting match - is_server: " + str(is_server) + ", game_phase: " + str(game_phase))
 	
-	# In debug mode, force the game to start regardless of phase
-	if debug_mode:
-		print("Debug mode enabled - forcing game start")
-		game_phase = GamePhase.PREGAME
-		is_server = true
-	
 	if not is_server or game_phase != GamePhase.PREGAME:
 		print("Cannot start game: Not server or wrong game phase. Current phase: " + str(game_phase))
 		return
