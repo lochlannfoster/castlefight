@@ -289,7 +289,7 @@ func purchase_item(team: int, item_type: String) -> bool:
 	return true
 
 # Award a bounty for killing a unit
-func award_unit_kill_bounty(team: int, unit_type: String, killer_unit = null) -> void:
+func award_unit_kill_bounty(team: int, unit_type: String, _killer_unit = null) -> void:
 	# Find the building that spawns this unit type
 	var spawning_building_type = _find_building_that_spawns_unit(unit_type)
 	

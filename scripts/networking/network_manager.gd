@@ -56,11 +56,11 @@ func _ready() -> void:
 	game_manager = get_node_or_null("/root/GameManager")
 	
 	# Set network peer
-	get_tree().connect("network_peer_connected", self, "_on_player_connected")
-	get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
-	get_tree().connect("connected_to_server", self, "_on_connected_to_server")
-	get_tree().connect("connection_failed", self, "_on_connection_failed")
-	get_tree().connect("server_disconnected", self, "_on_server_disconnected")
+	var _connect1 = get_tree().connect("network_peer_connected", self, "_on_player_connected")
+	var _connect2 = get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
+	var _connect3 = get_tree().connect("connected_to_server", self, "_on_connected_to_server")
+	var _connect4 = get_tree().connect("connection_failed", self, "_on_connection_failed")
+	var _connect5 = get_tree().connect("server_disconnected", self, "_on_server_disconnected")
 
 # Process function for server ticks and ping
 func _process(delta: float) -> void:
@@ -228,7 +228,6 @@ func change_team(team: int) -> void:
 		rpc("_update_player_list", player_info)
 
 # Start game for all players
-
 func start_game() -> void:
 	if not is_server:
 		return
@@ -371,7 +370,7 @@ func _process_server_tick() -> void:
 	rpc("_server_heartbeat", OS.get_ticks_msec())
 
 # Update pings
-func _update_pings(delta: float) -> void:
+func _update_pings(_delta: float) -> void:
 	if not network:
 		return
 	
@@ -394,7 +393,7 @@ func _send_ping(player_id: int) -> void:
 		if player_id == 1:  # Server
 			rpc_id(1, "_ping", OS.get_ticks_msec())
 
-# Start game locally# Start game locally
+# Start game locally
 func _start_game_locally() -> void:
 	print("NetworkManager: Starting game locally")
 	print("Current scene: ", get_tree().current_scene.filename)
@@ -406,16 +405,16 @@ func _start_game_locally() -> void:
 # Finish game start after scene change 
 func _finish_game_start() -> void:
 	# Now set up the game with GameManager
-	var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager:
+	var current_game_manager = get_node_or_null("/root/GameManager")
+	if current_game_manager:
 		# Set player teams
 		for player_id in player_info.keys():
 			var team = player_info[player_id].team
 			var name = player_info[player_id].name
-			game_manager.add_player(player_id, name, team)
+			current_game_manager.add_player(player_id, name, team)
 		
 		# Start the game
-		game_manager.start_game()
+		current_game_manager.start_game()
 	else:
 		push_error("Could not find GameManager after scene change")
 
@@ -425,7 +424,7 @@ func _generate_match_id() -> String:
 	rng.randomize()
 	
 	var id = ""
-	for i in range(8):
+	for _i in range(8):
 		id += char(rng.randi_range(65, 90))  # A-Z
 	
 	return id
@@ -542,7 +541,7 @@ remote func _receive_player_input(input_data: Dictionary) -> void:
 	var player_id = get_tree().get_rpc_sender_id()
 	_process_player_input(player_id, input_data)
 
-remote func _server_heartbeat(server_time: int) -> void:
+remote func _server_heartbeat(_server_time: int) -> void:
 	# Clients receive heartbeat from server
 	if is_server:
 		return
@@ -625,7 +624,7 @@ func _process_player_input(player_id: int, input_data: Dictionary) -> void:
 			"worker_move":
 				# Notify game manager of worker movement
 				if game_manager and player_info.has(player_id):
-					var team = player_info[player_id].team
+					var _team = player_info[player_id].team
 					# Implement worker movement command
 					pass
 			
@@ -653,7 +652,7 @@ func _process_player_input(player_id: int, input_data: Dictionary) -> void:
 		if id != player_id:
 			rpc_id(id, "_apply_remote_input", player_id, input_data)
 
-remote func _apply_remote_input(player_id: int, input_data: Dictionary) -> void:
+remote func _apply_remote_input(_player_id: int, input_data: Dictionary) -> void:
 	# Clients apply input received from server
 	if is_server:
 		return
@@ -752,7 +751,7 @@ func _on_player_disconnected(player_id: int) -> void:
 				
 				if disconnected_players.has(player_id):
 					# Player didn't reconnect within timeout
-					var _removed = disconnected_players.erase(player_id)  # Use _removed to acknowledge return value
+					var _removed = disconnected_players.erase(player_id)
 					player_info.erase(player_id)
 					
 					# Broadcast updated player list
@@ -779,7 +778,7 @@ func _handle_reconnection(player_id: int) -> void:
 	player_info[player_id] = disconnected_players[player_id].info
 	
 	# Remove from disconnected players
-	var _removed = disconnected_players.erase(player_id)  # Use _removed to acknowledge return value
+	var _removed = disconnected_players.erase(player_id)
 	
 	# Send current game state to reconnected player
 	_send_game_state_to_player(player_id)

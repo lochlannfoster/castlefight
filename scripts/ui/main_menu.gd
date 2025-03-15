@@ -5,10 +5,10 @@ extends Control
 # Ready function
 func _ready() -> void:
 	# Connect button signals
-	$VBoxContainer/MultiplayerButton.connect("pressed", self, "_on_multiplayer_button_pressed")
-	$VBoxContainer/VSingleplayerButton.connect("pressed", self, "_on_singleplayer_button_pressed")
-	$VBoxContainer/OptionsButton.connect("pressed", self, "_on_options_button_pressed")
-	$VBoxContainer/QuitButton.connect("pressed", self, "_on_quit_button_pressed")
+	var _connect1 = $VBoxContainer/MultiplayerButton.connect("pressed", self, "_on_multiplayer_button_pressed")
+	var _connect2 = $VBoxContainer/VSingleplayerButton.connect("pressed", self, "_on_singleplayer_button_pressed")
+	var _connect3 = $VBoxContainer/OptionsButton.connect("pressed", self, "_on_options_button_pressed")
+	var _connect4 = $VBoxContainer/QuitButton.connect("pressed", self, "_on_quit_button_pressed")
 	
 	# Set version text
 	$VersionLabel.text = "Version 0.1.0"
@@ -19,11 +19,11 @@ func _ready() -> void:
 # Navigate to multiplayer lobby
 func _on_multiplayer_button_pressed() -> void:
 	print("Multiplayer button pressed, changing to lobby scene")
-	get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+	var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Start a singleplayer game
 func _on_singleplayer_button_pressed() -> void:
-	get_tree().change_scene("res://scenes/singleplayer/singleplayer_setup.tscn")
+	var _result = get_tree().change_scene("res://scenes/singleplayer/singleplayer_setup.tscn")
 
 # Open options menu
 func _on_options_button_pressed() -> void:

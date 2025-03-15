@@ -289,10 +289,10 @@ func _on_building_placed(_building_type: String, _position: Vector2, _team: int)
 
 func _on_building_destroyed(building) -> void:
 	var building_id = building.get_instance_id()
-	all_buildings.erase(building_id)
+	var _result = all_buildings.erase(building_id)
 	
 	for team in visible_buildings.keys():
-		var _result = visible_buildings[team].erase(building_id)
+		visible_buildings[team].erase(building_id)
 
 # Set current player team (for single-player or client-side view)
 func set_current_player_team(team: int) -> void:
