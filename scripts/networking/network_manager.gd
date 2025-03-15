@@ -756,11 +756,7 @@ remote func _apply_remote_input(_player_id: int, input_data: Dictionary) -> void
 				# Apply item purchase
 				pass
 
-# Validate checksums from all players
-func _validate_checksums() -> void:
-	if not is_server:
-		return
-	
+
 func _on_player_disconnected(player_id: int) -> void:
 	print("Player disconnected: ", player_id)
 	
@@ -802,14 +798,7 @@ func _on_player_disconnected(player_id: int) -> void:
 				if network:  # Make sure we're still connected
 					rpc("_update_player_list", player_info)
 
-# Placeholder for checksum validation
-func _validate_checksums() -> void:
-	if not is_server:
-		return
-	
-	# Placeholder: Implement actual checksum validation logic
-	print("Validating game state checksums")
-					
+				
 # Handle reconnection of a player
 func _handle_reconnection(player_id: int) -> void:
 	if not is_server or not disconnected_players.has(player_id):
