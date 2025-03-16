@@ -54,7 +54,7 @@ class UnifiedLogger:
         _open_log_file()
 
     # Core logging method
-func log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
+func debug_debug_log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
     # Skip logs below current configuration level
     if level < _config.current_level:
         return
@@ -102,22 +102,22 @@ func log(level: int, message: String, category: String = "General", context: Dic
 
     # Convenience methods for different log levels
 func verbose(message: String, category: String = "General") -> void:
-        log(LogLevel.VERBOSE, message, category)
+        debug_log(LogLevel.VERBOSE, message, category)
     
 func debug(message: String, category: String = "General") -> void:
-        log(LogLevel.DEBUG, message, category)
+        debug_log(LogLevel.DEBUG, message, category)
     
 func info(message: String, category: String = "General") -> void:
-        log(LogLevel.INFO, message, category)
+        debug_log(LogLevel.INFO, message, category)
     
 func warning(message: String, category: String = "General") -> void:
-        log(LogLevel.WARNING, message, category)
+        debug_log(LogLevel.WARNING, message, category)
     
 func error(message: String, category: String = "General") -> void:
-        log(LogLevel.ERROR, message, category)
+        debug_log(LogLevel.ERROR, message, category)
     
 func critical(message: String, category: String = "General") -> void:
-        log(LogLevel.CRITICAL, message, category)
+        debug_log(LogLevel.CRITICAL, message, category)
 
     # Performance tracking and logging
 func track_performance(operation_name: String, start_time: int, start_memory: int) -> void:
@@ -127,7 +127,7 @@ func track_performance(operation_name: String, start_time: int, start_memory: in
         var duration = end_time - start_time
         var memory_change = end_memory - start_memory
         
-        log(LogLevel.INFO,
+        debug_log(LogLevel.INFO,
             "Performance: %s took %d ms, memory change %d bytes" % [
                 operation_name, duration, memory_change
             ],

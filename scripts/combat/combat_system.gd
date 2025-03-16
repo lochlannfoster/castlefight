@@ -29,7 +29,7 @@ func _init() -> void:
     service_name = "CombatSystem"
     required_services = []
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -56,7 +56,7 @@ func _initialize_impl() -> void:
     # Load custom damage tables if needed
     _load_damage_tables()
     
-    log("Combat system initialized", "info")
+    debug_log("Combat system initialized", "info")
 
 # Load custom damage tables from configuration
 func _load_damage_tables() -> void:

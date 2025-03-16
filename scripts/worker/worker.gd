@@ -54,7 +54,7 @@ var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():
@@ -144,7 +144,7 @@ func _handle_input() -> void:
     if input_direction != Vector2.ZERO:
         is_moving_to_target = false
         velocity = input_direction.normalized() * speed
-        log("Moving worker with velocity: " + str(velocity), "debug")
+        debug_log("Moving worker with velocity: " + str(velocity), "debug")
     elif not is_moving_to_target:
         velocity = velocity.move_toward(Vector2.ZERO, friction)
     
@@ -243,7 +243,7 @@ func start_building_placement(building_type: String, size: Vector2) -> void:
 # Try to place a building at the given position
 func _try_place_building(position: Vector2) -> void:
     if not building_manager or not grid_system:
-        log("Cannot place building: Missing manager references", "warning")
+        debug_log("Cannot place building: Missing manager references", "warning")
         return
     
     var grid_pos = grid_system.world_to_grid(position)
@@ -259,12 +259,12 @@ func _try_place_building(position: Vector2) -> void:
     
     # Check if placement is valid
     if not _can_place_at_position(grid_pos):
-        log("Cannot place building: Invalid position", "warning")
+        debug_log("Cannot place building: Invalid position", "warning")
         return
     
     # Check if we can afford it
     if not economy_manager.can_afford_building(team, current_building_type):
-        log("Cannot place building: Cannot afford", "warning")
+        debug_log("Cannot place building: Cannot afford", "warning")
         return
     
     # Place the building
@@ -279,7 +279,7 @@ func _try_place_building(position: Vector2) -> void:
         current_building_type = ""
         current_building_size = Vector2.ONE
     else:
-        log("Failed to place building", "warning")
+        debug_log("Failed to place building", "warning")
 
 # Cancel building placement
 func cancel_building_placement() -> void:
@@ -302,7 +302,7 @@ func toggle_auto_repair() -> void:
     auto_repair = !auto_repair
     emit_signal("auto_repair_toggled", auto_repair)
     
-    log("Auto-repair " + ("enabled" if auto_repair else "disabled"), "info")
+    debug_log("Auto-repair " + ("enabled" if auto_repair else "disabled"), "info")
 
 # Handle auto-repair of nearby buildings
 func _handle_auto_repair(delta: float) -> void:
@@ -331,7 +331,7 @@ func _handle_auto_repair(delta: float) -> void:
             closest_damaged.repair(repair_amount)
 
 func move_to(pos: Vector2, options: Dictionary = {}) -> void:
-    log("Worker moving to " + str(pos), "debug")
+    debug_log("Worker moving to " + str(pos), "debug")
     target_position = pos
     is_moving_to_target = true
     current_target_building = options.get("is_building_target", false)
@@ -342,7 +342,7 @@ func move_to(pos: Vector2, options: Dictionary = {}) -> void:
             cancel_building_placement()
 
 func select() -> void:
-    log("Worker select() called. Current team: " + str(team), "debug")
+    debug_log("Worker select() called. Current team: " + str(team), "debug")
     is_selected = true
     
     # Create or update selection indicator
@@ -355,10 +355,10 @@ func select() -> void:
     # More verbose logging for UI manager interaction
     var worker_ui_manager = get_node_or_null("/root/GameManager/UIManager")
     if worker_ui_manager:
-        log("Attempting to select worker with UI Manager. Team: " + str(team), "debug")
+        debug_log("Attempting to select worker with UI Manager. Team: " + str(team), "debug")
         worker_ui_manager.select_worker(self)
     else:
-        log("No UI Manager found during worker selection", "warning")
+        debug_log("No UI Manager found during worker selection", "warning")
 
 # Deselect this worker
 func deselect() -> void:
@@ -372,7 +372,7 @@ func get_team() -> int:
     return team
 
 func _ready() -> void:
-    log("Worker initialized. Team: " + str(team), "info")
+    debug_log("Worker initialized. Team: " + str(team), "info")
     
     # Replace entire existing method with these calls
     _initialize_systems()
@@ -382,12 +382,12 @@ func _ready() -> void:
 
 # Add or modify this function in your worker.gd script
 func _setup_visuals() -> void:
-    log("Setting up worker visuals for team " + str(team), "debug")
+    debug_log("Setting up worker visuals for team " + str(team), "debug")
     
     # Create or get sprite
     var sprite = get_node_or_null("Sprite")
     if not sprite:
-        log("Creating new Sprite node", "debug")
+        debug_log("Creating new Sprite node", "debug")
         sprite = Sprite.new()
         sprite.name = "Sprite"
         add_child(sprite)
@@ -398,7 +398,7 @@ func _setup_visuals() -> void:
     
     # If loading fails, try fallback method
     if not texture:
-        log("Failed to load worker texture, trying fallback", "warning")
+        debug_log("Failed to load worker texture, trying fallback", "warning")
         
         # Create a placeholder texture
         # ... rest of code ...
@@ -406,7 +406,7 @@ func _setup_visuals() -> void:
         # Create texture
         texture = ImageTexture.new()
         texture.create_from_image(img)
-        log("Created fallback worker texture", "debug")
+        debug_log("Created fallback worker texture", "debug")
     
     # Set the texture
     sprite.texture = texture
@@ -417,7 +417,7 @@ func _setup_visuals() -> void:
     else:
         sprite.modulate = Color(1, 0, 0) # Red for Team B
     
-    log("Worker visuals setup complete", "debug")
+    debug_log("Worker visuals setup complete", "debug")
 
 func _execute_move_command(params: Dictionary) -> void:
     var target_position = params.get("position", Vector2.ZERO)

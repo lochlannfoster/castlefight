@@ -59,7 +59,7 @@ var required_base_scenes: Dictionary = {
     }
 }
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -87,7 +87,7 @@ func _init() -> void:
     required_services = ["DebugLogger"]
 
 func _initialize_impl() -> void:
-    log("Initializing resource manager...")
+    debug_log("Initializing resource manager...")
     
     # Ensure required directories exist
     _ensure_directories_exist()
@@ -98,7 +98,7 @@ func _initialize_impl() -> void:
     # Preload essential resources
     _preload_essential_resources()
     
-    log("Resource manager initialized successfully")
+    debug_log("Resource manager initialized successfully")
 
 # Ensure all required directories exist
 func _ensure_directories_exist() -> void:
@@ -106,10 +106,10 @@ func _ensure_directories_exist() -> void:
     
     for directory in required_directories:
         if not dir.dir_exists(directory):
-            log("Creating missing directory: " + directory)
+            debug_log("Creating missing directory: " + directory)
             var err = dir.make_dir_recursive(directory)
             if err != OK:
-                log("Failed to create directory: " + directory, "error")
+                debug_log("Failed to create directory: " + directory, "error")
 
 # Ensure all required base scenes exist
 func _ensure_base_scenes_exist() -> void:
@@ -119,7 +119,7 @@ func _ensure_base_scenes_exist() -> void:
         var scene_info = required_base_scenes[scene_path]
         
         if not file.file_exists(scene_path):
-            log("Required scene not found: " + scene_path + ". Creating it...", "warning")
+            debug_log("Required scene not found: " + scene_path + ". Creating it...", "warning")
             _create_base_scene(scene_path, scene_info)
 
 # Create a base scene
@@ -128,7 +128,7 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
     var script = load(script_path)
     
     if not script:
-        log("Failed to load script for scene: " + scene_path, "error")
+        debug_log("Failed to load script for scene: " + scene_path, "error")
         return
     
     # Create appropriate root node based on type
@@ -210,9 +210,9 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
     # Save scene
     var err = ResourceSaver.save(scene_path, packed_scene)
     if err != OK:
-        log("Failed to save scene: " + scene_path + " with error: " + str(err), "error")
+        debug_log("Failed to save scene: " + scene_path + " with error: " + str(err), "error")
     else:
-        log("Successfully created scene: " + scene_path)
+        debug_log("Successfully created scene: " + scene_path)
 
 # Preload essential resources
 func _preload_essential_resources() -> void:
@@ -308,7 +308,7 @@ func create_default_json(path: String, default_data: Dictionary) -> Dictionary:
     if not file.file_exists(path):
         var error = file.open(path, File.WRITE)
         if error != OK:
-            log("Could not create default JSON file: " + path, "error")
+            debug_log("Could not create default JSON file: " + path, "error")
             return {}
         
         var json_text = JSON.print(default_data, "  ")
@@ -317,7 +317,7 @@ func create_default_json(path: String, default_data: Dictionary) -> Dictionary:
         
         # Store in cache
         _json_data[path] = default_data
-        log("Created default JSON file: " + path)
+        debug_log("Created default JSON file: " + path)
         
         return default_data
     
@@ -334,7 +334,7 @@ func _track_load_attempt(path: String) -> void:
 # Track resource load error
 func _track_load_error(path: String, error: String) -> void:
     _load_errors[path] = error
-    log("Resource load error: " + path + " - " + error, "error")
+    debug_log("Resource load error: " + path + " - " + error, "error")
 
 # Get load error for a path
 func get_load_error(path: String) -> String:
@@ -351,7 +351,7 @@ func clear_caches() -> void:
     _audio.clear()
     # Don't clear JSON data as it rarely changes
     
-    log("Resource caches cleared")
+    debug_log("Resource caches cleared")
 
 # Reset the manager
 func reset() -> void:

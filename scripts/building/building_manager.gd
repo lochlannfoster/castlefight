@@ -80,7 +80,7 @@ func _load_building_file(building_id: String, file_path: String) -> void:
     else:
         push_error("Error opening building file: " + file_path)
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():
@@ -104,7 +104,7 @@ func log(message: String, level: String = "info", context: String = "") -> void:
         print(prefix + " " + message)
 
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
-    log("Attempting to place building: " + building_type + " at position " + str(position) + " for team " + str(team), "debug", "BuildingManager")
+    debug_log("Attempting to place building: " + building_type + " at position " + str(position) + " for team " + str(team), "debug", "BuildingManager")
     
     # Validate building type
     if not building_data.has(building_type):
@@ -204,7 +204,7 @@ func _on_building_construction_completed(building: Building) -> void:
 
 # Handle building destruction
 func _on_building_destroyed(building: Building) -> void:
-    log("Building destroyed: " + building.display_name + " (Team " + str(building.team) + ")", "info", "BuildingManager")
+    debug_log("Building destroyed: " + building.display_name + " (Team " + str(building.team) + ")", "info", "BuildingManager")
     
     # Remove from tracking
     var building_id_to_remove = null
@@ -319,17 +319,17 @@ func initialize() -> void:
     if not grid_system:
         grid_system = get_node_or_null("/root/GameManager/GridSystem")
         if not grid_system:
-            log("Error: GridSystem not found", "error", "BuildingManager")
+            debug_log("Error: GridSystem not found", "error", "BuildingManager")
         
     economy_manager = get_node_or_null("/root/EconomyManager")
     if not economy_manager:
         economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
         if not economy_manager:
-            log("Error: EconomyManager not found", "error", "BuildingManager")
+            debug_log("Error: EconomyManager not found", "error", "BuildingManager")
         
     game_manager = get_node_or_null("/root/GameManager")
     if not game_manager:
-        log("Error: GameManager not found", "error", "BuildingManager")
+        debug_log("Error: GameManager not found", "error", "BuildingManager")
     
     # Clear building tracking
     buildings.clear()

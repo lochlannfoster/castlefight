@@ -18,7 +18,7 @@ var lane_cells: Dictionary = {} # Cells organized by lanes
 # Team constants
 enum Team {TEAM_A, TEAM_B}
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -90,7 +90,7 @@ func _initialize_impl() -> void:
             if is_valid_placement_cell(grid_pos):
                 valid_placement_cells.append(grid_pos)
                 
-    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
+    debug_log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
           str(team_b_cells.size()) + " Team B cells", "info")
     
     emit_signal("grid_initialized")
@@ -143,7 +143,7 @@ func initialize_grid() -> void:
             if is_valid_placement_cell(grid_pos):
                 valid_placement_cells.append(grid_pos)
                 
-    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " + str(team_b_cells.size()) + " Team B cells", "info")
+    debug_log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " + str(team_b_cells.size()) + " Team B cells", "info")
     
     emit_signal("grid_initialized")
 

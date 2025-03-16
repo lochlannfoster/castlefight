@@ -31,7 +31,7 @@ var map_obstacles: Array = []
 var grid_system: GridSystem
 var map_node: Node2D
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -74,7 +74,7 @@ func _initialize_impl() -> void:
     # Generate default map
     generate_map()
     
-    log("Map manager initialized", "info")
+    debug_log("Map manager initialized", "info")
 
 # Generate a new map
 func generate_map() -> void:

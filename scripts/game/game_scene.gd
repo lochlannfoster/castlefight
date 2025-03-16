@@ -20,7 +20,7 @@ var ui_manager: Node = null
 
 export var debug_mode: bool = false
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -55,7 +55,7 @@ func _ready() -> void:
     call_deferred("_explicitly_draw_grid")
 
 func initialize_game_systems() -> void:
-    log("Initializing all game systems...", "info", "GameManager")
+    debug_log("Initializing all game systems...", "info", "GameManager")
     
     # Initialize all services through ServiceLocator
     var service_locator = get_node("/root/ServiceLocator")
@@ -76,11 +76,11 @@ func initialize_game_systems() -> void:
     # Connect signals after all systems are initialized
     _connect_signals()
     
-    log("All game systems initialized successfully", "info", "GameManager")
+    debug_log("All game systems initialized successfully", "info", "GameManager")
 
 # Safely set up game camera with deferred addition
 func _setup_safe_camera() -> void:
-    log("Setting up game camera...")
+    debug_log("Setting up game camera...")
     var camera = Camera2D.new()
     camera.name = "GameCamera"
     camera.position = Vector2(400, 300)
@@ -90,30 +90,30 @@ func _setup_safe_camera() -> void:
     if camera_script:
         camera.set_script(camera_script)
     else:
-        log("Camera controller script not found!", "warning")
+        debug_log("Camera controller script not found!", "warning")
     
     call_deferred("add_child", camera)
 
 # Safely load game map
 func _load_map_safely() -> void:
-    log("Loading game map...")
+    debug_log("Loading game map...")
     var map_scene = load("res://scenes/game/map.tscn")
     if map_scene:
         var map_instance = map_scene.instance()
         call_deferred("add_child", map_instance)
     else:
-        log("Map scene could not be loaded!", "error")
+        debug_log("Map scene could not be loaded!", "error")
 
 # Prepare initial game state without spawning test entities
 func _prepare_game_state() -> void:
-    log("Preparing initial game state...")
+    debug_log("Preparing initial game state...")
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("start_pregame_countdown"):
         game_manager.start_pregame_countdown()
 
 # Validate complete game initialization
 func _validate_game_initialization() -> void:
-    log("Performing final initialization validation...")
+    debug_log("Performing final initialization validation...")
     
     var critical_systems = [
         "GameManager",
@@ -126,13 +126,13 @@ func _validate_game_initialization() -> void:
     for system in critical_systems:
         var node = get_node_or_null("/root/" + system)
         if not node:
-            log("Critical system " + system + " not initialized!", "error")
+            debug_log("Critical system " + system + " not initialized!", "error")
             initialization_successful = false
     
     if initialization_successful:
-        log("Game initialization validated successfully.")
+        debug_log("Game initialization validated successfully.")
     else:
-        log("Game initialization encountered issues!", "warning")
+        debug_log("Game initialization encountered issues!", "warning")
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed:
@@ -169,10 +169,10 @@ func _validate_system_readiness() -> void:
     
     for system in critical_systems:
         if not system:
-            log("Critical system not initialized!", "error")
+            debug_log("Critical system not initialized!", "error")
 
 func _explicitly_draw_grid() -> void:
-    log("Setting up permanent grid visualization...")
+    debug_log("Setting up permanent grid visualization...")
     
     # Try multiple ways to get the grid system
     var grid_sys = get_node_or_null("/root/GridSystem")
@@ -185,12 +185,12 @@ func _explicitly_draw_grid() -> void:
             grid_sys = GridSystemScript.new()
             grid_sys.name = "GridSystem"
             get_tree().root.call_deferred("add_child", grid_sys)
-            log("Created missing GridSystem")
+            debug_log("Created missing GridSystem")
             
             # We need to wait until it's added to the tree
             yield (get_tree(), "idle_frame")
         else:
-            log("Cannot create grid system - script not valid", "error")
+            debug_log("Cannot create grid system - script not valid", "error")
             return
     
     # Now try to draw the grid
@@ -198,10 +198,10 @@ func _explicitly_draw_grid() -> void:
         # Use call_deferred to ensure grid system is ready
         call_deferred("_draw_grid_deferred", grid_sys)
     else:
-        log("GridSystem found but lacks draw_debug_grid method", "error")
+        debug_log("GridSystem found but lacks draw_debug_grid method", "error")
 
 func _verify_system_availability() -> void:
-    log("Verifying system availability...")
+    debug_log("Verifying system availability...")
     
     # Check for critical autoloaded systems
     var autoload_systems = [
@@ -217,9 +217,9 @@ func _verify_system_availability() -> void:
     for system in autoload_systems:
         var node = get_node_or_null("/root/" + system)
         if node:
-            log("Found system: " + system)
+            debug_log("Found system: " + system)
         else:
-            log("System not found: " + system, "warning")
+            debug_log("System not found: " + system, "warning")
     
     # Check for required children nodes
     var required_children = ["GameWorld", "Ground", "Units", "Buildings", "Camera2D"]
@@ -227,16 +227,16 @@ func _verify_system_availability() -> void:
     for child_name in required_children:
         var child = get_node_or_null(child_name)
         if child:
-            log("Found child node: " + child_name)
+            debug_log("Found child node: " + child_name)
         else:
-            log("Child node not found: " + child_name, "warning")
+            debug_log("Child node not found: " + child_name, "warning")
             
             # Create essential missing nodes
             if child_name in ["GameWorld", "Ground", "Units", "Buildings"]:
                 var new_node = Node2D.new()
                 new_node.name = child_name
                 call_deferred("add_child", new_node)
-                log("Created missing essential node: " + child_name)
+                debug_log("Created missing essential node: " + child_name)
 
 func _deferred_initialize_managers() -> void:
     # Initialize each manager if it has the method
@@ -251,12 +251,12 @@ func _deferred_initialize_managers() -> void:
     
     for manager in managers:
         if manager.node and manager.node.has_method("initialize"):
-            log("Initializing " + manager.name)
+            debug_log("Initializing " + manager.name)
             manager.node.initialize()
         elif manager.node:
-            log(manager.name + " found but lacks initialization method", "warning")
+            debug_log(manager.name + " found but lacks initialization method", "warning")
         else:
-            log(manager.name + " not found", "warning")
+            debug_log(manager.name + " not found", "warning")
 
 func _draw_grid_deferred(grid_sys) -> void:
     if is_instance_valid(grid_sys) and grid_sys.has_method("draw_debug_grid"):
@@ -267,8 +267,8 @@ func _draw_grid_deferred(grid_sys) -> void:
         var visualizer = grid_sys.get_node_or_null("DebugGridVisualizer")
         if visualizer:
             visualizer.visible = true
-            log("Grid visualizer setup complete and visible")
+            debug_log("Grid visualizer setup complete and visible")
         else:
-            log("Grid visualizer not found after creation", "warning")
+            debug_log("Grid visualizer not found after creation", "warning")
     else:
-        log("Grid system invalid or missing draw method", "error")
+        debug_log("Grid system invalid or missing draw method", "error")

@@ -11,7 +11,7 @@ func _get_logger():
     return _logger
 
 # Log methods
-func log_error(message, category = null):
+func debug_log_error(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()
@@ -19,7 +19,7 @@ func log_error(message, category = null):
     else:
         print("[ERROR] " + message)
 
-func log_warning(message, category = null):
+func debug_log_warning(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()
@@ -27,7 +27,7 @@ func log_warning(message, category = null):
     else:
         print("[WARNING] " + message)
 
-func log_info(message, category = null):
+func debug_log_info(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()
@@ -35,7 +35,7 @@ func log_info(message, category = null):
     else:
         print("[INFO] " + message)
 
-func log(message, category = null):
+func debug_debug_log(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()
@@ -43,7 +43,7 @@ func log(message, category = null):
     else:
         print("[DEBUG] " + message)
 
-func log_verbose(message, category = null):
+func debug_log_verbose(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()

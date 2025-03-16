@@ -125,7 +125,7 @@ var bandwidth_limit: int = 100000 # Bytes per second
 var player_tokens: Dictionary = {}
 var authentication_required: bool = false
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():
@@ -292,10 +292,10 @@ func _generate_server_seed() -> void:
 func start_server(server_name: String = "Castle Fight Server",
                  port: int = DEFAULT_PORT,
                  max_players: int = MAX_PLAYERS) -> bool:
-    log("Attempting to start server: " + server_name + " on port " + str(port), "info")
+    debug_log("Attempting to start server: " + server_name + " on port " + str(port), "info")
     
     if network:
-        log("Server already running", "warning")
+        debug_log("Server already running", "warning")
         return false
     
     # Create network instance
@@ -315,7 +315,7 @@ func start_server(server_name: String = "Castle Fight Server",
         elif result == ERR_ALREADY_EXISTS:
             error_message += ": Server already exists"
             
-        log(error_message, "error")
+        debug_log(error_message, "error")
         network = null
         emit_signal("network_error", error_message)
         return false
@@ -342,7 +342,7 @@ func start_server(server_name: String = "Castle Fight Server",
         "ping": 0
     }
     
-    log("Server started successfully on port " + str(port), "info")
+    debug_log("Server started successfully on port " + str(port), "info")
     
     emit_signal("server_started")
     return true
@@ -351,11 +351,11 @@ func start_server(server_name: String = "Castle Fight Server",
 func connect_to_server(ip: String,
                      port: int = DEFAULT_PORT,
                      player_name: String = "Player") -> bool:
-    log("Attempting to connect to server: " + ip + ":" + str(port), "info")
+    debug_log("Attempting to connect to server: " + ip + ":" + str(port), "info")
     
     # Prevent multiple connection attempts
     if network:
-        log("Already connected or server running", "warning")
+        debug_log("Already connected or server running", "warning")
         return false
     
     # Create network instance
@@ -369,7 +369,7 @@ func connect_to_server(ip: String,
     var result = network.create_client(ip, port)
     
     if result != OK:
-        log("Failed to connect to " + ip + ":" + str(port), "error")
+        debug_log("Failed to connect to " + ip + ":" + str(port), "error")
         network = null
         emit_signal("network_error", "Connection failed")
         return false
@@ -393,7 +393,7 @@ func connect_to_server(ip: String,
         "ping": - 1
     }
     
-    log("Connection initiated to server: " + ip + ":" + str(port), "info")
+    debug_log("Connection initiated to server: " + ip + ":" + str(port), "info")
     
     return true
 
@@ -431,7 +431,7 @@ func disconnect_from_network() -> void:
 
 # Player Connection Handlers
 func _on_player_connected(player_id: int) -> void:
-    log("Player connected: " + str(player_id), "info")
+    debug_log("Player connected: " + str(player_id), "info")
     emit_signal("client_connected", player_id)
     
     if is_server:
@@ -489,7 +489,7 @@ func _on_connected_to_server() -> void:
     emit_signal("connection_succeeded")
 
 func _on_connection_failed() -> void:
-    log("Connection to server failed", "error")
+    debug_log("Connection to server failed", "error")
     connection_state = ConnectionState.DISCONNECTED
     network = null
     get_tree().network_peer = null
@@ -497,28 +497,7 @@ func _on_connection_failed() -> void:
     emit_signal("connection_failed")
 
 func _on_server_disconnected() -> void:
-    log("Disconnected from server", "warning")
-    
-    # Try to reconnect if in active game
-    if game_phase == GamePhase.ACTIVE:
-        # Store game state for potential reconnection
-        var saved_state = _capture_game_state_snapshot()
-        
-        # Try reconnecting
-        var reconnect_timer = Timer.new()
-        reconnect_timer.one_shot = true
-        reconnect_timer.wait_time = 5.0
-        reconnect_timer.connect("timeout", self, "_attempt_reconnect", [saved_state])
-        add_child(reconnect_timer)
-        reconnect_timer.start()
-        
-        emit_signal("network_error", "Server connection lost. Attempting to reconnect...")
-    else:
-        disconnect_from_network()
-        emit_signal("network_error", "Server connection lost")
-
-func _on_server_disconnected() -> void:
-    print("Disconnected from server")
+    debug_log("Disconnected from server", "warning")
     
     # Try to reconnect if in active game
     if game_phase == GamePhase.ACTIVE:
@@ -699,11 +678,11 @@ func _client_pre_match_setup() -> void:
     print("Client pre-match setup completed")
 
 func start_match() -> void:
-    log("Starting match - is_server: " + str(is_server) + ", game_phase: " + str(game_phase), "info")
+    debug_log("Starting match - is_server: " + str(is_server) + ", game_phase: " + str(game_phase), "info")
     
     # Enhanced debug mode player creation
     if debug_mode:
-        log("Debug mode: Ensuring player exists", "debug")
+        debug_log("Debug mode: Ensuring player exists", "debug")
         if not player_info.has(1):
             player_info[1] = {
                 "name": "Debug Player",
@@ -714,12 +693,12 @@ func start_match() -> void:
             }
     
     if not is_server or game_phase != GamePhase.PREGAME:
-        log("Cannot start game: Not server or wrong game phase (" + str(game_phase) + ")", "warning")
+        debug_log("Cannot start game: Not server or wrong game phase (" + str(game_phase) + ")", "warning")
         return
     
     # Ensure at least one player exists in debug mode
     if debug_mode and player_info.size() <= 1:
-        log("Debug mode: Ensuring at least one player exists", "debug")
+        debug_log("Debug mode: Ensuring at least one player exists", "debug")
         # Create a default player for the server in debug mode
         if not player_info.has(1): # Server is always ID 1
             player_info[1] = {
@@ -750,10 +729,10 @@ func start_match() -> void:
     rpc("_match_started")
     
     # Change to game scene
-    log("Server changing to game scene...", "info")
+    debug_log("Server changing to game scene...", "info")
     var error = get_tree().change_scene("res://scenes/game/game.tscn")
     if error != OK:
-        log("ERROR: Failed to change to game scene with error code: " + str(error), "error")
+        debug_log("ERROR: Failed to change to game scene with error code: " + str(error), "error")
     emit_signal("match_started")
 
 # New function to sync player data to GameManager
@@ -761,10 +740,10 @@ func _sync_player_data_to_game_manager() -> void:
     # Use a different variable name to avoid shadowing the class member
     var current_gm = get_node_or_null("/root/GameManager")
     if not current_gm:
-        log("ERROR: Cannot sync player data - GameManager not found", "error")
+        debug_log("ERROR: Cannot sync player data - GameManager not found", "error")
         return
         
-    log("Syncing player data to GameManager...", "info")
+    debug_log("Syncing player data to GameManager...", "info")
     
     # Get player info from NetworkManager
     var player_data = player_info
@@ -777,12 +756,12 @@ func _sync_player_data_to_game_manager() -> void:
         var p_data = player_data[player_id]
         # Only add players that have a team assigned
         if p_data.has("team") and p_data.team >= 0:
-            log("Adding player to GameManager: ID=" + str(player_id) +
+            debug_log("Adding player to GameManager: ID=" + str(player_id) +
                 ", Name=" + str(p_data.name) +
                 ", Team=" + str(p_data.team), "debug")
             var _result = current_gm.add_player(player_id, p_data.name, p_data.team)
     
-    log("Player sync complete. GameManager now has " + str(current_gm.players.size()) + " players", "info")
+    debug_log("Player sync complete. GameManager now has " + str(current_gm.players.size()) + " players", "info")
 
 remote func _match_started() -> void:
     if is_server:

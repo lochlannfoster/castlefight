@@ -50,7 +50,7 @@ var total_resources_spent: Dictionary = {}
 var player_teams: Dictionary = {}
 var player_resources_spent: Dictionary = {}
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -88,7 +88,7 @@ func _initialize_impl() -> void:
     # Reset resources to starting values
     reset_team_resources()
     
-    log(level, message, category, context)
+    debug_log("Economy manager initialized", "info", "EconomyManager")
 
 func _process(delta: float) -> void:
     income_timer += delta

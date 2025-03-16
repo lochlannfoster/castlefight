@@ -18,6 +18,7 @@ export var verbose_logging: bool = false
 signal initialization_completed
 signal service_ready
 
+
 func _init(service_name_override: String = "") -> void:
     if service_name_override != "":
         service_name = service_name_override
@@ -48,11 +49,11 @@ func initialize() -> void:
         return
         
     # Log initialization start
-    log(service_name + ": Initializing...", "info")
+    self.debug_log(service_name + ": Initialization complete", "info")
     
     # Resolve service dependencies
     if not _resolve_dependencies():
-        log(service_name + ": Initialization deferred - waiting for dependencies", "warning")
+        debug_log(service_name + ": Initialization deferred - waiting for dependencies", "warning")
         call_deferred("initialize") # Try again next frame
         return
     
@@ -63,7 +64,7 @@ func initialize() -> void:
     is_initialized = true
     
     # Log initialization success
-    log(service_name + ": Initialization complete", "info")
+    debug_log(service_name + ": Initialization complete", "info")
     
     # Emit signals
     emit_signal("initialization_completed")
@@ -116,29 +117,6 @@ func get_dependency(dependency_name: String) -> Node:
     
     push_warning(service_name + ": Dependency not found: " + dependency_name)
     return null
-
-func log(message: String, level: String = "info", context: String = "") -> void:
-    var logger = get_node_or_null("/root/Logger")
-    if logger:
-        match level.to_lower():
-            "error":
-                logger.error(message, context if context else service_name)
-            "warning":
-                logger.warning(message, context if context else service_name)
-            "debug":
-                logger.debug(message, context if context else service_name)
-            "verbose":
-                logger.debug(message, context if context else service_name)
-            _:
-                logger.info(message, context if context else service_name)
-    else:
-        # Fallback to print
-        var prefix = "[" + level.to_upper() + "]"
-        if context:
-            prefix += "[" + context + "]"
-        elif service_name:
-                prefix += "[" + service_name + "]"
-        print(prefix + " " + message)
 
 # Handle scene changes
 func _on_tree_changed() -> void:

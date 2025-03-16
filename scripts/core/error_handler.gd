@@ -33,7 +33,7 @@ var _error_history: Array = []
 signal error_occurred(report)
 signal critical_error(report)
 
-func log(message: String, level: String = "info", context: String = "") -> void:
+func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
@@ -157,7 +157,7 @@ func _sort_crash_logs(a: String, b: String) -> bool:
 # Handle critical errors
 func _handle_critical_error(report: ErrorReport):
     # Attempt graceful shutdown or recovery
-    log("Critical Error Detected: " + report.message, "error", "ErrorHandler")
+    debug_log("Critical Error Detected: " + report.message, "error", "ErrorHandler")
     
     # Optional: Show error dialog
     var dialog = AcceptDialog.new()
