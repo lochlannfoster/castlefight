@@ -48,6 +48,7 @@ var ui_manager
 var fog_of_war_manager
 var network_manager
 var map_manager
+var tech_tree_manager
 
 var is_initialized: bool = false
 
@@ -751,7 +752,7 @@ func _create_basic_race_selection() -> void:
 # Handle race selection
 func _on_race_selected(race: String, team: int) -> void:
     # Set race for the given team
-    var tech_tree_manager = get_node_or_null("TechTreeManager")
+    tech_tree_manager = get_node_or_null("TechTreeManager")
     if not tech_tree_manager:
         # Try to find it in the root
         tech_tree_manager = get_node_or_null("/root/TechTreeManager")
@@ -902,7 +903,7 @@ func toggle_grid_visualization() -> void:
         "_initialize_tech_tree_manager",
         "_initialize_map_manager"
     ]
-    
+
     # Initialize one system at a time
     for system_method in systems_to_initialize:
         call(system_method)
@@ -1153,24 +1154,80 @@ func verify_game_state() -> void:
     print("Game state verification complete")
 
 # Clean initialization of all game systems
+# Replace the problematic code that calls individual initialization functions
+# with this comprehensive initialization function
+
 func initialize_game_systems() -> void:
-    print("Initializing core game systems...")
+    log_debug("Initializing all game systems...", "info", "GameManager")
     
-    # Get references to all autoloaded singletons
+    # Initialize grid system
     grid_system = get_node_or_null("/root/GridSystem")
+    if not grid_system:
+        var grid_system_class = load("res://scripts/core/grid_system.gd")
+        if grid_system_class:
+            grid_system = grid_system_class.new()
+            grid_system.name = "GridSystem"
+            add_child(grid_system)
+            # Initialize grid
+            if grid_system.has_method("initialize_grid"):
+                grid_system.initialize_grid()
+            log_debug("Created and initialized GridSystem", "info", "GameManager")
+    
+    # Initialize combat system
     combat_system = get_node_or_null("/root/CombatSystem")
+    if not combat_system:
+        var combat_system_class = load("res://scripts/combat/combat_system.gd")
+        if combat_system_class:
+            combat_system = combat_system_class.new()
+            combat_system.name = "CombatSystem"
+            add_child(combat_system)
+            log_debug("Created CombatSystem", "info", "GameManager")
+    
+    # Initialize economy manager
     economy_manager = get_node_or_null("/root/EconomyManager")
+    if not economy_manager:
+        var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
+        if economy_manager_class:
+            economy_manager = economy_manager_class.new()
+            economy_manager.name = "EconomyManager"
+            add_child(economy_manager)
+            log_debug("Created EconomyManager", "info", "GameManager")
+    
+    # Initialize building manager
     building_manager = get_node_or_null("/root/BuildingManager")
+    if not building_manager:
+        var building_manager_class = load("res://scripts/building/building_manager.gd")
+        if building_manager_class:
+            building_manager = building_manager_class.new()
+            building_manager.name = "BuildingManager"
+            add_child(building_manager)
+            log_debug("Created BuildingManager", "info", "GameManager")
+    
+    # Initialize unit factory
     unit_factory = get_node_or_null("/root/UnitFactory")
+    # UnitFactory is usually a singleton, so we don't need to create it
+    
+    # Initialize tech tree manager
     tech_tree_manager = get_node_or_null("/root/TechTreeManager")
-    ui_manager = get_node_or_null("/root/UIManager")
+    if not tech_tree_manager:
+        var tech_tree_manager_class = load("res://scripts/core/tech_tree_manager.gd")
+        if tech_tree_manager_class:
+            tech_tree_manager = tech_tree_manager_class.new()
+            tech_tree_manager.name = "TechTreeManager"
+            add_child(tech_tree_manager)
+            log_debug("Created TechTreeManager", "info", "GameManager")
+    
+    # Initialize map manager if needed
     map_manager = get_node_or_null("/root/MapManager")
+    if not map_manager:
+        var map_manager_class = load("res://scripts/core/map_manager.gd")
+        if map_manager_class:
+            map_manager = map_manager_class.new()
+            map_manager.name = "MapManager"
+            add_child(map_manager)
+            log_debug("Created MapManager", "info", "GameManager")
     
-    # Initialize grid system if it exists
-    if grid_system and grid_system.has_method("initialize_grid"):
-        grid_system.initialize_grid()
-    
-    # Set up default tech trees
+    # Set default tech trees
     if tech_tree_manager and tech_tree_manager.has_method("set_team_tech_tree"):
         tech_tree_manager.set_team_tech_tree(0, "human")
         tech_tree_manager.set_team_tech_tree(1, "orc")
@@ -1178,4 +1235,4 @@ func initialize_game_systems() -> void:
     # Connect signals after all systems are initialized
     _connect_signals()
     
-    print("Core game systems initialized")
+    log_debug("All game systems initialized successfully", "info", "GameManager")

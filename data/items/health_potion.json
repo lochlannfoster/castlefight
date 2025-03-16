@@ -1,0 +1,13 @@
+{
+  "item_id": "health_potion",
+  "display_name": "Default Item",
+  "description": "A default item created by the game",
+  "gold_cost": 50,
+  "wood_cost": 0,
+  "supply_cost": 0,
+  "effect": {
+    "type": "heal",
+    "value": 50
+  },
+  "icon_path": "res://assets/items/default_item.png"
+}
