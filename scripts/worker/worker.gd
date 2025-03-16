@@ -449,3 +449,4 @@ func _ready() -> void:
     add_child(selection_indicator)
     
     print("Worker ready complete")
+    print("Worker initialized. Team: " + str(team))
