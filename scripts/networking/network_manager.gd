@@ -154,7 +154,7 @@ func _ready() -> void:
     var logger = get_node("/root/UnifiedLogger")
     
     # Use a dictionary for additional context if needed
-    var context = {
+    var _context = {
         "protocol_version": PROTOCOL_VERSION
     }
     

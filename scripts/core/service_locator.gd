@@ -16,11 +16,9 @@ var _service_classes: Dictionary = {
     "FogOfWarManager": "res://scripts/core/fog_of_war.gd",
     "TechTreeManager": "res://scripts/core/tech_tree_manager.gd",
     "NetworkManager": "res://scripts/networking/network_manager.gd",
-    "DebugLogger": "res://scripts/core/debug_logger.gd"
 }
 
 var _initialization_order: Array = [
-    "DebugLogger",
     "GridSystem",
     "EconomyManager",
     "CombatSystem",
@@ -58,7 +56,10 @@ func _ready() -> void:
 # Register a service with the service locator
 func register_service(service_name: String, service_instance: Node) -> void:
     if _services.has(service_name):
-        push_warning("ServiceLocator: Service already registered: " + service_name + ". Replacing.")
+        # Optional: Only print warning in debug mode
+        if verbose:
+            print("ServiceLocator: Service already registered: " + service_name + ". Skipping replacement.")
+        return
     
     _services[service_name] = service_instance
     

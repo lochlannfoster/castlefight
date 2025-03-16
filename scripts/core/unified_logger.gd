@@ -227,8 +227,22 @@ func _rotate_log_files() -> void:
 
 func _sort_files_by_time(a: String, b: String) -> bool:
     var dir = Directory.new()
-    var time_a = dir.get_modified_time(a)
-    var time_b = dir.get_modified_time(b)
+    var file = File.new()
+    
+    # Safely get modification times
+    var time_a = 0
+    var time_b = 0
+    
+    if file.file_exists(a):
+        file.open(a, File.READ)
+        time_a = file.get_modified_time(a)
+        file.close()
+    
+    if file.file_exists(b):
+        file.open(b, File.READ)
+        time_b = file.get_modified_time(b)
+        file.close()
+    
     return time_a < time_b
 
 func _get_level_name(level: int) -> String:
