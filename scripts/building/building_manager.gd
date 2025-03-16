@@ -60,6 +60,11 @@ func _initialize_impl() -> void:
         "total_building_types": building_data.size()
     })
 
+func get_node_or_null(path):
+    if has_node(path):
+        return get_node(path)
+    return null
+
 # Process function
 func _process(_delta: float) -> void:
     # Check for building selection via input

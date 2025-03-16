@@ -812,24 +812,6 @@ func _create_worker_for_player(player_id: int) -> void:
     player_data.worker = worker
     push_warning("Successfully restored worker for player " + str(player_id))
 
-func debug_log(message: String, level: String = "debug", context: String = "") -> void:
-    if Engine.has_singleton("DebugLogger"):
-        var debug_logger = Engine.get_singleton("DebugLogger")
-        match level.to_lower():
-            "error":
-                debug_logger.error(message, context)
-            "warning":
-                debug_logger.warning(message, context)
-            "info":
-                debug_logger.info(message, context)
-            "verbose":
-                debug_logger.verbose(message, context)
-            _: # Default to debug level
-                debug_logger.debug(message, context)
-    else:
-        # Fallback to print if DebugLogger is not available
-        print(level.to_upper() + " [" + context + "]: " + message)
-
 func _sync_player_data_to_game_manager() -> void:
     # Use a different variable name to avoid shadowing the class member
     var nm = get_node_or_null("NetworkManager")
@@ -1211,7 +1193,7 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
     
     if error != OK:
         debug_log("message", "level", "GameManager")

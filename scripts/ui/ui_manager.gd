@@ -2,6 +2,8 @@
 # Path: scripts/ui/ui_manager.gd
 extends CanvasLayer
 
+var service_name: String = "UIManager"
+
 # UI signals
 signal building_selected(building_type)
 signal building_placement_cancelled
@@ -1033,7 +1035,7 @@ func _on_end_game_continue() -> void:
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:

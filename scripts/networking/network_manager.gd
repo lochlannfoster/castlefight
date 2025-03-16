@@ -770,14 +770,12 @@ remote func _match_started() -> void:
     game_phase = GamePhase.ACTIVE
     
     print("Client changing to game scene...")
-        var game_manager = get_node_or_null("/root/GameManager")
+    var game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
-    if error != OK:
-        print("ERROR: Failed to change to game scene with error code: " + str(error))
+        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 func _client_match_start_setup() -> void:
     # Ensure game manager exists

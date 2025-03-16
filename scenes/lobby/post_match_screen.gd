@@ -91,4 +91,4 @@ func _on_continue_button_pressed():
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
     # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")

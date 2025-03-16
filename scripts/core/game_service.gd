@@ -18,6 +18,28 @@ export var verbose_logging: bool = false
 signal initialization_completed
 signal service_ready
 
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.verbose(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        elif service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 func _init(service_name_override: String = "") -> void:
     if service_name_override != "":

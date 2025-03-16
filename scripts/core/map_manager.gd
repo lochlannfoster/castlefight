@@ -28,7 +28,7 @@ var team_b_hq_pos: Vector2
 var map_obstacles: Array = []
 
 # References
-var grid_system: GridSystem
+var grid_system
 var map_node: Node2D
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:

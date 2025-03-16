@@ -1,8 +1,8 @@
 extends Node2D
 
 # Import required scripts for system initialization
-const GridSystemScript = load("res://scripts/core/grid_system.gd")
-const CombatSystemScript = load("res://scripts/combat/combat_system.gd")
+var GridSystemScript = preload("res://scripts/core/grid_system.gd")
+var CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
 const EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
 const BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 

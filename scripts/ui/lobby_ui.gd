@@ -387,7 +387,7 @@ func _on_back_button_pressed() -> void:
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 
 func _on_connection_cancel_pressed() -> void:

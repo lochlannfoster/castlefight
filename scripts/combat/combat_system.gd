@@ -1,4 +1,4 @@
-#extends GameService
+extends GameService
 
 # Signal for when combat events occur
 signal combat_event(attacker, target, damage, attack_type)

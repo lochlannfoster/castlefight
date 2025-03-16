@@ -2,6 +2,8 @@
 # Path: scripts/core/error_handler.gd
 extends Node
 
+var service_name: String = "ErrorHandler"
+
 # Error types
 enum ErrorType {
     CONFIGURATION,

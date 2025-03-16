@@ -79,11 +79,3 @@ func save_config(path: String = "user://config.json") -> bool:
     file.store_string(JSON.print(_config, "  "))
     file.close()
     return true
-
-# Debug method to print current configuration
-func print_config() -> void:
-    print("Current Game Configuration:")
-    for category in _config:
-        print(f"[{category}]")
-        for key in _config[category]:
-            print(f"  {key}: {_config[category][key]}")

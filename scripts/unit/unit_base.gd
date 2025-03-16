@@ -581,3 +581,25 @@ func apply_debuff(debuff_name: String, debuff_data: Dictionary) -> void:
         if effect_scene:
             var effect = effect_scene.instance()
             effects_node.add_child(effect)
+
+# Add to unit_base.gd
+func _setup_core_components() -> void:
+    # Set up collision shape
+    if not has_node("CollisionShape2D"):
+        var collision = CollisionShape2D.new()
+        collision.name = "CollisionShape2D"
+        var shape = CircleShape2D.new()
+        shape.radius = collision_radius
+        collision.shape = shape
+        add_child(collision)
+    
+    # Set up sprite
+    if not has_node("Sprite"):
+        sprite = Sprite.new()
+        sprite.name = "Sprite"
+        add_child(sprite)
+    else:
+        sprite = get_node("Sprite")
+    
+    # Set up health bar
+    _setup_health_bar()
