@@ -388,8 +388,8 @@ func _emit_worker_command(command_type: String, params: Dictionary = {}) -> void
 func _input(event) -> void:
 	# Handle key shortcuts
 	  if event is InputEventKey and event.pressed:
-		if event.scancode == KEY_F3: # You can change this to any key
-		 is_debug_overlay_visible = !is_debug_overlay_visible
+		if event.scancode == KEY_F3:
+			is_debug_overlay_visible = !is_debug_overlay_visible
 	  if debug_overlay:
 		debug_overlay.visible = is_debug_overlay_visible
 		log_debug("Debug overlay toggled: " + str(is_debug_overlay_visible), "UIManager")
