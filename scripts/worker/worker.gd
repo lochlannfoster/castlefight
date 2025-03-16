@@ -84,37 +84,7 @@ func _physics_process(delta: float) -> void:
 
 # Get references to manager nodes
 func _get_manager_references() -> void:
-    # Try multiple paths for each manager
-    grid_system = get_node_or_null("/root/GridSystem")
-    if not grid_system:
-        grid_system = get_node_or_null("/root/GameManager/GridSystem")
-    
-    # Get game manager
-    var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager:
-        # Try to get managers from game manager
-        building_manager = game_manager.get_node_or_null("BuildingManager")
-        if not building_manager:
-            building_manager = get_node_or_null("/root/BuildingManager")
-            
-        economy_manager = game_manager.get_node_or_null("EconomyManager")
-        if not economy_manager:
-            economy_manager = get_node_or_null("/root/EconomyManager")
-            
-        ui_manager = game_manager.get_node_or_null("UIManager")
-        if not ui_manager:
-            ui_manager = get_node_or_null("/root/UIManager")
-    else:
-        # Fallback to root level managers
-        building_manager = get_node_or_null("/root/BuildingManager")
-        economy_manager = get_node_or_null("/root/EconomyManager")
-        ui_manager = get_node_or_null("/root/UIManager")
-    
-    # Additional logging for debugging
-    print("Worker references - Grid: ", grid_system != null,
-          " Building: ", building_manager != null,
-          " Economy: ", economy_manager != null,
-          " UI: ", ui_manager != null)
+    _initialize_systems()
 
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:
@@ -180,48 +150,16 @@ func _handle_input() -> void:
     if is_placing_building and Input.is_action_just_pressed("ui_cancel"):
         cancel_building_placement()
 
-func handle_command(command_type, params = {}) -> void:
-    # Reset current command
-    current_command = command_type
-    command_params = params
-    
+func handle_command(command_type, params: Dictionary = {}) -> void:
     match command_type:
         CommandType.MOVE:
-            if params.has("position"):
-                move_to(params.position)
-                
+            _execute_move_command(params)
         CommandType.BUILD:
-            if params.has("building_type") and params.has("size"):
-                # Start building placement
-                start_building_placement(params.building_type, params.size)
-                # If position is specified, try to place it there
-                if params.has("position"):
-                    _try_place_building(params.position)
-                    
+            _execute_build_command(params)
         CommandType.REPAIR:
-            if params.has("building"):
-                command_target = params.building
-                # Move to building first if not in range
-                var distance = global_position.distance_to(command_target.global_position)
-                if distance > repair_range:
-                    move_to(command_target.global_position)
-                # Otherwise start repairing
-                else:
-                    # Start auto-repair temporarily
-                    var was_auto_repair = auto_repair
-                    auto_repair = true
-                    _handle_auto_repair(0.1) # Try immediate repair
-                    auto_repair = was_auto_repair
-                    
+            _execute_repair_command(params)
         CommandType.STOP:
-            # Stop current action
-            is_moving_to_target = false
-            velocity = Vector2.ZERO
-            current_command = null
-            command_target = null
-            command_params = {}
-            if is_placing_building:
-                cancel_building_placement()
+            _stop_current_action()
 
 # Handle movement
 func _handle_movement(_delta: float) -> void:
@@ -421,32 +359,11 @@ func get_team() -> int:
 func _ready() -> void:
     print("Worker initialized. Team: " + str(team))
     
-    # Get references to manager nodes
-    _get_manager_references()
-    
-    # Set up visual appearance for the worker
+    # Replace entire existing method with these calls
+    _initialize_systems()
     _setup_visuals()
-    
-    # Set up building ghost for placement preview
     _setup_building_ghost()
-    
-    # Set up selection indicator
-    var selection_indicator = Node2D.new()
-    selection_indicator.name = "SelectionIndicator"
-    
-    # Create a simple selection visual
-    var selection_rect = ColorRect.new()
-    selection_rect.rect_size = Vector2(32, 32)
-    selection_rect.rect_position = Vector2(-16, -16)
-    selection_rect.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
-    selection_indicator.add_child(selection_rect)
-    
-    # Hide by default
-    selection_indicator.visible = false
-    add_child(selection_indicator)
-    
-    print("Worker ready complete")
-    print("Worker initialized. Team: " + str(team))
+    _setup_selection_indicator()
 
 # Add or modify this function in your worker.gd script
 func _setup_visuals() -> void:
@@ -499,3 +416,28 @@ func _setup_visuals() -> void:
         sprite.modulate = Color(1, 0, 0) # Red for Team B
     
     print("Worker visuals setup complete")
+
+func _execute_move_command(params: Dictionary) -> void:
+    var target_position = params.get("position", Vector2.ZERO)
+    var move_options = params.get("options", {})
+    move_to(target_position, move_options)
+
+func _execute_build_command(params: Dictionary) -> void:
+    var building_type = params.get("building_type", "")
+    var size = params.get("size", Vector2.ONE)
+    var position = params.get("position", null)
+    
+    if position:
+        start_building_placement(building_type, size, position)
+    else:
+        start_building_placement(building_type, size)
+
+func _stop_current_action() -> void:
+    is_moving_to_target = false
+    velocity = Vector2.ZERO
+    current_command = null
+    command_target = null
+    command_params = {}
+    
+    if is_placing_building:
+        cancel_building_placement()

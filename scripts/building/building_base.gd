@@ -1,7 +1,10 @@
-# Base class for all buildings
-# Path: scripts/building/building_base.gd
-class_name Building
+# scripts/building/building_base.gd
 extends StaticBody2D
+class_name Building
+
+# Add Loggable as a dependency
+const Loggable = preload("res://scripts/core/loggable.gd")
+var _logger = Loggable.new()
 
 # Building signals
 signal unit_spawned(unit_reference)
@@ -17,16 +20,16 @@ export var display_name: String = "Building"
 export var health: float = 100.0
 export var max_health: float = 100.0
 export var armor: float = 0.0
-export var armor_type: String = "normal"  # normal, heavy, light, fortified, etc.
-export var team: int = 0  # 0 = Team A, 1 = Team B
-export var size: Vector2 = Vector2(1, 1)  # Size in grid cells
-export var construction_time: float = 5.0  # Time in seconds to construct
+export var armor_type: String = "normal" # normal, heavy, light, fortified, etc.
+export var team: int = 0 # 0 = Team A, 1 = Team B
+export var size: Vector2 = Vector2(1, 1) # Size in grid cells
+export var construction_time: float = 5.0 # Time in seconds to construct
 
 # Spawning properties
 export var can_spawn_units: bool = false
-export var spawn_interval: float = 10.0  # Time between unit spawns
-export var spawn_point_offset: Vector2 = Vector2(0, 32)  # Offset from building center
-export var unit_types: Array = []  # Array of unit IDs this building can spawn
+export var spawn_interval: float = 10.0 # Time between unit spawns
+export var spawn_point_offset: Vector2 = Vector2(0, 32) # Offset from building center
+export var unit_types: Array = [] # Array of unit IDs this building can spawn
 
 # Visual properties
 export var construction_texture: Texture
@@ -42,37 +45,23 @@ var spawn_timer: float = 0.0
 var is_destroyed: bool = false
 
 # References
-var grid_system: GridSystem
+var grid_system
 var unit_factory
-var sprite: Sprite
-var animation_player: AnimationPlayer
-var construction_progress_bar: ProgressBar
-var selection_indicator: Node2D
-var spawn_points: Array = []
-var grid_position: Vector2
 
 # Initialize
 func _ready() -> void:
     # Get references
-    grid_system = get_node("/root/GameManager/GridSystem")
-    unit_factory = get_node_or_null("/root/UnitFactory")
+    var service_locator = get_node_or_null("/root/ServiceLocator")
+    if service_locator:
+        grid_system = service_locator.get_service("GridSystem")
+        unit_factory = service_locator.get_service("UnitFactory")
+    else:
+        grid_system = get_node_or_null("/root/GameManager/GridSystem")
+        unit_factory = get_node_or_null("/root/UnitFactory")
     
     # Setup components
     sprite = $Sprite
     animation_player = $AnimationPlayer if has_node("AnimationPlayer") else null
-    
-    # Setup construction progress bar
-    _setup_progress_bar()
-    
-    # Setup selection indicator
-    _setup_selection_indicator()
-    
-    # Setup spawn points if this building can spawn units
-    if can_spawn_units:
-        _setup_spawn_points()
-    
-    # Start in construction state
-    start_construction()
 
 func _physics_process(delta: float) -> void:
     # Handle construction
@@ -129,7 +118,7 @@ func complete_construction() -> void:
     if completed_texture:
         sprite.texture = completed_texture
     else:
-        push_error("Failed to load building texture for " + building_id)
+        _logger.log_warning("Failed to load building texture for " + building_id, "Building")
         # Use a colored rectangle as fallback
         var placeholder = ColorRect.new()
         placeholder.rect_size = Vector2(64, 64)
@@ -152,7 +141,7 @@ func complete_construction() -> void:
 func _setup_progress_bar() -> void:
     construction_progress_bar = ProgressBar.new()
     construction_progress_bar.rect_size = Vector2(50, 10)
-    construction_progress_bar.rect_position = Vector2(-25, -40)  # Position above building
+    construction_progress_bar.rect_position = Vector2(-25, -40) # Position above building
     construction_progress_bar.min_value = 0
     construction_progress_bar.max_value = 100
     construction_progress_bar.percent_visible = false
@@ -167,10 +156,10 @@ func _setup_selection_indicator() -> void:
     
     # Create outline or other visual to indicate selection
     var outline = ColorRect.new()
-    outline.rect_size = Vector2(size.x * grid_system.cell_size.x + 4, 
+    outline.rect_size = Vector2(size.x * grid_system.cell_size.x + 4,
                                 size.y * grid_system.cell_size.y + 4)
-    outline.rect_position = Vector2(-outline.rect_size.x/2 - 2, -outline.rect_size.y/2 - 2)
-    outline.color = Color(0, 1, 1, 0.3)  # Cyan semi-transparent
+    outline.rect_position = Vector2(-outline.rect_size.x / 2 - 2, -outline.rect_size.y / 2 - 2)
+    outline.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
     selection_indicator.add_child(outline)
     
     # Hide by default
@@ -212,10 +201,10 @@ func _spawn_unit() -> void:
         return
         
     # Get unit type to spawn (could be random or based on some strategy)
-    var unit_type = unit_types[0]  # For now, just use the first type
+    var unit_type = unit_types[0] # For now, just use the first type
     
     # Choose a spawn point (could be random or based on some strategy)
-    var spawn_point = spawn_points[0]  # For now, just use the first point
+    var spawn_point = spawn_points[0] # For now, just use the first point
     
     # Request unit creation from factory
     var unit = unit_factory.create_unit(unit_type, global_position + spawn_point.position, team)
@@ -284,7 +273,7 @@ func destroy() -> void:
     
     # Queue for removal (with delay if showing destruction animation)
     if animation_player and animation_player.has_animation("destroyed"):
-        yield(animation_player, "animation_finished")
+        yield (animation_player, "animation_finished")
     
     queue_free()
 

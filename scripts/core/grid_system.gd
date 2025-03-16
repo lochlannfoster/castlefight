@@ -1,12 +1,7 @@
-# Grid System for building placement and unit movement
-# Path: scripts/core/grid_system.gd
-extends Node2D
+extends GameService
 
-signal cell_highlighted(grid_pos, is_valid)
+# Signal for when grid is initialized
 signal grid_initialized
-
-# Debug settings
-var debug_verbose = true # Set to true for initial debugging
 
 # Grid dimensions
 var grid_width: int = 40 # Number of cells horizontally
@@ -23,8 +18,12 @@ var lane_cells: Dictionary = {} # Cells organized by lanes
 # Team constants
 enum Team {TEAM_A, TEAM_B}
 
-func _ready():
-    # Initialize the grid when the node enters the scene tree
+func _init() -> void:
+    service_name = "GridSystem"
+    required_services = []
+
+func _initialize_impl() -> void:
+    # Override GameService's _initialize_impl
     initialize_grid()
 
 # Initialize the grid with all cells and their properties
@@ -75,49 +74,9 @@ func initialize_grid() -> void:
             if is_valid_placement_cell(grid_pos):
                 valid_placement_cells.append(grid_pos)
                 
-    print("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
-          str(team_b_cells.size()) + " Team B cells")
+    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
+          str(team_b_cells.size()) + " Team B cells", "info")
     
-    emit_signal("grid_initialized")
-    grid_cells.clear()
-    valid_placement_cells.clear()
-    team_a_cells.clear()
-    team_b_cells.clear()
-    lane_cells.clear()
-    
-    # First create all cells
-    for x in range(grid_width):
-        for y in range(grid_height):
-            var grid_pos = Vector2(x, y)
-            var world_pos = grid_to_world(grid_pos)
-            
-            # Create a new cell data structure with no territory initially
-            var cell_data = {
-                "grid_position": grid_pos,
-                "world_position": world_pos,
-                "occupied": false,
-                "building": null,
-                "walkable": true,
-                "team_territory": null,
-                "lane": determine_lane(grid_pos)
-            }
-            
-            # Store the cell in our grid
-            grid_cells[grid_pos] = cell_data
-            
-            # Add to lane organization  
-            var lane = grid_cells[grid_pos].lane
-            if not lane_cells.has(lane):
-                lane_cells[lane] = []
-            lane_cells[lane].append(grid_pos)
-    
-    # Third pass: determine valid placement cells
-    for x in range(grid_width):
-        for y in range(grid_height):
-            var grid_pos = Vector2(x, y)
-            if is_valid_placement_cell(grid_pos):
-                valid_placement_cells.append(grid_pos)
-                
     emit_signal("grid_initialized")
 
 # Determine which lane a cell belongs to based on its position

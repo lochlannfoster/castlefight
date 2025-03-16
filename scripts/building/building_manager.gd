@@ -1,7 +1,5 @@
-# Building Manager - Handles building creation, placement, and management
-# Path: scripts/building/building_manager.gd
 class_name BuildingManager
-extends Node2D
+extends GameService
 
 # Building signals
 signal building_placed(building_type, position, team)
@@ -20,21 +18,20 @@ var grid_system: GridSystem
 var economy_manager
 var game_manager
 
-# Ready function
-func _ready() -> void:
-    # Get references to required systems using more robust lookups
-    grid_system = get_node_or_null("/root/GridSystem")
-    if not grid_system:
-        grid_system = get_node_or_null("/root/GameManager/GridSystem")
-        
-    economy_manager = get_node_or_null("/root/EconomyManager")
-    if not economy_manager:
-        economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
-        
-    game_manager = get_node_or_null("/root/GameManager")
+func _init() -> void:
+    service_name = "BuildingManager"
+    required_services = ["GridSystem", "EconomyManager"]
+
+func _initialize_impl() -> void:
+    # Get references to required systems
+    grid_system = get_dependency("GridSystem")
+    economy_manager = get_dependency("EconomyManager")
+    game_manager = get_dependency("GameManager")
     
     # Load building data
     _load_building_data()
+    
+    log("Building manager initialized with " + str(building_data.size()) + " building types", "info")
 
 # Process function
 func _process(_delta: float) -> void:

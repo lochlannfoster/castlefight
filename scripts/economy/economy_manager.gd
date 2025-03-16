@@ -1,6 +1,4 @@
-# Economy Manager - Handles resources, income, and purchases
-# Path: scripts/economy/economy_manager.gd
-extends Node
+extends GameService
 
 # Economy signals
 signal resources_changed(team, resource_type, amount)
@@ -52,13 +50,29 @@ var total_resources_spent: Dictionary = {}
 var player_teams: Dictionary = {}
 var player_resources_spent: Dictionary = {}
 
-# Ready function
-func _ready() -> void:
+func _init() -> void:
+    service_name = "EconomyManager"
+    required_services = ["UIManager"]
+
+func _initialize_impl() -> void:
+    # Override GameService's _initialize_impl
     # Try to get reference to UI manager for displaying income ticks
-    ui_manager = get_node_or_null("/root/GameManager/UIManager")
+    ui_manager = get_dependency("UIManager")
     
     # Load cost data
     _load_cost_data()
+    
+    # Reset resources to starting values
+    reset_team_resources()
+    
+    log("Economy manager initialized", "info")
+
+func _process(delta: float) -> void:
+    income_timer += delta
+    
+    if income_timer >= income_interval:
+        income_timer -= income_interval
+        _distribute_income()
 
 # Process function for handling income ticks
 func _process(delta: float) -> void:

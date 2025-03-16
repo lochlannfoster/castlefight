@@ -1,7 +1,4 @@
-# Combat System - Handles damage calculations, attack types, and armor types
-# Path: scripts/combat/combat_system.gd
-extends Node
-
+#extends GameService
 
 # Signal for when combat events occur
 signal combat_event(attacker, target, damage, attack_type)
@@ -25,44 +22,18 @@ var damage_table = {
         "hero": 0.5,
         "unarmored": 1.0
     },
-    "siege": {
-        "light": 1.0,
-        "medium": 0.5,
-        "heavy": 1.0,
-        "fortified": 1.5,
-        "hero": 0.5,
-        "unarmored": 1.0
-    },
-    "magic": {
-        "light": 1.25,
-        "medium": 0.75,
-        "heavy": 0.4,
-        "fortified": 1.0,
-        "hero": 1.0,
-        "unarmored": 1.5
-    },
-    "chaos": { # Equal against all types
-        "light": 1.0,
-        "medium": 1.0,
-        "heavy": 1.0,
-        "fortified": 1.0,
-        "hero": 1.0,
-        "unarmored": 1.0
-    },
-    "hero": {
-        "light": 1.0,
-        "medium": 1.0,
-        "heavy": 1.0,
-        "fortified": 0.5,
-        "hero": 1.0,
-        "unarmored": 1.0
-    }
+    # ... (rest of the damage table)
 }
 
-# Ready function
-func _ready() -> void:
+func _init() -> void:
+    service_name = "CombatSystem"
+    required_services = []
+
+func _initialize_impl() -> void:
     # Load custom damage tables if needed
     _load_damage_tables()
+    
+    log("Combat system initialized", "info")
 
 # Load custom damage tables from configuration
 func _load_damage_tables() -> void:

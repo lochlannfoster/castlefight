@@ -50,18 +50,18 @@ func _ready() -> void:
 func _initialize_game_systems() -> void:
     _log("Beginning game systems initialization...")
     
-    # Step 1: Setup core visual components
-    _setup_safe_camera()
-    _load_map_safely()
+    # Initialize all services through ServiceLocator
+    var service_locator = get_node("/root/ServiceLocator")
+    if service_locator:
+        service_locator.initialize_all_services()
     
-    # Step 2: Initialize game managers and systems
-    _initialize_managers_sequentially()
-    
-    # Step 3: Prepare game state
-    _prepare_game_state()
-    
-    # Step 4: Final setup checks
-    _validate_game_initialization()
+    # Get references to services
+    grid_system = service_locator.get_service("GridSystem")
+    combat_system = service_locator.get_service("CombatSystem")
+    economy_manager = service_locator.get_service("EconomyManager")
+    building_manager = service_locator.get_service("BuildingManager")
+    network_manager = service_locator.get_service("NetworkManager")
+    ui_manager = service_locator.get_service("UIManager")
     
     _log("Game systems initialization complete.")
 

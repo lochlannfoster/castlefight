@@ -1,7 +1,5 @@
-# Map Manager - Handles map generation, terrain, and layout
-# Path: scripts/core/map_manager.gd
 class_name MapManager
-extends Node2D
+extends GameService
 
 # Map signals
 signal map_loaded
@@ -33,10 +31,13 @@ var map_obstacles: Array = []
 var grid_system: GridSystem
 var map_node: Node2D
 
-# Ready function
-func _ready() -> void:
+func _init() -> void:
+    service_name = "MapManager"
+    required_services = ["GridSystem"]
+
+func _initialize_impl() -> void:
     # Get grid system reference
-    grid_system = get_node_or_null("/root/GameManager/GridSystem")
+    grid_system = get_dependency("GridSystem")
     
     # Create map display node
     map_node = Node2D.new()
@@ -46,6 +47,11 @@ func _ready() -> void:
     # Connect grid signals
     if grid_system:
         var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+    
+    # Generate default map
+    generate_map()
+    
+    log("Map manager initialized", "info")
 
 # Generate a new map
 func generate_map() -> void:

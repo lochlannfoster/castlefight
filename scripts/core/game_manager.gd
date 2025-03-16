@@ -110,60 +110,23 @@ func _process(delta: float) -> void:
 
 # Initialize all game subsystems
 func _initialize_systems() -> void:
-    # Initialize Grid System if not already in scene
-    if not has_node("GridSystem"):
-        # Use the preloaded script to instantiate
-        grid_system = GridSystemScript.new()
-        grid_system.name = "GridSystem"
-        add_child(grid_system)
+    var service_locator = get_node_or_null("/root/ServiceLocator")
+    if service_locator:
+        service_locator.initialize_all_services()
+        
+        # Get references to services
+        grid_system = service_locator.get_service("GridSystem")
+        combat_system = service_locator.get_service("CombatSystem")
+        economy_manager = service_locator.get_service("EconomyManager")
+        building_manager = service_locator.get_service("BuildingManager")
+        unit_factory = service_locator.get_service("UnitFactory")
+        ui_manager = service_locator.get_service("UIManager")
+        fog_of_war_manager = service_locator.get_service("FogOfWarManager")
+        network_manager = service_locator.get_service("NetworkManager")
+        map_manager = service_locator.get_service("MapManager")
     else:
-        grid_system = $GridSystem
-    
-    # Initialize Combat System
-    if not has_node("CombatSystem"):
-        # Use the preloaded script to instantiate
-        combat_system = CombatSystemScript.new()
-        combat_system.name = "CombatSystem"
-        add_child(combat_system)
-    else:
-        combat_system = $CombatSystem
-    
-    # Initialize Economy Manager
-    if not has_node("EconomyManager"):
-        # Use the preloaded script to instantiate
-        economy_manager = EconomyManagerScript.new()
-        economy_manager.name = "EconomyManager"
-        add_child(economy_manager)
-    else:
-        economy_manager = $EconomyManager
-    
-    # Initialize Building Manager
-    if not has_node("BuildingManager"):
-        # Use the preloaded script to instantiate
-        building_manager = BuildingManagerScript.new()
-        building_manager.name = "BuildingManager"
-        add_child(building_manager)
-    else:
-        building_manager = $BuildingManager
-    
-    # Initialize Unit Factory (already a singleton)
-    unit_factory = get_node_or_null("/root/UnitFactory")
-    if not unit_factory:
-        print("WARNING: UnitFactory not found! Creating manually.")
-        unit_factory = load("res://scripts/unit/unit_factory.gd").new()
-        add_child(unit_factory)
-    
-    # Initialize UI Manager if available
-    ui_manager = get_node_or_null("UIManager")
-    
-    # Initialize Fog of War Manager if available
-    fog_of_war_manager = get_node_or_null("FogOfWarManager")
-    
-    # Initialize Network Manager if available
-    network_manager = get_node_or_null("NetworkManager")
-    
-    # Initialize Map Manager if available
-    map_manager = get_node_or_null("MapManager")
+        # Fallback to old initialization if ServiceLocator not available
+        _initialize_managers_directly()
 
 # Connect signals between systems
 func _connect_signals() -> void:
