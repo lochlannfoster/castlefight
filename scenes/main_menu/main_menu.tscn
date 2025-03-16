@@ -52,24 +52,17 @@ margin_bottom = 194.0
 rect_min_size = Vector2( 0, 50 )
 text = "Multiplayer"
 
-[node name="VSingleplayerButton" type="Button" parent="VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="VBoxContainer"]
 margin_top = 214.0
 margin_right = 400.0
 margin_bottom = 264.0
 rect_min_size = Vector2( 0, 50 )
-text = "VS AI (Singleplayer)"
-
-[node name="OptionsButton" type="Button" parent="VBoxContainer"]
-margin_top = 284.0
-margin_right = 400.0
-margin_bottom = 334.0
-rect_min_size = Vector2( 0, 50 )
 text = "Options"
 
 [node name="QuitButton" type="Button" parent="VBoxContainer"]
-margin_top = 354.0
+margin_top = 284.0
 margin_right = 400.0
-margin_bottom = 404.0
+margin_bottom = 334.0
 rect_min_size = Vector2( 0, 50 )
 text = "Quit"
 

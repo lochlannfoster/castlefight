@@ -462,7 +462,7 @@ func _on_grid_initialized() -> void:
     apply_map_to_grid()
 
 func load_map_config(map_name: String = "default_map") -> bool:
-    var file_path = "res://data/maps/" + map_name + ".json"
+    var file_path = "res://data/defaults/maps/default_maps.json"
     var file = File.new()
     
     if not file.file_exists(file_path):
@@ -528,7 +528,6 @@ func load_map_config(map_name: String = "default_map") -> bool:
     
     return true
 
-# Create a default map configuration if loading fails
 func _create_default_map_config() -> bool:
     print("Creating default map configuration")
     
@@ -555,9 +554,9 @@ func _create_default_map_config() -> bool:
             "start_y": 0,
             "end_y": 10,
             "waypoints": [
-                Vector2(10, 5),
-                Vector2(20, 5),
-                Vector2(30, 5)
+                {"x": 10, "y": 5},
+                {"x": 20, "y": 5},
+                {"x": 30, "y": 5}
             ]
         },
         {
@@ -566,9 +565,9 @@ func _create_default_map_config() -> bool:
             "start_y": 10,
             "end_y": 20,
             "waypoints": [
-                Vector2(10, 15),
-                Vector2(20, 15),
-                Vector2(30, 15)
+                {"x": 10, "y": 15},
+                {"x": 20, "y": 15},
+                {"x": 30, "y": 15}
             ]
         },
         {
@@ -577,9 +576,9 @@ func _create_default_map_config() -> bool:
             "start_y": 20,
             "end_y": 30,
             "waypoints": [
-                Vector2(10, 25),
-                Vector2(20, 25),
-                Vector2(30, 25)
+                {"x": 10, "y": 25},
+                {"x": 20, "y": 25},
+                {"x": 30, "y": 25}
             ]
         }
     ]
