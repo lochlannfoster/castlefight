@@ -546,10 +546,10 @@ func _create_debug_overlay() -> void:
     add_child(debug_overlay)
     debug_overlay.visible = false
 
-# Connect signals
 func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
+        # Check if not already connected before connecting
         if not economy_manager.is_connected("resources_changed", self, "_on_resources_changed"):
             economy_manager.connect("resources_changed", self, "_on_resources_changed")
         if not economy_manager.is_connected("income_changed", self, "_on_income_changed"):

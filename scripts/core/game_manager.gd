@@ -361,21 +361,9 @@ func _create_player_workers() -> void:
     debug_log("Initiating player worker creation process", "info", "GameManager")
     
     # Critical: Verify game state and system readiness
-    if not is_instance_valid(unit_factory):
+    var unit_factory_ref = get_node_or_null("/root/UnitFactory")
+    if not is_instance_valid(unit_factory_ref):
         debug_log("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
-        # Initialize unit factory if missing
-        unit_factory = get_node_or_null("/root/UnitFactory")
-        if not unit_factory:
-            debug_log("Attempting to create UnitFactory", "info", "GameManager")
-            unit_factory = load("res://scripts/unit/unit_factory.gd").new()
-            add_child(unit_factory)
-        
-    # Get worker scene path
-    var worker_scene_path = "res://scenes/units/worker.tscn"
-    var worker_scene = load(worker_scene_path)
-    
-    if not worker_scene:
-        debug_log("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
     
     # Iterate through all players and spawn workers
@@ -392,64 +380,15 @@ func _create_player_workers() -> void:
             "GameManager"
         )
         
-        # Create worker instance
-        var worker = worker_scene.instance()
+        # Create worker instance using UnitFactory instead of direct scene loading
+        var worker = unit_factory_ref.create_unit("worker", Vector2(200 + (team * 400), 300), team)
         
-        # Set core worker properties
-        worker.team = team
-        worker.name = "Worker_Player" + str(player_id)
-        
-        # Determine spawn position with fallback mechanism
-        var start_position = Vector2(400 + (team * 200), 300) # Default grid-based spawn
-        
-        # Use map manager for precise positioning if available
-        if map_manager and map_manager.has_method("get_team_start_position"):
-            var map_position = map_manager.get_team_start_position(team)
-            if map_position:
-                start_position = map_position
-                debug_log(
-                    "Using map manager position: " + str(start_position),
-                    "info",
-                    "GameManager"
-                )
-                
-        # Set worker position
-        worker.position = start_position
-        
-        # Visual team identification
-        if worker.has_node("Sprite"):
-            var sprite = worker.get_node("Sprite")
-            var team_color = get_team_color(team)
-            sprite.modulate = team_color
-        
-        # Add worker to scene
-        var current_scene = get_tree().current_scene
-        if current_scene:
-            current_scene.add_child(worker)
-            debug_log(
-                "Worker added to scene at position: " + str(worker.position),
-                "info",
-                "GameManager"
-            )
+        if worker:
+            # Store worker reference in player data
+            player_data["worker"] = worker
+            debug_log("Worker creation completed for player " + str(player_id), "info", "GameManager")
         else:
-            debug_log(
-                "CRITICAL: No current scene found to add worker",
-                "error",
-                "GameManager"
-            )
-            # Try adding to a known game node instead
-            var game_world = get_node_or_null("/root/game/GameWorld")
-            if game_world:
-                game_world.add_child(worker)
-                debug_log("Added worker to GameWorld node instead", "info", "GameManager")
-            else:
-                add_child(worker)
-                debug_log("Added worker to GameManager as fallback", "info", "GameManager")
-        
-        # Store worker reference in player data
-        player_data["worker"] = worker
-        
-        debug_log("Worker creation completed for player " + str(player_id), "info", "GameManager")
+            debug_log("FAILED to create worker for player " + str(player_id), "error", "GameManager")
     
     debug_log("Player worker creation process completed", "info", "GameManager")
 
