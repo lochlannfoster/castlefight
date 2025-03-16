@@ -54,10 +54,22 @@ var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
 
-# Process function
-# Add to worker.gd in _physics_process function:
 func _physics_process(delta: float) -> void:
-    # Existing code...
+    # If selected, handle player input
+    if is_selected:
+        _handle_input()
+    
+    # Handle movement
+    _handle_movement(delta)
+    
+    # Update building placement preview if active
+    if is_placing_building:
+        _update_building_preview()
+    
+    # Handle auto-repair if enabled
+    if auto_repair:
+        _handle_auto_repair(delta)
+    
     # Check if we need to continue processing a command
     if current_command == CommandType.REPAIR and command_target != null:
         # Check if we're in range of repair target
@@ -420,5 +432,20 @@ func _ready() -> void:
     
     # Set up building ghost for placement preview
     _setup_building_ghost()
+    
+    # Set up selection indicator
+    var selection_indicator = Node2D.new()
+    selection_indicator.name = "SelectionIndicator"
+    
+    # Create a simple selection visual
+    var selection_rect = ColorRect.new()
+    selection_rect.rect_size = Vector2(32, 32)
+    selection_rect.rect_position = Vector2(-16, -16)
+    selection_rect.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
+    selection_indicator.add_child(selection_rect)
+    
+    # Hide by default
+    selection_indicator.visible = false
+    add_child(selection_indicator)
     
     print("Worker ready complete")

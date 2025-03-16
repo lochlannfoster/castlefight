@@ -280,50 +280,50 @@ func start_pregame_countdown() -> void:
 
 # Start the game
 func start_game() -> void:
-    log_debug("GameManager: Starting game...", "GameManager")
-    log_debug("Current state: " + str(current_state), "GameManager")
+    log_debug("GameManager: Starting game...", "info", "GameManager")
+    log_debug("Current state: " + str(current_state), "info", "GameManager")
 
     # Start the game properly
     if current_state == GameState.SETUP or current_state == GameState.PREGAME:
         change_game_state(GameState.PLAYING)
-        print("Game state changed to PLAYING")
+        log_debug("Game state changed to PLAYING", "info", "GameManager")
         
         # Create player workers
-        print("About to create workers...")
+        log_debug("About to create workers...", "info", "GameManager")
         _create_player_workers()
-        print("Workers creation attempted")
+        log_debug("Workers creation attempted", "info", "GameManager")
         
         # Create initial buildings (HQs)
-        print("About to create HQs...")
+        log_debug("About to create HQs...", "info", "GameManager")
         _create_starting_buildings()
-        print("HQ creation attempted")
+        log_debug("HQ creation attempted", "info", "GameManager")
         
         emit_signal("game_started")
-        print("GameManager: Game started signal emitted")
+        log_debug("Game started signal emitted", "info", "GameManager")
     else:
-        print("Cannot start game: Current state is ", current_state)
+        log_debug("Cannot start game: Current state is " + str(current_state), "error", "GameManager")
 
-    log_debug("Game started signal emitted", "GameManager")
-
+    log_debug("Game started function completed", "info", "GameManager")
+    
 func _create_player_workers() -> void:
-    log_debug("Creating player workers", "GameManager")
+    log_debug("Creating player workers", "info", "GameManager")
     
     # Check if player dictionary is empty
     if players.empty():
-        log_debug("WARNING: No players defined in player dictionary!", "GameManager")
+        log_debug("WARNING: No players defined in player dictionary!", "warning", "GameManager")
     
     var worker_scene = load("res://scenes/units/worker.tscn")
     if not worker_scene:
-        log_debug("CRITICAL ERROR: Failed to load worker scene", "GameManager")
+        log_debug("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
     
-    log_debug("Player count: " + str(players.size()), "GameManager")
+    log_debug("Player count: " + str(players.size()), "info", "GameManager")
     
     for player_id in players.keys():
         var player_data = players[player_id]
         var team = player_data.team
         
-        log_debug("Processing player ID: " + str(player_id) + " on team " + str(team), "GameManager")
+        log_debug("Processing player ID: " + str(player_id) + " on team " + str(team), "info", "GameManager")
         
         # Create worker instance
         var worker = worker_scene.instance()
@@ -331,43 +331,35 @@ func _create_player_workers() -> void:
         # Set worker properties
         worker.team = team
         
-        # Position worker at a guaranteed position
-        var start_position = Vector2(400 + (team * 200), 300) # Default center-ish position
+        # Position worker at team's start position
+        var start_position = Vector2(400 + (team * 200), 300) # Default position
         
         if map_manager and map_manager.has_method("get_team_start_position"):
             var map_position = map_manager.get_team_start_position(team)
             if map_position:
                 start_position = map_position
-                log_debug("Using map position for worker: " + str(start_position), "GameManager")
+                log_debug("Using map position for worker: " + str(start_position), "info", "GameManager")
             else:
                 log_debug("Map position returned null, using default: " + str(start_position), "GameManager")
         else:
-            log_debug("Map manager not available, using default position: " + str(start_position), "GameManager")
+            log_debug("Map manager not available, using default position: " + str(start_position), "info", "GameManager")
         
         worker.position = start_position
-        log_debug("Spawning worker for player " + str(player_id) + " at " + str(start_position), "GameManager")
+        log_debug("Spawning worker for player " + str(player_id) + " at " + str(start_position), "info", "GameManager")
         
-        # Get current scene
+        # Add to scene tree
         var current_scene = get_tree().current_scene
         if current_scene:
-            log_debug("Current scene: " + current_scene.name, "GameManager")
+            log_debug("Current scene: " + current_scene.name, "info", "GameManager")
             current_scene.add_child(worker)
-            log_debug("Worker added to scene successfully", "GameManager")
+            log_debug("Worker added to scene successfully", "info", "GameManager")
         else:
-            log_debug("CRITICAL ERROR: No current scene found!", "GameManager")
+            log_debug("CRITICAL ERROR: No current scene found!", "error", "GameManager")
             return
         
         # Store reference in player data
         player_data.worker = worker
-        log_debug("Worker reference stored in player data", "GameManager")
-        
-        # Make sure the worker is visible
-        var sprite = worker.get_node_or_null("Sprite")
-        if sprite:
-            log_debug("Worker sprite found, setting team colors", "GameManager")
-            sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
-        else:
-            log_debug("WARNING: Worker sprite not found!", "GameManager")
+        log_debug("Worker reference stored in player data", "info", "GameManager")
 
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):
@@ -375,9 +367,84 @@ func safe_get_node(path):
         return get_node(path)
     return null
 
-# Create starting buildings (HQs)
 func _create_starting_buildings() -> void:
-    log_debug("Creating starting buildings...", "GameManager")
+    log_debug("Creating starting buildings...", "info", "GameManager")
+    
+    if not building_manager:
+        log_debug("CRITICAL ERROR: No building manager available!", "error", "GameManager")
+        return
+    
+    # First, ensure territories are properly set up for both teams
+    if grid_system:
+        log_debug("Setting up team territories in grid system", "info", "GameManager")
+        
+        # Define territories for both teams
+        var team_0_area = Rect2(0, 0, grid_system.grid_width / 3, grid_system.grid_height)
+        var team_1_area = Rect2(grid_system.grid_width * 2 / 3, 0, grid_system.grid_width / 3, grid_system.grid_height)
+        
+        log_debug("Team A area: " + str(team_0_area), "info", "GameManager")
+        log_debug("Team B area: " + str(team_1_area), "info", "GameManager")
+        
+        # Debug grid cell count
+        log_debug("Grid cell count: " + str(grid_system.grid_cells.size()), "info", "GameManager")
+        
+        # Assign territories
+        var team_0_count = 0
+        var team_1_count = 0
+        
+        for x in range(grid_system.grid_width):
+            for y in range(grid_system.grid_height):
+                var pos = Vector2(x, y)
+                if team_0_area.has_point(pos):
+                    if grid_system.grid_cells.has(pos):
+                        grid_system.grid_cells[pos].team_territory = 0
+                        team_0_count += 1
+                elif team_1_area.has_point(pos):
+                    if grid_system.grid_cells.has(pos):
+                        grid_system.grid_cells[pos].team_territory = 1
+                        team_1_count += 1
+        
+        log_debug("Assigned " + str(team_0_count) + " cells to Team A territory", "info", "GameManager")
+        log_debug("Assigned " + str(team_1_count) + " cells to Team B territory", "info", "GameManager")
+    else:
+        log_debug("WARNING: No grid system available for territory setup!", "warning", "GameManager")
+    
+    # Create headquarters for each team
+    for current_team in range(2):
+        log_debug("Creating HQ for team " + str(current_team), "info", "GameManager")
+        
+        # Determine HQ position
+        var position_to_use
+        
+        if map_manager and map_manager.has_method("get_team_hq_position"):
+            position_to_use = map_manager.get_team_hq_position(current_team)
+            log_debug("Got HQ position from map manager: " + str(position_to_use), "info", "GameManager")
+        else:
+            # Default positions if map_manager isn't available
+            position_to_use = Vector2(200, 300) if current_team == 0 else Vector2(600, 300)
+            log_debug("Using default HQ position: " + str(position_to_use), "info", "GameManager")
+        
+        log_debug("Attempting to place HQ at " + str(position_to_use) + " for team " + str(current_team), "info", "GameManager")
+        
+        var hq = building_manager.place_building("headquarters", position_to_use, current_team)
+        if hq:
+            log_debug("HQ successfully created for team " + str(current_team), "info", "GameManager")
+            register_headquarters(hq, current_team)
+        else:
+            log_debug("CRITICAL ERROR: Failed to create HQ for team " + str(current_team), "error", "GameManager")
+            
+            # Debug information about why placement might have failed
+            if grid_system:
+                var grid_pos = grid_system.world_to_grid(position_to_use)
+                log_debug("Grid position for HQ: " + str(grid_pos), "info", "GameManager")
+                
+                if grid_system.grid_cells.has(grid_pos):
+                    var cell = grid_system.grid_cells[grid_pos]
+                    log_debug("Cell territory: " + str(cell.team_territory), "info", "GameManager")
+                    log_debug("Cell occupied: " + str(cell.occupied), "info", "GameManager")
+                else:
+                    log_debug("Grid cell doesn't exist at position: " + str(grid_pos), "error", "GameManager")
+                    log_debug("Creating starting buildings...", "GameManager")
     
     if not building_manager:
         log_debug("CRITICAL ERROR: No building manager available!", "GameManager")

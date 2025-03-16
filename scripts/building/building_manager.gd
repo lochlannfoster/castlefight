@@ -11,9 +11,9 @@ signal building_selected(building_reference)
 signal building_deselected(building_reference)
 
 # Building data
-var building_data: Dictionary = {}  # Stores building configurations
-var buildings: Dictionary = {}  # Tracks all active buildings
-var selected_building = null  # Currently selected building
+var building_data: Dictionary = {} # Stores building configurations
+var buildings: Dictionary = {} # Tracks all active buildings
+var selected_building = null # Currently selected building
 
 # References to other systems
 var grid_system: GridSystem
@@ -91,9 +91,8 @@ func log_debug(message: String, level: String = "debug", context: String = "") -
         # Fallback to print if DebugLogger is not available
         print(level.to_upper() + " [" + context + "]: " + message)
 
-# Place a new building at the given position
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
-    log_debug("Attempting to place building: " + building_type + " at " + str(position) + " for team " + str(team), "BuildingManager")
+    log_debug("Attempting to place building: " + building_type + " at " + str(position) + " for team " + str(team), "info", "BuildingManager")
     # Check if building type exists
     if not building_data.has(building_type):
         push_error("Unknown building type: " + building_type)
@@ -104,22 +103,20 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
     
     # Convert position to grid position
     var grid_pos = grid_system.world_to_grid(position)
-    print("Attempting to place " + building_type + " at world position " + str(position) + 
+    print("Attempting to place " + building_type + " at world position " + str(position) +
         ", grid position " + str(grid_pos) + " for team " + str(team))
     
     # Get building size
-    var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1, 
+    var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1,
                     data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
     print("Building size: " + str(size))
-    log_debug("Grid position: " + str(grid_pos) + ", size: " + str(size), "BuildingManager")
-
+    
     # Check if placement is valid
     if not grid_system.can_place_building(grid_pos, size, team):
         print("Invalid placement: grid_pos=" + str(grid_pos) + ", size=" + str(size) + ", team=" + str(team))
         # Additional check to see specific reason
         if not grid_system.is_within_grid(grid_pos):
             print("Position is outside grid boundaries")
-        log_debug("Invalid building placement at " + str(grid_pos), "BuildingManager")
         return null
     
     # Create building scene instance
@@ -224,7 +221,7 @@ func _handle_selection() -> void:
     var space_state = get_world_2d().direct_space_state
     var mouse_pos = get_global_mouse_position()
     
-    var result = space_state.intersect_point(mouse_pos, 1, [], 2)  # Layer 2 for buildings
+    var result = space_state.intersect_point(mouse_pos, 1, [], 2) # Layer 2 for buildings
     
     if not result.empty():
         var selected = result[0].collider

@@ -5,10 +5,10 @@ extends Node
 
 # Network Connection Constants
 const DEFAULT_PORT = 27015
-const MAX_PLAYERS = 6  # Maximum 3v3 support
-const RECONNECT_TIMEOUT = 300  # 5 minutes reconnect window
-const SERVER_TICK_RATE = 20  # Server updates per second
-const MATCH_TIMEOUT = 1800  # 30-minute match limit
+const MAX_PLAYERS = 6 # Maximum 3v3 support
+const RECONNECT_TIMEOUT = 300 # 5 minutes reconnect window
+const SERVER_TICK_RATE = 20 # Server updates per second
+const MATCH_TIMEOUT = 1800 # 30-minute match limit
 const PROTOCOL_VERSION = "1.0.0"
 
 # Networking State Enums
@@ -53,8 +53,8 @@ signal match_started
 signal match_ended(winner, reason)
 signal network_error(error_message)
 signal ping_updated(player_id, ping)
-signal player_list_changed(players)  # Add this signal
-signal match_ready  # Add this signal
+signal player_list_changed(players) # Add this signal
+signal match_ready # Add this signal
 
 # Core Networking Properties
 var network: NetworkedMultiplayerENet = null
@@ -64,8 +64,8 @@ var game_phase: int = GamePhase.LOBBY
 
 # Player Management Structures
 var players: Dictionary = {
-    0: [],  # Team A
-    1: []   # Team B
+    0: [], # Team A
+    1: [] # Team B
 }
 var player_info: Dictionary = {}
 var spectator_players: Array = []
@@ -79,7 +79,7 @@ var match_config: Dictionary = {
     "allow_spectators": true
 }
 
-var is_server: bool = false  # Whether this client is hosting as a server
+var is_server: bool = false # Whether this client is hosting as a server
 
 # Match State Tracking
 var match_start_time: float = 0.0
@@ -118,7 +118,7 @@ var server_checksum: int = 0
 # Performance and Optimization
 var network_compression_enabled: bool = true
 var delta_updates_enabled: bool = true
-var bandwidth_limit: int = 100000  # Bytes per second
+var bandwidth_limit: int = 100000 # Bytes per second
 
 # Player Authentication (Placeholder for future implementation)
 var player_tokens: Dictionary = {}
@@ -243,8 +243,8 @@ func _generate_server_seed() -> void:
     server_seed = rng.randi()
 
 # Server Creation Method
-func start_server(server_name: String = "Castle Fight Server", 
-                 port: int = DEFAULT_PORT, 
+func start_server(server_name: String = "Castle Fight Server",
+                 port: int = DEFAULT_PORT,
                  max_players: int = MAX_PLAYERS) -> bool:
     # Prevent multiple server instances
     if network:
@@ -276,14 +276,14 @@ func start_server(server_name: String = "Castle Fight Server",
     # Set network peer and update connection state
     get_tree().network_peer = network
     connection_state = ConnectionState.SERVER_RUNNING
-    local_player_id = 1  # Server always has ID 1
+    local_player_id = 1 # Server always has ID 1
     is_server = true
-    game_phase = GamePhase.LOBBY  # Start in LOBBY phase
+    game_phase = GamePhase.LOBBY # Start in LOBBY phase
     
     # Initialize players dictionary properly
     players = {
-        0: [],  # Team A
-        1: []   # Team B
+        0: [], # Team A
+        1: [] # Team B
     }
     
     # Initialize server player info
@@ -303,8 +303,8 @@ func start_server(server_name: String = "Castle Fight Server",
     return true
 
 # Client Connection Method
-func connect_to_server(ip: String, 
-                     port: int = DEFAULT_PORT, 
+func connect_to_server(ip: String,
+                     port: int = DEFAULT_PORT,
                      player_name: String = "Player") -> bool:
     # Prevent multiple connection attempts
     if network:
@@ -329,21 +329,21 @@ func connect_to_server(ip: String,
     
     # Set network peer and update connection state
     get_tree().network_peer = network
-    connection_state = ConnectionState.CONNECTING  # Use CONNECTING, not SERVER_RUNNING
-    is_server = false  # Client is not the server
+    connection_state = ConnectionState.CONNECTING # Use CONNECTING, not SERVER_RUNNING
+    is_server = false # Client is not the server
     
     # Initialize players dictionary properly
     players = {
-        0: [],  # Team A
-        1: []  # Team B
+        0: [], # Team A
+        1: [] # Team B
     }
     
     # Store temporary player info
     player_info[0] = {
         "name": player_name,
-        "team": -1,
+        "team": - 1,
         "ready": false,
-        "ping": -1
+        "ping": - 1
     }
     
     # Log connection attempt
@@ -363,7 +363,7 @@ func disconnect_from_network() -> void:
     connection_state = ConnectionState.DISCONNECTED
     game_phase = GamePhase.LOBBY
     local_player_id = 0
-    is_server = false  # Reset is_server
+    is_server = false # Reset is_server
     
     # Clear player and match information
     player_info.clear()
@@ -394,9 +394,9 @@ func _on_player_connected(player_id: int) -> void:
         if not player_info.has(player_id):
             player_info[player_id] = {
                 "name": "Player_" + str(player_id),
-                "team": -1,
+                "team": - 1,
                 "ready": false,
-                "ping": -1
+                "ping": - 1
             }
         
         # Broadcast updated player list
@@ -416,10 +416,10 @@ func _on_player_disconnected(player_id: int) -> void:
         # Remove player from teams
         for team in players:
             if player_id in players[team]:
-                var _result = players[team].erase(player_id)  # Use team instead of current_team
+                var _result = players[team].erase(player_id) # Use team instead of current_team
         
         # Remove player info
-        var _result2 = player_info.erase(player_id)  # Capture the return value
+        var _result2 = player_info.erase(player_id) # Capture the return value
         
         # Update player list for all clients
         rpc("_update_player_list", player_info)
@@ -438,7 +438,7 @@ func _on_connected_to_server() -> void:
     # Transfer temporary player info
     if player_info.has(0):
         var temp_info = player_info[0]
-        var _result = player_info.erase(0)  # Changed player_id to 0
+        var _result = player_info.erase(0) # Changed player_id to 0
         player_info[local_player_id] = temp_info
     
     emit_signal("connection_succeeded")
@@ -593,7 +593,7 @@ func _team_all_ready(team: int) -> bool:
         return false
         
     if players[team].empty():
-        return true  # Empty team is considered "ready"
+        return true # Empty team is considered "ready"
     
     for player_id in players[team]:
         if not player_info.has(player_id):
@@ -772,7 +772,7 @@ func _sync_initial_game_state() -> void:
                 initial_state["resources"][str(team)] = {
                     "0": economy_manager.get_resource(team, 0), # Gold
                     "1": economy_manager.get_resource(team, 1), # Wood
-                    "2": economy_manager.get_resource(team, 2)  # Supply
+                    "2": economy_manager.get_resource(team, 2) # Supply
                 }
         
         # Collect building state (only headquarters initially)
@@ -784,7 +784,7 @@ func _sync_initial_game_state() -> void:
         
         # Broadcast to all clients
         for player_id in player_info.keys():
-            if player_id != 1:  # Skip server
+            if player_id != 1: # Skip server
                 rpc_id(player_id, "_receive_initial_state", initial_state)
     else:
         # Client requests initial state
@@ -859,7 +859,7 @@ remote func _receive_initial_state(state_data: Dictionary) -> void:
             var team = int(team_str)
             for resource_type_str in state_data.resources[team_str]:
                 var resource_type = int(resource_type_str)
-                economy_manager.set_resource(team, resource_type, 
+                economy_manager.set_resource(team, resource_type,
                                           state_data.resources[team_str][resource_type_str])
     
     # Apply building state
@@ -984,7 +984,7 @@ func _calculate_team_score(team: int) -> float:
     # Economy score
     if economy_manager:
         score += economy_manager.get_income(team) * 10.0
-        score += economy_manager.get_resource(team, 0) * 0.1  # Gold resources
+        score += economy_manager.get_resource(team, 0) * 0.1 # Gold resources
     
     return score
 
@@ -1157,7 +1157,7 @@ func _optimize_network_bandwidth() -> void:
     
     # Adjust send buffer size
     network.set_stats_enabled(true)
-    network.set_max_packet_size(1024 * 64)  # 64KB max packet
+    network.set_max_packet_size(1024 * 64) # 64KB max packet
     
     # Enable delta compression
     if network_compression_enabled:
@@ -1179,7 +1179,7 @@ func _generate_network_checksum() -> int:
     
     # Use a robust checksum generation method
     var checksum = hash(JSON.print(checksum_data))
-    return int(abs(checksum)) % 100000  # Normalize to a smaller range
+    return int(abs(checksum)) % 100000 # Normalize to a smaller range
 
 func _validate_network_checksum(client_checksum: int) -> bool:
     var _current_checksum = _generate_network_checksum()
@@ -1259,7 +1259,7 @@ func _collect_team_statistics(team: int) -> Dictionary:
             team_stats["total_income"] = economy_manager.get_total_income(team)
             
             # Collect resources
-            for resource_type in [0, 1, 2]:  # Assuming GOLD, WOOD, SUPPLY
+            for resource_type in [0, 1, 2]: # Assuming GOLD, WOOD, SUPPLY
                 team_stats["resources_collected"][resource_type] = economy_manager.get_total_resources_collected(team, resource_type)
         
         if tech_tree_manager:
@@ -1332,8 +1332,8 @@ func get_player_name(player_id: int) -> String:
     return player_info.get(player_id, {}).get("name", "Unknown Player")
 
 func is_player_in_match(player_id: int) -> bool:
-    return (player_info.has(player_id) and 
-            player_info[player_id].get("team", -1) != -1 and 
+    return (player_info.has(player_id) and
+            player_info[player_id].get("team", -1) != -1 and
             game_phase == GamePhase.ACTIVE)
 
 # Capture a snapshot of the current game state for checksum generation
@@ -1373,7 +1373,7 @@ func assess_network_quality() -> Dictionary:
             "min_ping": 999
         },
         "packet_loss": 0.0,
-        "connection_stability": 1.0  # 1.0 is perfect, 0.0 is worst
+        "connection_stability": 1.0 # 1.0 is perfect, 0.0 is worst
     }
     
     # Calculate ping statistics
@@ -1497,7 +1497,7 @@ remote func _sync_game_state(state_data: Dictionary) -> void:
                 var team = int(team_str)
                 for resource_type_str in state_data.resources[team_str]:
                     var resource_type = int(resource_type_str)
-                    economy_manager.set_resource(team, resource_type, 
+                    economy_manager.set_resource(team, resource_type,
                                                state_data.resources[team_str][resource_type_str])
         
         # Update building state
@@ -1571,7 +1571,7 @@ func _broadcast_game_state() -> void:
             state_data.resources[str(team)] = {
                 "0": economy_manager.get_resource(team, 0), # Gold
                 "1": economy_manager.get_resource(team, 1), # Wood
-                "2": economy_manager.get_resource(team, 2)  # Supply
+                "2": economy_manager.get_resource(team, 2) # Supply
             }
     
     # Collect building state
@@ -1602,7 +1602,7 @@ func _broadcast_game_state() -> void:
     
     # Broadcast state to all clients
     for player_id in player_info.keys():
-        if player_id != 1:  # Skip server (ID 1)
+        if player_id != 1: # Skip server (ID 1)
             rpc_id(player_id, "_sync_game_state", state_data)
 
 func _update_game_state(delta: float) -> void:
@@ -1633,7 +1633,7 @@ func _update_pings() -> void:
     if is_server:
         # Server measures ping to all clients
         for player_id in player_info.keys():
-            if player_id != 1:  # Skip server
+            if player_id != 1: # Skip server
                 # Send ping request to client
                 rpc_id(player_id, "_ping_request", OS.get_ticks_msec())
     else:
@@ -1675,7 +1675,7 @@ func change_team(new_team: int) -> bool:
     
     if is_server:
         var change_result = change_player_team(local_player_id, new_team)
-        return change_result  # Return the result from change_player_team
+        return change_result # Return the result from change_player_team
     else:
         rpc_id(1, "_request_change_team", new_team)
         return true

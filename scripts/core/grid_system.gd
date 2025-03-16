@@ -41,6 +41,56 @@ func initialize_grid() -> void:
             var grid_pos = Vector2(x, y)
             var world_pos = grid_to_world(grid_pos)
             
+            # Create a new cell data structure with territories initialized based on position
+            var cell_data = {
+                "grid_position": grid_pos,
+                "world_position": world_pos,
+                "occupied": false,
+                "building": null,
+                "walkable": true,
+                "team_territory": null, # Will be set below
+                "lane": determine_lane(grid_pos)
+            }
+            
+            if x < float(grid_width) / 3.0:
+                cell_data.team_territory = 0 # Team A
+                team_a_cells.append(grid_pos)
+            elif x >= 2.0 * float(grid_width) / 3.0:
+                cell_data.team_territory = 1 # Team B
+                team_b_cells.append(grid_pos)
+            
+            # Store the cell in our grid
+            grid_cells[grid_pos] = cell_data
+            
+            # Add to lane organization  
+            var lane = cell_data.lane
+            if not lane_cells.has(lane):
+                lane_cells[lane] = []
+            lane_cells[lane].append(grid_pos)
+    
+    # Update valid placement cells
+    for x in range(grid_width):
+        for y in range(grid_height):
+            var grid_pos = Vector2(x, y)
+            if is_valid_placement_cell(grid_pos):
+                valid_placement_cells.append(grid_pos)
+                
+    print("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
+          str(team_b_cells.size()) + " Team B cells")
+    
+    emit_signal("grid_initialized")
+    grid_cells.clear()
+    valid_placement_cells.clear()
+    team_a_cells.clear()
+    team_b_cells.clear()
+    lane_cells.clear()
+    
+    # First create all cells
+    for x in range(grid_width):
+        for y in range(grid_height):
+            var grid_pos = Vector2(x, y)
+            var world_pos = grid_to_world(grid_pos)
+            
             # Create a new cell data structure with no territory initially
             var cell_data = {
                 "grid_position": grid_pos,

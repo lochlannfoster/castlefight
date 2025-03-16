@@ -24,15 +24,6 @@ func _ready() -> void:
     # Initialize game
     print("Initializing game...")
     _initialize_game()
-    
-    # Add test worker after a short delay
-    print("Scheduling test worker spawn...")
-    var timer = Timer.new()
-    add_child(timer)
-    timer.wait_time = 1.0
-    timer.one_shot = true
-    timer.connect("timeout", self, "_add_test_worker")
-    timer.start()
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -41,6 +32,19 @@ func _initialize_game():
     var game_manager = get_node_or_null("/root/GameManager")
     var grid_system = get_node_or_null("/root/GridSystem")
     var economy_manager = get_node_or_null("/root/EconomyManager")
+    
+    # Get UI manager from game manager
+    if game_manager and game_manager.ui_manager == null:
+        # Load UI manager if it doesn't exist
+        var ui_manager_script = load("res://scripts/ui/ui_manager.gd")
+        if ui_manager_script:
+            var ui_manager = ui_manager_script.new()
+            ui_manager.name = "UIManager"
+            game_manager.ui_manager = ui_manager
+            add_child(ui_manager)
+            print("UI Manager added to scene")
+        else:
+            push_error("Failed to load UI manager script")
     
     # Log what we found
     print("Found game manager: ", game_manager != null)
@@ -85,15 +89,6 @@ func _start_single_player_game(game_manager):
 # Add the UI manager to the scene  
 func _add_ui_manager(ui_manager):
     add_child(ui_manager)
-    
-    # Set up a timer to add the worker after the UI manager is initialized
-    var worker_timer = Timer.new()
-    add_child(worker_timer)
-    worker_timer.wait_time = 0.2
-    worker_timer.one_shot = true
-    worker_timer.autostart = true
-    worker_timer.connect("timeout", self, "_add_test_worker")
-    worker_timer.connect("timeout", worker_timer, "queue_free")
 
 func _input(event):
     # Only check for scancode on keyboard events
@@ -124,3 +119,30 @@ func _setup_camera():
     
     add_child(camera)
     print("Camera set up at position: " + str(camera.position))
+
+func _add_test_worker():
+    print("Adding test worker to scene...")
+    
+    # Try to load the worker scene
+    var worker_scene = load("res://scenes/units/worker.tscn")
+    if not worker_scene:
+        print("ERROR: Failed to load worker scene")
+        return
+        
+    # Create worker instance
+    var worker = worker_scene.instance()
+    
+    # Set team and position
+    worker.team = 0 # Team A (blue)
+    worker.position = Vector2(400, 300) # Center of screen
+    
+    # Add to scene
+    add_child(worker)
+    
+    print("Test worker added at position: " + str(worker.position))
+    
+    # Select the worker with UI manager if available
+    var ui_manager = get_node_or_null("UIManager")
+    if ui_manager and ui_manager.has_method("select_worker"):
+        ui_manager.select_worker(worker)
+        print("Worker selected by UI manager")
