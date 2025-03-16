@@ -1,6 +1,5 @@
 class_name BuildingManager
 extends GameService
-
 # Building signals
 signal building_placed(building_type, position, team)
 signal building_constructed(building_reference)
@@ -107,6 +106,100 @@ func _load_building_file(building_id: String, file_path: String) -> void:
             push_error("Error parsing building data: " + file_path)
     else:
         push_error("Error opening building file: " + file_path)
+
+# Create and configure a building instance
+func _create_building_instance(building_type: String, position: Vector2, team: int) -> Building:
+    # Get building data
+    var data = building_data.get(building_type, {})
+    if data.empty():
+        debug_log("Unknown building type: " + building_type, "error", "BuildingManager")
+        return null
+    
+    # Check if we can afford it
+    if economy_manager and economy_manager.has_method("can_afford_building"):
+        if not economy_manager.can_afford_building(team, building_type):
+            debug_log("Cannot afford building: " + building_type, "warning", "BuildingManager")
+            return null
+    
+    # Check if position is valid for placement
+    if grid_system:
+        # Extract size from data
+        var size = Vector2.ONE
+        if data.has("size_x") and data.has("size_y"):
+            size = Vector2(data.size_x, data.size_y)
+        
+        # Convert world position to grid position
+        var grid_pos = grid_system.world_to_grid(position)
+        
+        # Check if position is valid for placement
+        if not grid_system.can_place_building(grid_pos, size, team):
+            debug_log("Invalid position for building: " + building_type, "warning", "BuildingManager")
+            return null
+        
+        # Deduct resources
+        if economy_manager and economy_manager.has_method("purchase_building"):
+            if not economy_manager.purchase_building(team, building_type):
+                debug_log("Failed to purchase building: " + building_type, "warning", "BuildingManager")
+                return null
+    
+    # Load building scene
+    var scene_path = "res://scenes/buildings/base_building.tscn"
+    if data.has("scene_path"):
+        scene_path = data.scene_path
+    
+    var building_scene = load(scene_path)
+    if not building_scene:
+        debug_log("Failed to load building scene: " + scene_path, "error", "BuildingManager")
+        return null
+    
+    # Create building instance
+    var building = building_scene.instance()
+    
+    # Configure the building
+    _configure_building(building, building_type, data, team)
+    
+    # Set position
+    building.position = position
+    
+    # Set grid position
+    if grid_system:
+        var grid_pos = grid_system.world_to_grid(position)
+        if building.has_method("set_grid_position"):
+            building.set_grid_position(grid_pos)
+        
+        # Occupy grid cells
+        var size = Vector2(data.size_x, data.size_y) if data.has("size_x") and data.has("size_y") else Vector2.ONE
+        for x in range(size.x):
+            for y in range(size.y):
+                var cell_pos = grid_pos + Vector2(x, y)
+                grid_system.occupy_cell(cell_pos, building)
+    
+    # Add to scene
+    var current_scene = get_tree().current_scene
+    if current_scene:
+        current_scene.add_child(building)
+    else:
+        add_child(building)
+    
+    # Connect signals
+    if not building.is_connected("building_destroyed", self, "_on_building_destroyed"):
+        building.connect("building_destroyed", self, "_on_building_destroyed")
+    
+    if not building.is_connected("construction_completed", self, "_on_building_construction_completed"):
+        building.connect("construction_completed", self, "_on_building_construction_completed")
+    
+    # Start construction
+    if building.has_method("start_construction"):
+        building.start_construction()
+    
+    # Add to building tracking
+    var building_id = building.get_instance_id()
+    buildings[building_id] = building
+    
+    # Emit signal
+    emit_signal("building_placed", building_type, position, team)
+    
+    return building
 
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
     debug_log("Attempting to place building: " + building_type + " at position " + str(position) + " for team " + str(team), "debug", "BuildingManager")

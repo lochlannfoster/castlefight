@@ -120,7 +120,7 @@ func track_performance(operation_name: String, start_time: int, start_memory: in
 # Internal logging methods (file, console output)
 func _log_to_console(entry: LogEntry) -> void:
     # Colorize and format console output
-    var color = _get_level_color(entry.level)
+    var _color = _get_level_color(entry.level)
     var formatted_message = "[%s] [%s] %s" % [
         _get_level_name(entry.level),
         entry.category,

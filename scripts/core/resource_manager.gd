@@ -218,7 +218,7 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
 func _preload_essential_resources() -> void:
     # Preload all base scenes
     for scene_path in required_base_scenes.keys():
-        load_scene(scene_path)
+        var _loaded_scene = load_scene(scene_path)
 
 # Load a scene
 func load_scene(path: String) -> PackedScene:

@@ -1,6 +1,7 @@
 # Game Manager - Coordinates all game systems
 # Path: scripts/core/game_manager.gd
 extends Node
+var service_name: String = "GameManager"
 
 # Game signals
 signal game_started

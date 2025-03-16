@@ -603,3 +603,22 @@ func _setup_core_components() -> void:
     
     # Set up health bar
     _setup_health_bar()
+
+func _configure_default_behavior() -> void:
+    # Get enemy HQ position for attack-move
+    _get_enemy_hq_position()
+    
+    # Set up effect node for visual effects if needed
+    if not effects_node:
+        effects_node = Node2D.new()
+        effects_node.name = "Effects"
+        add_child(effects_node)
+        
+    # Start auto-attack behavior if this is a combat unit
+    if should_attack_move:
+        _start_attack_move()
+        
+    # Initialize abilities
+    for ability in abilities:
+        if ability.has("cooldown") and ability.has("data") and ability.data.has("initial_cooldown"):
+            ability.cooldown = ability.data.initial_cooldown

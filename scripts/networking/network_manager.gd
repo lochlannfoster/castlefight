@@ -1,6 +1,7 @@
 # Network Manager - Comprehensive Multiplayer Networking System
 # Path: scripts/networking/network_manager.gd
 extends Node
+var service_name: String = "NetworkManager"
 
 # Network Connection Constants
 const DEFAULT_PORT = 27015
@@ -770,7 +771,7 @@ remote func _match_started() -> void:
     game_phase = GamePhase.ACTIVE
     
     print("Client changing to game scene...")
-    var game_manager = get_node_or_null("/root/GameManager")
+    var _current_game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
@@ -1045,7 +1046,7 @@ func _client_match_end_processing() -> void:
     _reset_game_systems()
     
     # Transition to post-match lobby or menu
-    var game_manager = get_node_or_null("/root/GameManager")
+    var _current_game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
         game_manager.change_scene("res://scenes/lobby/lobby.tscn", true) # With transition
 

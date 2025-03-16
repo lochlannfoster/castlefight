@@ -1030,7 +1030,7 @@ func show_end_game_screen(winner: int, reason: String) -> void:
 # End game continue button handler
 func _on_end_game_continue() -> void:
     # Switch back to lobby scene
-    var game_manager = get_node_or_null("/root/GameManager")
+    var _current_game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
         game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:

@@ -1,10 +1,11 @@
 extends Node2D
+var service_name: String = "GameScene"
 
 # Import required scripts for system initialization
-var GridSystemScript = preload("res://scripts/core/grid_system.gd")
-var CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
-const EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
-const BuildingManagerScript = load("res://scripts/building/building_manager.gd")
+var GridSystemScript = load("res://scripts/core/grid_system.gd")
+var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
+var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
+var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 # Declare initialization tracking variable
 var is_initialized: bool = false
@@ -39,7 +40,7 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        else if service_name:
+        elif service_name:
             prefix += "[" + service_name + "]"
         print(prefix + " " + message)
 

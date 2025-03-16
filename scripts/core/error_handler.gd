@@ -202,7 +202,7 @@ func safe_resource_load(path: String, expected_type: String = "") -> Resource:
     
     # Check if resource loaded successfully
     if not resource:
-        report_error(
+        var _report = report_error(
             ErrorType.RESOURCE_LOADING,
             "Failed to load resource: " + path,
             error_context
@@ -211,7 +211,7 @@ func safe_resource_load(path: String, expected_type: String = "") -> Resource:
     
     # Optional type checking
     if expected_type and not (resource is Object and resource.get_class() == expected_type):
-        report_error(
+        var _report = report_error(
             ErrorType.RESOURCE_LOADING,
             "Resource is not of expected type",
             {
@@ -236,7 +236,7 @@ func safe_create_directory(path: String) -> bool:
     var error = dir.make_dir_recursive(path)
     
     if error != OK:
-        report_error(
+        var _report = report_error(
             ErrorType.CONFIGURATION,
             "Failed to create directory",
             {
@@ -256,7 +256,7 @@ func validate_dependencies(dependencies: Dictionary) -> bool:
         var dependency = dependencies[dep_name]
         
         if not is_instance_valid(dependency):
-            report_error(
+            var _report = report_error(
                 ErrorType.DEPENDENCY,
                 "Invalid dependency detected",
                 {
