@@ -369,9 +369,10 @@ func _handle_auto_repair(delta: float) -> void:
 
 # Move to a target position
 func move_to(pos: Vector2) -> void:
-	target_position = pos
-	is_moving_to_target = true
-	current_target_building = false
+  print("Worker moving to " + str(pos))
+  target_position = pos
+  is_moving_to_target = true
+  current_target_building = false
 
 # Select this worker
 func select() -> void:
@@ -394,3 +395,17 @@ func deselect() -> void:
 # Get worker's team
 func get_team() -> int:
 	return team
+
+func _ready() -> void:
+  print("Worker initialized. Team: " + str(team))
+  
+  # Get references to manager nodes
+  _get_manager_references()
+  
+  # Set up visual appearance for the worker
+  _setup_visuals()
+  
+  # Set up building ghost for placement preview
+  _setup_building_ghost()
+  
+  print("Worker ready complete")
