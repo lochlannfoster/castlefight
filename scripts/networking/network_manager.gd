@@ -61,6 +61,8 @@ var local_player_id: int = 0
 var connection_state: int = ConnectionState.DISCONNECTED
 var game_phase: int = GamePhase.LOBBY
 
+var is_creating_ui: bool = false
+
 # Player Management Structures
 var players: Dictionary = {
     0: [], # Team A
@@ -1753,3 +1755,30 @@ remote func _request_change_team(new_team: int) -> void:
 
 func get_player_info() -> Dictionary:
     return player_info
+
+func _on_scene_changed() -> void:
+    # Defensive programming with try-catch equivalent
+    if not is_inside_tree():
+        print("WARNING: Scene change attempted on invalid tree")
+        return
+    
+    # Prevent recursive calls
+    if is_creating_ui:
+        return
+    
+    # Safe scene type determination
+    var current_scene = get_tree().current_scene
+    if not current_scene:
+        print("WARNING: No current scene found")
+        return
+    
+    # Explicit, safe visibility management
+    match current_scene.name.to_lower():
+        "mainmenu":
+            set_visible(false)
+        "lobby", "game":
+            set_visible(true)
+            # Defer complex UI setup
+            call_deferred("_create_ui_elements")
+        _:
+            set_visible(false)

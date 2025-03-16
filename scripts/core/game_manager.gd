@@ -787,3 +787,8 @@ func toggle_grid_visualization() -> void:
         else:
             grid_system.draw_debug_grid()
             log_debug("Grid visualization created and enabled", "info", "GameManager")
+
+func initialize() -> void:
+    if not is_initialized:
+        _safe_system_initialization()
+        is_initialized = true

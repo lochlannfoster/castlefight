@@ -376,10 +376,10 @@ func select() -> void:
         selection_indicator.visible = true
     
     # More verbose logging for UI manager interaction
-    var ui_manager = get_node_or_null("/root/GameManager/UIManager")
-    if ui_manager:
+    var worker_ui_manager = get_node_or_null("/root/GameManager/UIManager")
+    if worker_ui_manager:
         print("DEBUG: Attempting to select worker with UI Manager. Team: " + str(team))
-        ui_manager.select_worker(self)
+        worker_ui_manager.select_worker(self)
     else:
         print("WARNING: No UI Manager found during worker selection")
 

@@ -69,6 +69,7 @@ CombatSystem="*res://scripts/combat/combat_system.gd"
 [debug]
 
 settings/stdout/verbose_stdout=true
+settings/stdout/print_error_messages=true
 
 [editor_plugins]
 
