@@ -348,9 +348,20 @@ func select() -> void:
     # Create or update selection indicator
     var selection_indicator = get_node_or_null("SelectionIndicator")
     if not selection_indicator:
-        # ... rest of code ...
-        else:
-            selection_indicator.visible = true
+        # Create a new selection indicator
+        selection_indicator = Node2D.new()
+        selection_indicator.name = "SelectionIndicator"
+        add_child(selection_indicator)
+        
+        # Create visual indicator (a simple colored rectangle)
+        var rect = ColorRect.new()
+        rect.rect_size = Vector2(32, 32)
+        rect.rect_position = Vector2(-16, -16)
+        rect.color = Color(0, 1, 0, 0.3) # Semi-transparent green
+        selection_indicator.add_child(rect)
+    
+    # Make selection indicator visible
+    selection_indicator.visible = true
     
     # More verbose logging for UI manager interaction
     var worker_ui_manager = get_node_or_null("/root/GameManager/UIManager")

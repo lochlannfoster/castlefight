@@ -273,3 +273,50 @@ func _draw_grid_deferred(grid_sys) -> void:
             debug_log("Grid visualizer not found after creation", "warning")
     else:
         debug_log("Grid system invalid or missing draw method", "error")
+
+func _connect_signals() -> void:
+    # Connect signals between game systems
+    if grid_system and grid_system.has_method("connect"):
+        if not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
+            grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+    
+    if combat_system and combat_system.has_method("connect"):
+        if not combat_system.is_connected("combat_event", self, "_on_combat_event"):
+            combat_system.connect("combat_event", self, "_on_combat_event")
+    
+    if building_manager and building_manager.has_method("connect"):
+        if not building_manager.is_connected("building_placed", self, "_on_building_placed"):
+            building_manager.connect("building_placed", self, "_on_building_placed")
+        if not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
+            building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+    
+    # Connect to signal handlers if they exist
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.has_method("connect"):
+        if not game_manager.is_connected("game_started", self, "_on_game_started"):
+            game_manager.connect("game_started", self, "_on_game_started")
+        if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
+            game_manager.connect("game_ended", self, "_on_game_ended")
+
+
+# Add these callback functions if they don't exist:
+func _on_grid_initialized() -> void:
+    debug_log("Grid system initialized", "info", "GameScene")
+    
+func _on_combat_event(attacker, target, damage, attack_type) -> void:
+    # Handle combat events if needed
+    pass
+    
+func _on_building_placed(building_type, position, team) -> void:
+    # Handle building placement events if needed
+    pass
+    
+func _on_building_destroyed(building) -> void:
+    # Handle building destruction events if needed  
+    pass
+    
+func _on_game_started() -> void:
+    debug_log("Game started", "info", "GameScene")
+    
+func _on_game_ended(winning_team) -> void:
+    debug_log("Game ended. Winner: Team " + str(winning_team), "info", "GameScene")

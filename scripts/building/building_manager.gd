@@ -206,25 +206,17 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
     
     # Validate building type
     if not building_data.has(building_type):
-        logger.error("Unknown building type attempted", "BuildingManager", {
-            "attempted_type": building_type
-        })
+        debug_log("Unknown building type attempted", "error", "BuildingManager")
         return null
     
     # Existing placement logic with added logging
     var building = _create_building_instance(building_type, position, team)
     
     if building:
-        logger.info("Building successfully placed", "BuildingManager", {
-            "building_type": building_type,
-            "team": team
-        })
+        debug_log("Building successfully placed", "info", "BuildingManager")
         return building
     else:
-        logger.warning("Building placement failed", "BuildingManager", {
-            "building_type": building_type,
-            "team": team
-        })
+        debug_log("Building placement failed", "warning", "BuildingManager")
         return null
 
 # Configure a building instance with data
@@ -266,7 +258,6 @@ func _configure_building(building, building_type: String, data: Dictionary, team
             if data.has("unit_types") and data.unit_types is Array:
                 building.unit_types = data.unit_types
 
-# Handle building selection
 func _handle_selection() -> void:
     # Deselect current building if any
     if selected_building != null:
@@ -275,7 +266,7 @@ func _handle_selection() -> void:
         selected_building = null
     
     # Cast a ray to select a building
-    var space_state = get_world_2d().direct_space_state
+    var space_state = get_viewport().get_world_2d().direct_space_state
     var mouse_pos = get_global_mouse_position()
     
     var result = space_state.intersect_point(mouse_pos, 1, [], 2) # Layer 2 for buildings

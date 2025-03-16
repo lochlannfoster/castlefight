@@ -1145,11 +1145,12 @@ func verify_critical_nodes() -> void:
         print("MISSING: GameWorld does not exist")
 
 func change_scene(scene_path: String, transition: bool = false) -> bool:
-    debug_log("message", "level", "GameManager")
+    # Declare fade_layer in the method scope
+    var fade_layer: CanvasLayer = null
     
     if transition:
         # Create transition effect
-        var fade_layer = CanvasLayer.new()
+        fade_layer = CanvasLayer.new()
         fade_layer.name = "SceneTransition"
         fade_layer.layer = 100 # Make sure it's on top
         get_tree().root.add_child(fade_layer)
@@ -1174,12 +1175,12 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
     # Verify scene exists before trying to load it
     var file = File.new()
     if !file.file_exists(scene_path):
-        debug_log("message", "level", "GameManager")
+        debug_log("Scene file does not exist: " + scene_path, "error", "GameManager")
         
         # Try to recover by checking if scene_creator can make it
         var scene_creator = get_node_or_null("/root/SceneCreator")
         if scene_creator and scene_creator.has_method("ensure_scene_exists"):
-            debug_log("message", "level", "GameManager")
+            debug_log("Attempting to create missing scene", "warning", "GameManager")
             scene_creator.ensure_scene_exists(scene_path)
         else:
             # If we can't recover, notify and abort
@@ -1189,15 +1190,10 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
             return false
     
     # Change to the scene
-    var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
-    else:
-        # Fallback if not available
-        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    var error = get_tree().change_scene(scene_path)
     
     if error != OK:
-        debug_log("message", "level", "GameManager")
+        debug_log("Failed to change scene with error code: " + str(error), "error", "GameManager")
         
         if transition:
             # Clean up transition
@@ -1211,8 +1207,8 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
         # Get our transition layer again (it might have been recreated during scene change)
         fade_layer = get_tree().root.get_node_or_null("SceneTransition")
         if fade_layer:
-            tween = fade_layer.get_node_or_null("Tween")
-            fade_rect = fade_layer.get_node_or_null("ColorRect")
+            var tween = fade_layer.get_node_or_null("Tween")
+            var fade_rect = fade_layer.get_node_or_null("ColorRect")
             
             if tween and fade_rect:
                 # Animate fade in
@@ -1226,7 +1222,7 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
             # Remove transition layer
             fade_layer.queue_free()
     
-    debug_log("message", "level", "GameManager")
+    debug_log("Scene changed successfully to: " + scene_path, "info", "GameManager")
     return true
 
 # Helper to check if a scene exists

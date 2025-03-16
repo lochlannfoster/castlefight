@@ -622,3 +622,8 @@ func _configure_default_behavior() -> void:
     for ability in abilities:
         if ability.has("cooldown") and ability.has("data") and ability.data.has("initial_cooldown"):
             ability.cooldown = ability.data.initial_cooldown
+
+func find_target() -> Object:
+    # This is a simple implementation that calls the more specific find_best_target method
+    # with a default targeting strategy
+    return find_best_target("closest")
