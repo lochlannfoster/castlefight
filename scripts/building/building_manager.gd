@@ -14,9 +14,32 @@ var buildings: Dictionary = {} # Tracks all active buildings
 var selected_building = null # Currently selected building
 
 # References to other systems
-var grid_system: GridSystem
+var grid_system
 var economy_manager
 var game_manager
+
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.verbose(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        elif service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 func _init() -> void:
     service_name = "BuildingManager"
@@ -79,29 +102,6 @@ func _load_building_file(building_id: String, file_path: String) -> void:
             push_error("Error parsing building data: " + file_path)
     else:
         push_error("Error opening building file: " + file_path)
-
-func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
-    var logger = get_node_or_null("/root/UnifiedLogger")
-    if logger:
-        match level.to_lower():
-            "error":
-                logger.error(message, context if context else service_name)
-            "warning":
-                logger.warning(message, context if context else service_name)
-            "debug":
-                logger.debug(message, context if context else service_name)
-            "verbose":
-                logger.verbose(message, context if context else service_name)
-            _:
-                logger.info(message, context if context else service_name)
-    else:
-        # Fallback to print
-        var prefix = "[" + level.to_upper() + "]"
-        if context:
-            prefix += "[" + context + "]"
-        elif service_name:
-            prefix += "[" + service_name + "]"
-        print(prefix + " " + message)
 
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
     debug_log("Attempting to place building: " + building_type + " at position " + str(position) + " for team " + str(team), "debug", "BuildingManager")

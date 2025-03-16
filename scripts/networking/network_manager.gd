@@ -125,7 +125,7 @@ var bandwidth_limit: int = 100000 # Bytes per second
 var player_tokens: Dictionary = {}
 var authentication_required: bool = false
 
-func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():

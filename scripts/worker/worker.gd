@@ -54,7 +54,7 @@ var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
 
-func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():

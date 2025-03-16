@@ -50,7 +50,7 @@ var total_resources_spent: Dictionary = {}
 var player_teams: Dictionary = {}
 var player_resources_spent: Dictionary = {}
 
-func debug_debug_log(message: String, level: String = "info", context: String = "") -> void:
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():

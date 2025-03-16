@@ -54,7 +54,7 @@ class UnifiedLogger:
         _open_log_file()
 
     # Core logging method
-func debug_debug_log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
+func debug_log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
     # Skip logs below current configuration level
     if level < _config.current_level:
         return
