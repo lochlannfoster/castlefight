@@ -21,7 +21,7 @@ func _on_multiplayer_button_pressed() -> void:
     print("Multiplayer button pressed, changing to lobby scene")
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
         get_tree().change_scene("res://scenes/lobby/lobby.tscn")
@@ -30,7 +30,7 @@ func _on_multiplayer_button_pressed() -> void:
 func _on_singleplayer_button_pressed() -> void:
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
         get_tree().change_scene("res://scenes/lobby/lobby.tscn")

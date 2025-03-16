@@ -150,7 +150,7 @@ func _process_idle(_delta: float) -> void:
             current_state = UnitState.MOVING
 
 # Process movement state
-func _process_movement(delta: float) -> void:
+func _process_movement(_delta: float) -> void:
     if path.empty():
         current_state = UnitState.IDLE
         return

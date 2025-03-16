@@ -54,6 +54,29 @@ var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
 
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.verbose(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
+
 func _physics_process(delta: float) -> void:
     # If selected, handle player input
     if is_selected:
@@ -420,24 +443,3 @@ func _stop_current_action() -> void:
     
     if is_placing_building:
         cancel_building_placement()
-
-func log(message: String, level: String = "info", context: String = "Worker") -> void:
-    var logger = get_node_or_null("/root/UnifiedLogger")
-    if logger:
-        match level.to_lower():
-            "error":
-                logger.error(message, context)
-            "warning":
-                logger.warning(message, context)
-            "debug":
-                logger.debug(message, context)
-            "verbose":
-                logger.verbose(message, context)
-            _:
-                logger.info(message, context)
-    else:
-        # Fallback to print
-        var prefix = "[" + level.to_upper() + "]"
-        if context:
-            prefix += "[" + context + "]"
-        print(prefix + " " + message)

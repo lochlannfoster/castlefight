@@ -1,10 +1,10 @@
 extends Node2D
 
 # Import required scripts for system initialization
-const GridSystemScript = preload("res://scripts/core/grid_system.gd")
-const CombatSystemScript = preload("res://scripts/combat/combat_system.gd")
-const EconomyManagerScript = preload("res://scripts/economy/economy_manager.gd")
-const BuildingManagerScript = preload("res://scripts/building/building_manager.gd")
+const GridSystemScript = load("res://scripts/core/grid_system.gd")
+const CombatSystemScript = load("res://scripts/combat/combat_system.gd")
+const EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
+const BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 # Declare initialization tracking variable
 var is_initialized: bool = false

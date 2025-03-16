@@ -31,11 +31,11 @@ func _configure_abilities(entity, abilities: Array) -> void:
                 entity.add_ability(ability_data.name, ability_data)
 
 # Configure animations
-func _configure_animations(entity, animations: Dictionary) -> void:
+func _configure_animations(_entity, _animations: Dictionary) -> void:
     # Add implementation based on your animation system
     pass
 
 # Configure sounds
-func _configure_sounds(entity, sounds: Dictionary) -> void:
+func _configure_sounds(_entity, _sounds: Dictionary) -> void:
     # Add implementation based on your sound system
     pass

@@ -50,7 +50,7 @@ func remove_player(player_id) -> void:
         team_players[team].erase(player_id)
     
     # Remove player data
-    players.erase(player_id)
+    var _result = team_players[team].erase(player_id)
     
     emit_signal("player_removed", player_id)
 

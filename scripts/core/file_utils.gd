@@ -36,7 +36,7 @@ func load_json(path: String, default_data: Dictionary = {}) -> Dictionary:
 func save_json(path: String, data: Dictionary, pretty: bool = true) -> bool:
     # Ensure directory exists
     var dir_path = path.get_base_dir()
-    ensure_directory(dir_path)
+    var _result = ensure_directory(dir_path)
     
     # Save file
     var file = File.new()

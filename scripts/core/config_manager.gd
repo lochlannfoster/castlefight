@@ -56,7 +56,7 @@ func load_config(path: String = "res://config.json") -> bool:
     
     var parse_result = JSON.parse(json_text)
     if parse_result.error != OK:
-        push_error(f"JSON Parse Error: {parse_result.error_string}")
+        push_error("JSON Parse Error: " + parse_result.error_string)
         return false
     
     # Merge loaded config with existing

@@ -54,56 +54,73 @@ class UnifiedLogger:
         _open_log_file()
 
     # Core logging method
-    func log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
-        # Skip logs below current configuration level
-        if level < _config.current_level:
-            return
-        
-        var entry = LogEntry.new()
-        entry.timestamp = OS.get_unix_time()
-        entry.level = level
-        entry.category = category
-        entry.message = message
-        entry.context = context
-        
-        # Store in log buffer
-        _log_buffer.append(entry)
-        
-        # Trim buffer if it gets too large
-        if _log_buffer.size() > 1000:
-            _log_buffer.pop_front()
-        
-        # Output based on destination configuration
-        match _config.destination:
-            LogDestination.CONSOLE:
-                _log_to_console(entry)
-            LogDestination.FILE:
-                _log_to_file(entry)
-            LogDestination.BOTH:
-                _log_to_console(entry)
-                _log_to_file(entry)
+func log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
+    # Skip logs below current configuration level
+    if level < _config.current_level:
+        return
+    
+    var entry = LogEntry.new()
+    entry.timestamp = OS.get_unix_time()
+    entry.level = level
+    entry.category = category
+    entry.message = message
+    entry.context = context
+    
+    # Store in log buffer
+    _log_buffer.append(entry)
+    
+    # Trim buffer if it gets too large
+    if _log_buffer.size() > 1000:
+        _log_buffer.pop_front()
+    
+    # Output based on destination configuration
+    match _config.destination:
+        LogDestination.CONSOLE:
+            _log_to_console(entry)
+        LogDestination.FILE:
+            _log_to_file(entry)
+        LogDestination.BOTH:
+            _log_to_console(entry)
+            _log_to_file(entry)
+    
+    # Store in log buffer
+    _log_buffer.append(entry)
+    
+    # Trim buffer if it gets too large
+    if _log_buffer.size() > 1000:
+        _log_buffer.pop_front()
+    
+    # Output based on destination configuration
+    match _config.destination:
+        LogDestination.CONSOLE:
+            _log_to_console(entry)
+        LogDestination.FILE:
+            _log_to_file(entry)
+        LogDestination.BOTH:
+            _log_to_console(entry)
+            _log_to_file(entry)
 
     # Convenience methods for different log levels
-    func verbose(message: String, category: String = "General") -> void:
+func verbose(message: String, category: String = "General") -> void:
         log(LogLevel.VERBOSE, message, category)
     
-    func debug(message: String, category: String = "General") -> void:
+func debug(message: String, category: String = "General") -> void:
         log(LogLevel.DEBUG, message, category)
     
-    func info(message: String, category: String = "General") -> void:
+func info(message: String, category: String = "General") -> void:
         log(LogLevel.INFO, message, category)
     
-    func warning(message: String, category: String = "General") -> void:
+func warning(message: String, category: String = "General") -> void:
         log(LogLevel.WARNING, message, category)
     
-    func error(message: String, category: String = "General") -> void:
+func error(message: String, category: String = "General") -> void:
         log(LogLevel.ERROR, message, category)
     
-    func critical(message: String, category: String = "General") -> void:
+func critical(message: String, category: String = "General") -> void:
         log(LogLevel.CRITICAL, message, category)
 
     # Performance tracking and logging
-    func track_performance(operation_name: String, start_time: int, start_memory: int) -> void:
+func track_performance(operation_name: String, start_time: int, start_memory: int) -> void:
         var end_time = OS.get_ticks_msec()
         var end_memory = OS.get_static_memory_usage()
         
@@ -118,7 +135,7 @@ class UnifiedLogger:
         )
 
     # Internal logging methods (file, console output)
-    func _log_to_console(entry: LogEntry) -> void:
+func _log_to_console(entry: LogEntry) -> void:
         # Colorize and format console output
         var color = _get_level_color(entry.level)
         var formatted_message = "[%s] [%s] %s" % [
@@ -129,7 +146,7 @@ class UnifiedLogger:
         print(formatted_message) # Godot's print handles colored console output
     
 # File logging implementation
-    func _log_to_file(entry: LogEntry) -> void:
+func _log_to_file(entry: LogEntry) -> void:
         # Check if file handle is valid
         if _file_handle == null or not _file_handle.is_open():
             _open_log_file()
@@ -158,7 +175,7 @@ class UnifiedLogger:
             _rotate_log_files()
 
     # Implement the missing _open_log_file method
-    func _open_log_file() -> void:
+func _open_log_file() -> void:
         # Close existing file handle if open
         if _file_handle != null and _file_handle.is_open():
             _file_handle.close()
@@ -172,7 +189,7 @@ class UnifiedLogger:
             _file_handle = null
 
     # Implement the missing _rotate_log_files method
-    func _rotate_log_files() -> void:
+func _rotate_log_files() -> void:
         # Close current log file
         if _file_handle != null and _file_handle.is_open():
             _file_handle.close()
@@ -219,7 +236,7 @@ class UnifiedLogger:
         # Open a new log file
         _open_log_file()
         
-    func _get_level_color(level: int) -> Color:
+func _get_level_color(level: int) -> Color:
         match level:
             LogLevel.VERBOSE: return Color(0.5, 0.5, 0.5) # Gray
             LogLevel.DEBUG: return Color(0, 1, 0) # Green

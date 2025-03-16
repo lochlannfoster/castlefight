@@ -4,24 +4,22 @@ class_name HQBuilding
 extends Building
 
 
-
 # HQ signals
 signal income_bonus_changed(new_bonus)
 
 # HQ properties
-export var base_income_bonus: float = 10.0  # Starting income for the team
-export var income_upgrade_cost: float = 100.0  # Cost to upgrade income
-export var income_upgrade_increment: float = 5.0  # Amount income increases per upgrade
-export var max_income_upgrades: int = 5  # Maximum number of income upgrades
+export var base_income_bonus: float = 10.0 # Starting income for the team
+export var income_upgrade_cost: float = 100.0 # Cost to upgrade income
+export var income_upgrade_increment: float = 5.0 # Amount income increases per upgrade
+export var max_income_upgrades: int = 5 # Maximum number of income upgrades
 
 # State tracking
 var current_income_bonus: float = 0.0
 var income_upgrade_level: int = 0
 var is_under_attack: bool = false
 var last_damage_time: float = 0.0
-var attack_warning_cooldown: float = 10.0  # Time between "under attack" warnings
+var attack_warning_cooldown: float = 10.0 # Time between "under attack" warnings
 
-# Ready function
 func _ready() -> void:
     # Call parent ready function first
     ._ready()
@@ -142,7 +140,7 @@ func _notify_under_attack() -> void:
         warning_label.text = "HQ UNDER ATTACK!"
         warning_label.align = Label.ALIGN_CENTER
         warning_label.valign = Label.VALIGN_CENTER
-        warning_label.modulate = Color(1, 0, 0)  # Red color
+        warning_label.modulate = Color(1, 0, 0) # Red color
         warning_label.rect_position = screen_pos - Vector2(100, 50)
         
         # Add to UI
@@ -163,7 +161,7 @@ func _notify_under_attack() -> void:
         tween.start()
         
         # Remove after animation
-        yield(tween, "tween_all_completed")
+        yield (tween, "tween_all_completed")
         warning_label.queue_free()
         
 # Get income bonus

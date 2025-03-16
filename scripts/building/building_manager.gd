@@ -81,7 +81,7 @@ func _load_building_file(building_id: String, file_path: String) -> void:
         push_error("Error opening building file: " + file_path)
 
 func log(message: String, level: String = "info", context: String = "") -> void:
-    var logger = get_node_or_null("/root/Logger")
+    var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
         match level.to_lower():
             "error":
@@ -91,7 +91,7 @@ func log(message: String, level: String = "info", context: String = "") -> void:
             "debug":
                 logger.debug(message, context if context else service_name)
             "verbose":
-                logger.debug(message, context if context else service_name)
+                logger.verbose(message, context if context else service_name)
             _:
                 logger.info(message, context if context else service_name)
     else:

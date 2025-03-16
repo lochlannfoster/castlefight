@@ -53,6 +53,7 @@ var animation_player: AnimationPlayer
 var construction_progress_bar: ProgressBar
 var selection_indicator: Node2D
 var spawn_points: Array = []
+var grid_position: Vector2 = Vector2.ZERO
 
 # Initialize
 func _ready() -> void:
