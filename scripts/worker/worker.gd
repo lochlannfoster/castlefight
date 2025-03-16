@@ -354,14 +354,18 @@ func move_to(pos: Vector2) -> void:
 
 # Select this worker
 func select() -> void:
+    print("DEBUG: Worker select() called. Current team: " + str(team))
     is_selected = true
     var selection_indicator = get_node_or_null("SelectionIndicator")
     if selection_indicator:
         selection_indicator.visible = true
     
-    # Register as selected worker with UI manager
+    # More verbose logging for UI manager interaction
     if ui_manager:
+        print("DEBUG: Attempting to select worker with UI Manager. Team: " + str(team))
         ui_manager.select_worker(self)
+    else:
+        print("WARNING: No UI Manager found during worker selection")
 
 # Deselect this worker
 func deselect() -> void:

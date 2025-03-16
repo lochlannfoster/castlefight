@@ -55,6 +55,8 @@ var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
 var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
 var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
+export var debug_mode: bool = false
+
 # Ready function
 func _ready() -> void:
     # Initialize match ID
@@ -322,62 +324,123 @@ func start_game() -> void:
         camera.global_position = get_headquarters_position(0)
     
 func _create_player_workers() -> void:
-    log_debug("Creating player workers", "info", "GameManager")
-    log_debug("Total players: " + str(players.size()), "info", "GameManager")
-    for player_id in players.keys():
-        log_debug("Player ID: " + str(player_id) + " Details: " + str(players[player_id]), "info", "GameManager")
+    # Check debug mode from network manager if available
+    var is_debug_mode = false
+    if network_manager:
+        is_debug_mode = network_manager.debug_mode
+    else:
+        # Fallback to class property
+        is_debug_mode = debug_mode
     
+    # Extensive logging and diagnostic information for worker creation
+    log_debug("Initiating player worker creation process", "info", "GameManager")
     
-    # Make sure worker scene loads properly
+    # Critical: Verify game state and system readiness
+    if not is_instance_valid(unit_factory):
+        log_debug("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
+        return
+    
+    # In debug mode, ensure at least one player exists
+    if is_debug_mode and players.empty():
+        log_debug("Debug mode: No players found. Creating default player.", "warning", "GameManager")
+        
+        # Properly handle the return value
+        var player_added = add_player(1, "Debug Player", 0)
+        if not player_added:
+            log_debug("CRITICAL: Failed to add debug player", "error", "GameManager")
+            return
+    
+    # Comprehensive logging of player information
+    log_debug("Total players to process: " + str(players.size()), "info", "GameManager")
+    
+    # Worker scene loading with robust error handling
     var worker_scene = load("res://scenes/units/worker.tscn")
     if not worker_scene:
         log_debug("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
-        
-    # Continue with normal worker creation for actual players
+    
+    # Iterate through all players and spawn workers
     for player_id in players.keys():
         var player_data = players[player_id]
-        var team = player_data.team
+        var team = player_data.get("team", 0) # Default to Team A if no team assigned
         
-        log_debug("Processing player ID: " + str(player_id) + " on team " + str(team), "info", "GameManager")
+        # Detailed logging for each player's worker creation
+        log_debug(
+            "Processing worker for Player ID: " + str(player_id) +
+            " | Team: " + str(team),
+            "info",
+            "GameManager"
+        )
         
-        # Create worker instance - make sure 'worker' is declared here
+        # Create worker instance
         var worker = worker_scene.instance()
         
-        # Set worker properties
+        # Set core worker properties
         worker.team = team
+        worker.name = "Worker_Player" + str(player_id)
         
-        # Position worker at team's start position
-        var start_position = Vector2(400 + (team * 200), 300) # Default position
+        # Determine spawn position with fallback mechanism
+        var start_position = Vector2(400 + (team * 200), 300) # Default grid-based spawn
         
+        # Use map manager for precise positioning if available
         if map_manager and map_manager.has_method("get_team_start_position"):
             var map_position = map_manager.get_team_start_position(team)
             if map_position:
                 start_position = map_position
-                log_debug("Using map position for worker: " + str(start_position), "info", "GameManager")
-            else:
-                log_debug("Map position returned null, using default: " + str(start_position), "GameManager")
-        else:
-            log_debug("Map manager not available, using default position: " + str(start_position), "info", "GameManager")
+                log_debug(
+                    "Using map manager position: " + str(start_position),
+                    "info",
+                    "GameManager"
+                )
         
+        # Set worker position
         worker.position = start_position
-        log_debug("Spawning worker for player " + str(player_id) + " at " + str(start_position), "info", "GameManager")
         
-        # Add to scene tree
+        # Visual team identification
+        if worker.has_node("Sprite"):
+            var sprite = worker.get_node("Sprite")
+            var team_color = get_team_color(team)
+            sprite.modulate = team_color
+            log_debug(
+                "Worker visual team color set: " + str(team_color),
+                "info",
+                "GameManager"
+            )
+        
+        # Enhanced worker tracking
+        worker.display_name = "Player " + str(player_id) + " Worker"
+        
+        # Add worker to scene
         var current_scene = get_tree().current_scene
         if current_scene:
-            log_debug("Current scene: " + current_scene.name, "info", "GameManager")
             current_scene.add_child(worker)
-            log_debug("Worker added to scene successfully", "info", "GameManager")
-            log_debug("Worker created at position: " + str(worker.position), "info", "GameManager")
-            log_debug("Worker has valid texture: " + str(worker.get_node_or_null("Sprite") != null && worker.get_node("Sprite").texture != null), "info", "GameManager")
+            log_debug(
+                "Worker added to scene at position: " + str(worker.position),
+                "info",
+                "GameManager"
+            )
         else:
-            log_debug("CRITICAL ERROR: No current scene found!", "error", "GameManager")
-            return
+            log_debug(
+                "CRITICAL: No current scene found to add worker",
+                "error",
+                "GameManager"
+            )
         
-        # Store reference in player data
-        player_data.worker = worker
-        log_debug("Worker reference stored in player data", "info", "GameManager")
+        # Store worker reference in player data
+        player_data["worker"] = worker
+        
+        # Final verification logging
+        log_debug(
+            "Worker Creation Summary:\n" +
+            "Player ID: " + str(player_id) + "\n" +
+            "Team: " + str(team) + "\n" +
+            "Position: " + str(worker.position) + "\n" +
+            "Scene: " + (current_scene.name if current_scene else "N/A"),
+            "info",
+            "GameManager"
+        )
+    
+    log_debug("Player worker creation process completed", "info", "GameManager")
 
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):

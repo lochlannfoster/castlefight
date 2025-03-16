@@ -633,8 +633,19 @@ func _client_pre_match_setup() -> void:
     print("Client pre-match setup completed")
 
 func start_match() -> void:
-    # Print more debug info
     print("Starting match - is_server: " + str(is_server) + ", game_phase: " + str(game_phase))
+    
+    # Enhanced debug mode player creation
+    if debug_mode:
+        print("Debug mode: Ensuring player exists")
+        if not player_info.has(1):
+            player_info[1] = {
+                "name": "Debug Player",
+                "team": 0,
+                "is_host": true,
+                "ready": true,
+                "ping": 0
+            }
     
     if not is_server or game_phase != GamePhase.PREGAME:
         print("Cannot start game: Not server or wrong game phase. Current phase: " + str(game_phase))
