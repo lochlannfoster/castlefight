@@ -267,8 +267,8 @@ func start_game() -> void:
             "current_state": current_state
         })
         return
-		
-	    # Extensive logging for critical initialization steps
+        
+        # Extensive logging for critical initialization steps
     logger.info("Attempting to create player workers", "GameManager")
     _create_player_workers()
     

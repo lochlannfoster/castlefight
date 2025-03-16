@@ -22,16 +22,6 @@ var _config: Dictionary = {
     }
 }
 
-# Service configuration and paths
-var _service_config: Dictionary = {
-    "GridSystem": "res://scripts/core/grid_system.gd",
-    "EconomyManager": "res://scripts/economy/economy_manager.gd",
-    "BuildingManager": "res://scripts/building/building_manager.gd",
-    "CombatSystem": "res://scripts/combat/combat_system.gd",
-    "NetworkManager": "res://scripts/networking/network_manager.gd",
-    "UIManager": "res://scripts/ui/ui_manager.gd"
-}
-
 # Initialization order and dependencies
 var _initialization_order: Array = [
     "GridSystem",
@@ -93,35 +83,6 @@ func save_config(path: String = "user://config.json") -> bool:
     file.store_string(JSON.print(_config, "  "))
     file.close()
     return true
-
-# Initialize a service by name
-func initialize_service(service_name: String) -> Node:
-    if not _service_config.has(service_name):
-        push_error(f"Unknown service: {service_name}")
-        return null
-    
-    var script_path = _service_config[service_name]
-    var script = load(script_path)
-    
-    if not script:
-        push_error(f"Could not load script for service: {service_name}")
-        return null
-    
-    var service = script.new()
-    service.name = service_name
-    
-    # Additional initialization logic could go here
-    if service.has_method("initialize"):
-        service.initialize()
-    
-    return service
-
-# Initialize all services in order
-func initialize_all_services() -> void:
-    print("Initializing all game services...")
-    for service_name in _initialization_order:
-        initialize_service(service_name)
-    print("Service initialization complete.")
 
 # Debug method to print current configuration
 func print_config() -> void:

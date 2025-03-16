@@ -57,9 +57,6 @@ func initialize() -> void:
         call_deferred("initialize") # Try again next frame
         return
     
-    # Call the implementation-specific initialization
-    _initialize_impl()
-    
     # Mark as initialized
     is_initialized = true
     
@@ -70,11 +67,6 @@ func initialize() -> void:
     # Emit signals
     emit_signal("initialization_completed")
     emit_signal("service_ready")
-
-# Implementation-specific initialization - override in derived classes
-func _initialize_impl() -> void:
-    # Default implementation does nothing
-    pass
 
 # Reset service state - override in derived classes
 func reset() -> void:

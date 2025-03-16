@@ -19,7 +19,6 @@ var _service_classes: Dictionary = {
     "DebugLogger": "res://scripts/core/debug_logger.gd"
 }
 
-# Initialization order to ensure dependencies are created in the correct order
 var _initialization_order: Array = [
     "DebugLogger",
     "GridSystem",
@@ -149,19 +148,13 @@ func _scan_for_services() -> void:
             if service:
                 register_service(service_name, service)
 
-# Initialize all services
 func initialize_all_services() -> void:
     print("ServiceLocator: Initializing all services...")
     
-    # First register any existing services
-    _scan_for_services()
-    
-    # Then create missing services in the correct order
     for service_name in _initialization_order:
         if not _services.has(service_name):
             _create_service(service_name)
         elif _services[service_name].has_method("initialize"):
-            # Initialize existing services
             _services[service_name].initialize()
     
     print("ServiceLocator: All services initialized.")
