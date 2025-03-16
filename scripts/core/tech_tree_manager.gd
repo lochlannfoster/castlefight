@@ -423,7 +423,7 @@ func _on_game_ended(_winning_team: int) -> void:
 func initialize() -> void:
     print("TechTreeManager: Initializing...")
     
-    # Clear any existing data
+    # Clear existing data
     tech_trees.clear()
     team_tech_trees = {
         0: "", # Team A tech tree race
@@ -445,10 +445,12 @@ func initialize() -> void:
     # Load all tech trees
     _load_tech_trees()
     
-    # Connect signals
+    # Connect signals (with check for existing connections)
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        game_manager.connect("game_started", self, "_on_game_started")
-        game_manager.connect("game_ended", self, "_on_game_ended")
+        if not game_manager.is_connected("game_started", self, "_on_game_started"):
+            game_manager.connect("game_started", self, "_on_game_started")
+        if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
+            game_manager.connect("game_ended", self, "_on_game_ended")
     
     print("TechTreeManager: Initialization complete with " + str(tech_trees.size()) + " tech trees loaded")

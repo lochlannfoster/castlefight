@@ -4,6 +4,7 @@ extends Node
 # Dictionary of all registered services
 var _services: Dictionary = {}
 
+# Dictionary of service class paths for auto-creation
 var _service_classes: Dictionary = {
     "GridSystem": "res://scripts/core/grid_system.gd",
     "BuildingManager": "res://scripts/building/building_manager.gd",
@@ -30,27 +31,28 @@ var _initialization_order: Array = [
     "NetworkManager"
 ]
 
+var _initialized = false
+
 # Debug settings
 var verbose: bool = true
 
-# Ready function
-func _ready() -> void:
-    # Set this to process after other autoloads
-    pause_mode = Node.PAUSE_MODE_PROCESS
+func _ready():
+    if not _initialized:
+        initialize_services()
+        _initialized = true
+
+# Register a service with the service locator
+func register_service(service_name: String, service_instance: Node) -> void:
+    if _services.has(service_name):
+        # Optional: Only print warning in debug mode
+        if verbose:
+            print("ServiceLocator: Service already registered: " + service_name + ". Skipping replacement.")
+        return
     
-    # Log that service locator is initializing
-    print("ServiceLocator: Initializing...")
+    _services[service_name] = service_instance
     
-    # Connect to the tree_changed signal to handle scene changes
-    var _connect_result = get_tree().connect("tree_changed", self, "_on_tree_changed")
-    
-    # Validate classes exist
-    _validate_service_classes()
-    
-    # Initial scan for existing services in the scene tree
-    _scan_for_services()
-    
-    print("ServiceLocator: Initialization complete")
+    if verbose:
+        print("ServiceLocator: Registered service: " + service_name)
 
 # Get a service by name
 func get_service(service_name: String) -> Node:
@@ -83,6 +85,7 @@ func get_service(service_name: String) -> Node:
     push_warning("ServiceLocator: Service not found: " + service_name)
     return null
 
+# Create a new service instance
 func _create_service(service_name: String) -> Node:
     if not _service_classes.has(service_name):
         push_error("ServiceLocator: No class defined for service: " + service_name)
@@ -98,7 +101,7 @@ func _create_service(service_name: String) -> Node:
     var service = script.new()
     service.name = service_name
     
-    # Add to the root node immediately (no deferred call)
+    # Add to the root node
     get_tree().root.add_child(service)
     
     # Register the service
@@ -136,8 +139,7 @@ func initialize_all_services() -> void:
     
     for service_name in _initialization_order:
         if not _services.has(service_name):
-            var service = _create_service(service_name)
-            # Don't need to assign it again since _create_service already registers it
+            _create_service(service_name)
         elif _services[service_name].has_method("initialize"):
             _services[service_name].initialize()
     

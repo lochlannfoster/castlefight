@@ -247,6 +247,10 @@ func _update_fog_textures() -> void:
     var team_b_image = Image.new()
     team_b_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
     
+    # Lock images before modifying
+    team_a_image.lock()
+    team_b_image.lock()
+    
     # Fill images based on visibility grid
     for x in range(map_width):
         for y in range(map_height):
@@ -264,6 +268,10 @@ func _update_fog_textures() -> void:
             else:
                 team_b_image.set_pixel(x, y, Color(0, 0, 0, 0.7)) # Partially visible
     
+    # Unlock images after modifying
+    team_a_image.unlock()
+    team_b_image.unlock()
+    
     # Update textures
     var team_a_texture = ImageTexture.new()
     team_a_texture.create_from_image(team_a_image)
@@ -273,17 +281,6 @@ func _update_fog_textures() -> void:
     
     fog_material.set_shader_param("team_a_fog", team_a_texture)
     fog_material.set_shader_param("team_b_fog", team_b_texture)
-
-# Signal handlers
-func _on_building_placed(_building_type: String, _position: Vector2, _team: int) -> void:
-    print("Building placed: " + _building_type)
-
-func _on_building_destroyed(building) -> void:
-    var building_id = building.get_instance_id()
-    var _result = all_buildings.erase(building_id)
-    
-    for team in visible_buildings.keys():
-        visible_buildings[team].erase(building_id)
 
 # Set current player team (for single-player or client-side view)
 func set_current_player_team(team: int) -> void:

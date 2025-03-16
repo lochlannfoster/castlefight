@@ -1,0 +1,77 @@
+{
+  "name": "Default Map",
+  "description": "A standard 2-team battleground",
+  "size": {
+    "width": 40,
+    "height": 30
+  },
+  "territories": {
+    "team_a": {
+      "start_x": 0,
+      "start_y": 0,
+      "end_x": 10,
+      "end_y": 30
+    },
+    "team_b": {
+      "start_x": 30,
+      "start_y": 0,
+      "end_x": 40,
+      "end_y": 30
+    }
+  },
+  "spawn_points": {
+    "team_a": {
+      "x": 5,
+      "y": 15
+    },
+    "team_b": {
+      "x": 35,
+      "y": 15
+    }
+  },
+  "hq_positions": {
+    "team_a": {
+      "x": 2,
+      "y": 15
+    },
+    "team_b": {
+      "x": 38,
+      "y": 15
+    }
+  },
+  "lanes": [
+    {
+      "id": 0,
+      "name": "Top Lane",
+      "start_y": 0,
+      "end_y": 10,
+      "waypoints": [
+        {"x": 10, "y": 5},
+        {"x": 20, "y": 5},
+        {"x": 30, "y": 5}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Middle Lane",
+      "start_y": 10,
+      "end_y": 20,
+      "waypoints": [
+        {"x": 10, "y": 15},
+        {"x": 20, "y": 15},
+        {"x": 30, "y": 15}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Bottom Lane",
+      "start_y": 20,
+      "end_y": 30,
+      "waypoints": [
+        {"x": 10, "y": 25},
+        {"x": 20, "y": 25},
+        {"x": 30, "y": 25}
+      ]
+    }
+  ]
+}

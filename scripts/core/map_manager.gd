@@ -467,11 +467,11 @@ func load_map_config(map_name: String = "default_map") -> bool:
     
     if not file.file_exists(file_path):
         push_error("Map configuration file not found: " + file_path)
-        return false
+        return _create_default_map_config()
     
     if file.open(file_path, File.READ) != OK:
         push_error("Could not open map configuration file: " + file_path)
-        return false
+        return _create_default_map_config()
     
     var json_text = file.get_as_text()
     file.close()
@@ -479,7 +479,7 @@ func load_map_config(map_name: String = "default_map") -> bool:
     var json_result = JSON.parse(json_text)
     if json_result.error != OK:
         push_error("Error parsing map configuration: " + json_result.error_string)
-        return false
+        return _create_default_map_config()
     
     var config = json_result.result
     
@@ -525,6 +525,64 @@ func load_map_config(map_name: String = "default_map") -> bool:
             lane.waypoints.append(Vector2(waypoint.x, waypoint.y))
         
         lanes.append(lane)
+    
+    return true
+
+# Create a default map configuration if loading fails
+func _create_default_map_config() -> bool:
+    print("Creating default map configuration")
+    
+    # Set default map dimensions
+    map_width = 40
+    map_height = 30
+    
+    # Set default territories
+    team_a_base_rect = Rect2(0, 0, 10, 30)
+    team_b_base_rect = Rect2(30, 0, 10, 30)
+    neutral_zone_rect = Rect2(10, 0, 20, 30)
+    
+    # Set default spawn and HQ positions
+    team_a_start_pos = Vector2(5, 15)
+    team_b_start_pos = Vector2(35, 15)
+    team_a_hq_pos = Vector2(2, 15)
+    team_b_hq_pos = Vector2(38, 15)
+    
+    # Create default lanes
+    lanes = [
+        {
+            "id": 0,
+            "name": "Top Lane",
+            "start_y": 0,
+            "end_y": 10,
+            "waypoints": [
+                Vector2(10, 5),
+                Vector2(20, 5),
+                Vector2(30, 5)
+            ]
+        },
+        {
+            "id": 1,
+            "name": "Middle Lane",
+            "start_y": 10,
+            "end_y": 20,
+            "waypoints": [
+                Vector2(10, 15),
+                Vector2(20, 15),
+                Vector2(30, 15)
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Bottom Lane",
+            "start_y": 20,
+            "end_y": 30,
+            "waypoints": [
+                Vector2(10, 25),
+                Vector2(20, 25),
+                Vector2(30, 25)
+            ]
+        }
+    ]
     
     return true
 
