@@ -1,6 +1,5 @@
 # Tech Tree Manager - Handles loading and managing tech trees
 # Path: scripts/core/tech_tree_manager.gd
-class_name TechTreeManager
 extends Node
 
 # Tech tree signals
@@ -11,20 +10,20 @@ signal upgrade_researched(team, upgrade_id)
 # Tech tree data
 var tech_trees: Dictionary = {}
 var team_tech_trees: Dictionary = {
-    0: "",  # Team A tech tree race
-    1: ""   # Team B tech tree race
+    0: "", # Team A tech tree race
+    1: "" # Team B tech tree race
 }
 var team_unlocked_buildings: Dictionary = {
-    0: [],  # Team A unlocked buildings
-    1: []   # Team B unlocked buildings
+    0: [], # Team A unlocked buildings
+    1: [] # Team B unlocked buildings
 }
 var team_unlocked_units: Dictionary = {
-    0: [],  # Team A unlocked units
-    1: []   # Team B unlocked units
+    0: [], # Team A unlocked units
+    1: [] # Team B unlocked units
 }
 var team_researched_upgrades: Dictionary = {
-    0: [],  # Team A researched upgrades
-    1: []   # Team B researched upgrades
+    0: [], # Team A researched upgrades
+    1: [] # Team B researched upgrades
 }
 
 # Ready function

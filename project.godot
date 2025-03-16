@@ -19,11 +19,6 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/building/building_manager.gd"
 }, {
-"base": "Node",
-"class": "CombatSystem",
-"language": "GDScript",
-"path": "res://scripts/combat/combat_system.gd"
-}, {
 "base": "Node2D",
 "class": "FogOfWar",
 "language": "GDScript",
@@ -39,21 +34,6 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/core/map_manager.gd"
 }, {
-"base": "Node",
-"class": "NetworkManager",
-"language": "GDScript",
-"path": "res://scripts/networking/network_manager.gd"
-}, {
-"base": "Node",
-"class": "TechTreeManager",
-"language": "GDScript",
-"path": "res://scripts/core/tech_tree_manager.gd"
-}, {
-"base": "CanvasLayer",
-"class": "UIManager",
-"language": "GDScript",
-"path": "res://scripts/ui/ui_manager.gd"
-}, {
 "base": "KinematicBody2D",
 "class": "Unit",
 "language": "GDScript",
@@ -62,13 +42,9 @@ _global_script_classes=[ {
 _global_script_class_icons={
 "Building": "",
 "BuildingManager": "",
-"CombatSystem": "",
 "FogOfWar": "",
 "HQBuilding": "",
 "MapManager": "",
-"NetworkManager": "",
-"TechTreeManager": "",
-"UIManager": "",
 "Unit": ""
 }
 
@@ -85,6 +61,10 @@ GridSystem="*res://scripts/core/grid_system.gd"
 EconomyManager="*res://scripts/economy/economy_manager.gd"
 UnitFactory="*res://scripts/unit/unit_factory.gd"
 DebugLogger="*res://scripts/core/debug_logger.gd"
+NetworkManager="*res://scripts/networking/network_manager.gd"
+TechTreeManager="*res://scripts/core/tech_tree_manager.gd"
+UIManager="*res://scripts/ui/ui_manager.gd"
+CombatSystem="*res://scripts/combat/combat_system.gd"
 
 [debug]
 

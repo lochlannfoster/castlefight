@@ -1,7 +1,6 @@
 # Combat System - Handles damage calculations, attack types, and armor types
 # Path: scripts/combat/combat_system.gd
 extends Node
-class_name CombatSystem
 
 
 # Signal for when combat events occur
@@ -42,7 +41,7 @@ var damage_table = {
         "hero": 1.0,
         "unarmored": 1.5
     },
-    "chaos": {  # Equal against all types
+    "chaos": { # Equal against all types
         "light": 1.0,
         "medium": 1.0,
         "heavy": 1.0,
@@ -95,12 +94,11 @@ func _load_damage_tables() -> void:
 
 # Calculate damage based on attack type and armor type
 func calculate_damage(base_damage: float, attack_type: String, armor_value: float, armor_type: String) -> float:
-    
     # Get type modifier
     var type_modifier = damage_table[attack_type][armor_type]
     
     # Apply armor reduction (each point of armor reduces damage by ~5%)
-    var armor_reduction = 1.0 - (armor_value / (armor_value + 20.0))  # This formula gives diminishing returns
+    var armor_reduction = 1.0 - (armor_value / (armor_value + 20.0)) # This formula gives diminishing returns
     
     # Calculate final damage
     var final_damage = base_damage * type_modifier * armor_reduction
@@ -194,19 +192,19 @@ func apply_status_effect(target, effect_type: String, duration: float, value: fl
             if target.has_method("apply_stun"):
                 target.apply_stun(duration)
         "speed_boost":
-            effect_data["speed_modifier"] = 1.0 + value  # Increase speed by value%
+            effect_data["speed_modifier"] = 1.0 + value # Increase speed by value%
             if target.has_method("apply_buff"):
                 target.apply_buff("speed_boost", effect_data)
         "speed_slow":
-            effect_data["speed_modifier"] = 1.0 - value  # Decrease speed by value%
+            effect_data["speed_modifier"] = 1.0 - value # Decrease speed by value%
             if target.has_method("apply_debuff"):
                 target.apply_debuff("speed_slow", effect_data)
         "damage_boost":
-            effect_data["damage_modifier"] = 1.0 + value  # Increase damage by value%
+            effect_data["damage_modifier"] = 1.0 + value # Increase damage by value%
             if target.has_method("apply_buff"):
                 target.apply_buff("damage_boost", effect_data)
         "damage_reduction":
-            effect_data["damage_modifier"] = 1.0 - value  # Decrease damage by value%
+            effect_data["damage_modifier"] = 1.0 - value # Decrease damage by value%
             if target.has_method("apply_debuff"):
                 target.apply_debuff("damage_reduction", effect_data)
         "heal_over_time":

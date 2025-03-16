@@ -1,6 +1,5 @@
 # UI Manager - Handles all in-game UI elements and interactions
 # Path: scripts/ui/ui_manager.gd
-class_name UIManager
 extends CanvasLayer
 
 # UI signals
@@ -34,25 +33,38 @@ var game_manager
 var debug_overlay: Control = null
 var is_debug_overlay_visible: bool = false
 
-# Ready function
+enum SceneType {
+    MAIN_MENU,
+    LOBBY,
+    GAME,
+    NONE
+}
+var current_scene_type = SceneType.NONE
+
 func _ready() -> void:
-    # Get references to game systems
-    game_manager = get_node_or_null("/root/GameManager")
-    if game_manager:
-        economy_manager = game_manager.economy_manager
-        building_manager = game_manager.building_manager
+    # Ensure UI elements are created
+    if not has_node("Tooltip"):
+        _create_tooltip()
+    if not is_inside_tree():
+        print("WARNING: UIManager not properly added to scene tree")
+        return
+    
+    # Set pause mode to ensure UI can be managed during game state changes
+    pause_mode = Node.PAUSE_MODE_PROCESS
+    
+    # Ensure visibility can be controlled
+    if has_method("set_visible"):
+        # Connect to the scene change signal with error handling
+        var connection_result = get_tree().connect("tree_changed", self, "_on_scene_changed")
+        
+        # Check if signal connection was successful
+        if connection_result != OK:
+            print("WARNING: Failed to connect 'tree_changed' signal in UIManager")
+        
+        # Perform initial scene context detection
+        _on_scene_changed()
     else:
-        economy_manager = get_node_or_null("/root/EconomyManager")
-        building_manager = get_node_or_null("/root/BuildingManager")
-    
-    # Create UI elements
-    _create_ui_elements()
-    
-    # Connect signals
-    _connect_signals()
-    
-    # Setup input handling
-    set_process_input(true)
+        print("ERROR: UIManager cannot control visibility")
 
 # Create all UI elements
 func _create_ui_elements() -> void:
@@ -93,7 +105,7 @@ func _create_debug_indicator() -> void:
     debug_indicator.margin_top = 150
     debug_indicator.margin_right = 300
     debug_indicator.margin_bottom = 170
-    debug_indicator.add_color_override("font_color", Color(1, 0.5, 0, 1))  # Orange color
+    debug_indicator.add_color_override("font_color", Color(1, 0.5, 0, 1)) # Orange color
     debug_indicator.visible = false
     add_child(debug_indicator)
     
@@ -347,23 +359,25 @@ func _create_floating_text_container() -> void:
 
 # Create tooltip
 func _create_tooltip() -> void:
-    tooltip = Control.new()
-    tooltip.name = "Tooltip"
-    tooltip.visible = false
-    tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    add_child(tooltip)
-    
-    var panel = Panel.new()
-    panel.name = "Panel"
-    panel.rect_min_size = Vector2(200, 80)
-    tooltip.add_child(panel)
-    
-    var label = Label.new()
-    label.name = "Label"
-    label.rect_position = Vector2(10, 10)
-    label.rect_size = Vector2(180, 60)
-    label.autowrap = true
-    panel.add_child(label)
+    # Explicitly create tooltip if it doesn't exist
+    if not has_node("Tooltip"):
+        tooltip = Control.new()
+        tooltip.name = "Tooltip"
+        tooltip.visible = false
+        tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        add_child(tooltip)
+        
+        var panel = Panel.new()
+        panel.name = "Panel"
+        panel.rect_min_size = Vector2(200, 80)
+        tooltip.add_child(panel)
+        
+        var label = Label.new()
+        label.name = "Label"
+        label.rect_position = Vector2(10, 10)
+        label.rect_size = Vector2(180, 60)
+        label.autowrap = true
+        panel.add_child(label)
 
 # Create debug overlay
 func _create_debug_overlay() -> void:
@@ -450,15 +464,24 @@ func _connect_signals() -> void:
     if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
         var _connect_result = connect("worker_command_issued", self, "_emit_worker_command")
 
-# Input handling
 func _input(event) -> void:
+    # Ensure tooltip exists before accessing
+    if tooltip == null:
+        _create_tooltip()
+    if not is_inside_tree():
+        return
+
     # Handle key shortcuts
     if event is InputEventKey and event.pressed:
         if event.scancode == KEY_F3:
             is_debug_overlay_visible = !is_debug_overlay_visible
-            if debug_overlay:
+            
+            # Add null check before accessing visible property
+            if debug_overlay != null:
                 debug_overlay.visible = is_debug_overlay_visible
-        
+            else:
+                print("Debug overlay not initialized")
+
         match event.scancode:
             KEY_ESCAPE:
                 if is_building_menu_open:
@@ -472,13 +495,16 @@ func _input(event) -> void:
                 # Toggle auto-repair for selected worker
                 if selected_worker != null and selected_worker.has_method("toggle_auto_repair"):
                     selected_worker.toggle_auto_repair()
-    
+
     # Handle mouse movement for tooltip
     if event is InputEventMouseMotion:
-        # Update tooltip position
-        if tooltip.visible:
-            tooltip.rect_position = event.position + Vector2(15, 15)
-    
+        # Add null check for tooltip
+        if tooltip != null and tooltip.has_method("is_visible"):
+            if tooltip.visible:
+                tooltip.rect_position = event.position + Vector2(15, 15)
+        else:
+            print("Tooltip not initialized")
+
     # Handle mouse button clicks
     if event is InputEventMouseButton and event.pressed:
         if event.button_index == BUTTON_RIGHT:
@@ -486,6 +512,12 @@ func _input(event) -> void:
             if selected_worker and selected_worker.is_placing_building:
                 selected_worker.cancel_building_placement()
                 emit_signal("building_placement_cancelled")
+
+    if event is InputEventMouseMotion:
+        # Safe tooltip position update
+        if tooltip != null and tooltip.has_method("is_visible"):
+            if tooltip.visible:
+                tooltip.rect_position = event.position + Vector2(15, 15)
 
 # Process function to update game time and debug info
 func _process(_delta: float) -> void:
@@ -568,7 +600,7 @@ func update_resource_display() -> void:
     
     if supply_label:
         var current_supply = int(economy_manager.get_resource(current_team, economy_manager.ResourceType.SUPPLY))
-        var max_supply = 20  # This should be calculated based on buildings
+        var max_supply = 20 # This should be calculated based on buildings
         supply_label.text = str(current_supply) + "/" + str(max_supply)
 
 # Update income display
@@ -632,7 +664,7 @@ func show_income_popup(team: int, amount: float) -> void:
     
     var popup = Label.new()
     popup.text = "+%d gold" % int(amount)
-    popup.modulate = Color(1, 0.843, 0)  # Gold color
+    popup.modulate = Color(1, 0.843, 0) # Gold color
     popup.rect_position = Vector2(150, 300)
     
     floating_text_container.add_child(popup)
@@ -652,7 +684,7 @@ func show_income_popup(team: int, amount: float) -> void:
     tween.start()
     
     # Remove after animation
-    yield(tween, "tween_all_completed")
+    yield (tween, "tween_all_completed")
     popup.queue_free()
 
 # Show bounty popup
@@ -662,7 +694,7 @@ func show_bounty_popup(team: int, amount: float, source: String) -> void:
     
     var popup = Label.new()
     popup.text = "+%d gold (%s)" % [int(amount), source]
-    popup.modulate = Color(1, 0.843, 0)  # Gold color
+    popup.modulate = Color(1, 0.843, 0) # Gold color
     
     # Position near center screen
     popup.rect_position = Vector2(get_viewport().size.x / 2, get_viewport().size.y / 2)
@@ -684,7 +716,7 @@ func show_bounty_popup(team: int, amount: float, source: String) -> void:
     tween.start()
     
     # Remove after animation
-    yield(tween, "tween_all_completed")
+    yield (tween, "tween_all_completed")
     popup.queue_free()
 
 # Show tooltip
@@ -750,7 +782,7 @@ func show_match_preparation() -> void:
     floating_text_container.add_child(label)
     
     # Remove after delay
-    yield(get_tree().create_timer(2.0), "timeout")
+    yield (get_tree().create_timer(2.0), "timeout")
     label.queue_free()
 
 # Show end game screen
@@ -864,7 +896,6 @@ func _on_pause_button_pressed() -> void:
 
 func _on_game_started() -> void:
     # Reset UI elements for game start
-    
     # Show debug indicator if in debug mode
     var debug_indicator = get_node_or_null("DebugIndicator")
     if debug_indicator:
@@ -950,3 +981,28 @@ func log_debug(message: String, level: String = "debug", context: String = "") -
     else:
         # Fallback to print if DebugLogger is not available
         print(level.to_upper() + " [" + context + "]: " + message)
+
+func _on_scene_changed() -> void:
+    # Defensive programming: check if we can actually modify visibility
+    if not has_method("set_visible"):
+        print("Cannot modify UI visibility")
+        return
+    
+    # Determine current scene type
+    var current_scene = get_tree().current_scene
+    
+    if current_scene:
+        match current_scene.name:
+            "MainMenu":
+                # Explicitly hide UI
+                set_visible(false)
+            "Lobby":
+                # Show UI for lobby
+                set_visible(true)
+            "game": # Lowercase to match Godot's typical scene naming
+                # Fully set up game UI
+                set_visible(true)
+                _create_ui_elements()
+            _:
+                # Default: hide UI
+                set_visible(false)

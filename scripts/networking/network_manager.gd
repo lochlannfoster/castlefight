@@ -1,6 +1,5 @@
 # Network Manager - Comprehensive Multiplayer Networking System
 # Path: scripts/networking/network_manager.gd
-class_name NetworkManager
 extends Node
 
 # Network Connection Constants
