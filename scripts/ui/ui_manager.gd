@@ -69,34 +69,96 @@ func _ready() -> void:
     else:
         print("ERROR: UIManager cannot control visibility")
 
-# Create all UI elements
 func _create_ui_elements() -> void:
-    # Create resource display
-    _create_resource_display()
+    # Prevent recursive or multiple simultaneous UI creation attempts
+    if is_creating_ui:
+        debug_log("UI creation already in progress. Skipping.", "warning", "UIManager")
+        return
     
-    # Create building menu
-    _create_building_menu()
+    # Set flag to prevent re-entrancy
+    is_creating_ui = true
     
-    # Create unit info panel
-    _create_unit_info_panel()
+    # Comprehensive debug log to track UI creation process
+    debug_log("Starting comprehensive UI element creation", "info", "UIManager")
     
-    # Create game status panel
-    _create_game_status_panel()
+    # 1. Resource Display - Shows player's current resources
+    if not has_node("ResourceDisplay"):
+        var creation_result = _safe_create_node("_create_resource_display")
+        if not creation_result:
+            debug_log("Failed to create resource display", "error", "UIManager")
     
-    # Create minimap
-    _create_minimap()
+    # 2. Building Menu - Interface for selecting and placing buildings
+    if not has_node("BuildingMenu"):
+        var creation_result = _safe_create_node("_create_building_menu")
+        if not creation_result:
+            debug_log("Failed to create building menu", "error", "UIManager")
     
-    # Create floating text container
-    _create_floating_text_container()
+    # 3. Unit Info Panel - Displays details about selected units
+    if not has_node("UnitInfoPanel"):
+        var creation_result = _safe_create_node("_create_unit_info_panel")
+        if not creation_result:
+            debug_log("Failed to create unit info panel", "error", "UIManager")
     
-    # Create tooltip
-    _create_tooltip()
+    # 4. Game Status Panel - Shows game time, pause button, etc.
+    if not has_node("GameStatusPanel"):
+        var creation_result = _safe_create_node("_create_game_status_panel")
+        if not creation_result:
+            debug_log("Failed to create game status panel", "error", "UIManager")
     
-    # Create debug mode indicator
-    _create_debug_indicator()
+    # 5. Minimap - Scaled-down view of the game map
+    if not has_node("Minimap"):
+        var creation_result = _safe_create_node("_create_minimap")
+        if not creation_result:
+            debug_log("Failed to create minimap", "error", "UIManager")
     
-    # Create debug overlay
-    _create_debug_overlay()
+    # 6. Floating Text Container - For temporary on-screen messages
+    if not has_node("FloatingTextContainer"):
+        var creation_result = _safe_create_node("_create_floating_text_container")
+        if not creation_result:
+            debug_log("Failed to create floating text container", "error", "UIManager")
+    
+    # 7. Tooltip - Hover information display
+    if not has_node("Tooltip"):
+        var creation_result = _safe_create_node("_create_tooltip")
+        if not creation_result:
+            debug_log("Failed to create tooltip", "error", "UIManager")
+    
+    # 8. Debug Overlay - Performance and debug information
+    if not has_node("DebugOverlay"):
+        var creation_result = _safe_create_node("_create_debug_overlay")
+        if not creation_result:
+            debug_log("Failed to create debug overlay", "error", "UIManager")
+    
+    # 9. Debug Mode Indicator
+    if not has_node("DebugIndicator"):
+        var creation_result = _safe_create_node("_create_debug_indicator")
+        if not creation_result:
+            debug_log("Failed to create debug indicator", "error", "UIManager")
+    
+    # Final setup and connection of signals
+    _connect_signals()
+    
+    debug_log("All UI elements creation process completed", "info", "UIManager")
+    
+    # Reset the creation flag
+    is_creating_ui = false
+
+# Safe node creation method to prevent crashes
+func _safe_create_node(method_name: String) -> bool:
+    # Check if the method exists
+    if not has_method(method_name):
+        debug_log("Method " + method_name + " not found", "error", "UIManager")
+        return false
+    
+    # Call the method using call()
+    var result = call(method_name)
+    
+    # Basic error checking
+    if result == null:
+        debug_log("Node creation method " + method_name + " returned null", "warning", "UIManager")
+        return false
+    
+    return true
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
@@ -1227,35 +1289,24 @@ func initialize() -> void:
     print("UIManager: Initialization complete")
 
 func set_ui_visibility(is_visible: bool) -> void:
-    # This function controls the visibility of all UI elements
-    # First, set our own visibility if possible
-    if has_method("set_visible"):
-        set_visible(is_visible)
-    elif "visible" in self:
-        visible = is_visible
+    # Prevent recursive calls
+    if is_creating_ui:
+        return
     
-    # If we have child UI elements, set their visibility too
-    if has_node("ResourceDisplay"):
-        get_node("ResourceDisplay").visible = is_visible
+    # Single, controlled print statement
+    print("UI Manager visibility: " + str(is_visible))
     
-    if has_node("BuildingMenu"):
-        get_node("BuildingMenu").visible = false # Always start with building menu closed
+    # Simple, direct visibility management
+    var elements_to_toggle = [
+        "ResourceDisplay",
+        "BuildingMenu",
+        "UnitInfoPanel",
+        "GameStatusPanel",
+        "Minimap",
+        "FloatingTextContainer"
+    ]
     
-    if has_node("UnitInfoPanel"):
-        get_node("UnitInfoPanel").visible = false # Always start with unit info panel closed
-    
-    if has_node("GameStatusPanel"):
-        get_node("GameStatusPanel").visible = is_visible
-    
-    if has_node("Minimap"):
-        get_node("Minimap").visible = is_visible
-    
-    if has_node("FloatingTextContainer"):
-        get_node("FloatingTextContainer").visible = is_visible
-    
-    # Apply to any CanvasItem children
-    for child in get_children():
-        if child is CanvasItem and child.name != "BuildingMenu" and child.name != "UnitInfoPanel":
-            child.visible = is_visible
-            
-    print("UI visibility set to: " + str(is_visible))
+    for element_name in elements_to_toggle:
+        var element = get_node_or_null(element_name)
+        if element and "visible" in element:
+            element.visible = is_visible

@@ -1802,31 +1802,52 @@ func get_player_info() -> Dictionary:
     return player_info
 
 func _on_scene_changed() -> void:
-    # Defensive programming with try-catch equivalent
-    if not is_inside_tree():
-        print("WARNING: Scene change attempted on invalid tree")
+    # Prevent multiple simultaneous calls
+    if is_creating_ui:
+        debug_log("Scene change rejected - UI creation in progress", "warning", "NetworkManager")
         return
     
+    # Ensure we have a valid scene
+    var current_scene = get_tree().current_scene
+    if not current_scene:
+        debug_log("No current scene found", "warning", "NetworkManager")
+        return
+    
+    # Safe scene transition logic
+    match current_scene.name.to_lower():
+        "mainmenu":
+            _set_ui_visibility(false)
+        "lobby", "game":
+            _set_ui_visibility(true)
+        _:
+            _set_ui_visibility(false)
+
+func _set_ui_visibility(is_visible: bool) -> void:
+    # Prevent recursive calls
+    if is_creating_ui:
+        debug_log("Visibility change rejected - UI creation in progress", "warning", "NetworkManager")
+        return
+    
+    debug_log("Setting UI visibility: " + str(is_visible), "debug", "NetworkManager")
+    
+    # Safely manage UI visibility
+    var ui_manager = get_node_or_null("/root/UIManager")
+    if ui_manager and ui_manager.has_method("set_ui_visibility"):
+        ui_manager.set_ui_visibility(is_visible)
+
+# New method to handle visibility with minimal recursion risk
+func _set_network_ui_visibility(is_visible: bool) -> void:
     # Prevent recursive calls
     if is_creating_ui:
         return
     
-    # Safe scene type determination
-    var current_scene = get_tree().current_scene
-    if not current_scene:
-        print("WARNING: No current scene found")
-        return
+    # Use a single, controlled print statement
+    print("Network UI visibility: " + str(is_visible))
     
-    # Explicit, safe visibility management
-    match current_scene.name.to_lower():
-        "mainmenu":
-            set_ui_visibility(false)
-        "lobby", "game":
-            set_ui_visibility(true)
-            # Defer complex UI setup
-            call_deferred("_create_ui_elements")
-        _:
-            set_ui_visibility(false)
+    # Directly interact with UI manager
+    var ui_manager = get_node_or_null("/root/UIManager")
+    if ui_manager and ui_manager.has_method("set_ui_visibility"):
+        ui_manager.set_ui_visibility(is_visible)
 
 func set_visible(is_visible: bool) -> void:
     # This method exists to implement a common interface but doesn't directly 
