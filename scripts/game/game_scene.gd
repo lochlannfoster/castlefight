@@ -146,3 +146,20 @@ func _add_test_worker():
     if ui_manager and ui_manager.has_method("select_worker"):
         ui_manager.select_worker(worker)
         print("Worker selected by UI manager")
+
+func _draw():
+    # Draw a grid every 100 pixels
+    var grid_size = 100
+    var grid_color = Color(0.3, 0.3, 0.3, 0.5)
+    
+    # Draw vertical lines
+    for x in range(0, 3000, grid_size):
+        draw_line(Vector2(x, 0), Vector2(x, 2000), grid_color)
+    
+    # Draw horizontal lines
+    for y in range(0, 2000, grid_size):
+        draw_line(Vector2(0, y), Vector2(0, 3000), grid_color)
+
+func _process(_delta):
+    # This will redraw the grid as the camera moves
+    update()

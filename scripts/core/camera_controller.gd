@@ -44,6 +44,14 @@ func _process(delta: float) -> void:
         move_direction.y = 1
     if Input.is_action_pressed("ui_up"):
         move_direction.y = -1
+
+    if move_direction != Vector2.ZERO:
+        print("Camera moving: ", move_direction)
+    
+    # Apply movement with boundaries
+    position += move_direction.normalized() * pan_speed * delta
+    position.x = clamp(position.x, boundary_left, boundary_right)
+    position.y = clamp(position.y, boundary_top, boundary_bottom)
     
     # Apply movement
     position += move_direction.normalized() * pan_speed * delta

@@ -329,13 +329,13 @@ func _create_player_workers() -> void:
         log_debug("WARNING: No players defined in player dictionary!", "warning", "GameManager")
         
         # In debug mode, create a default player if missing
-        var nm = get_node_or_null("/root/GameManager/NetworkManager") # Use different name to avoid shadowing
+        var nm = get_node_or_null("/root/GameManager/NetworkManager")
         if nm and nm.debug_mode:
             log_debug("Debug mode active: Creating default player", "info", "GameManager")
             
             # Create a default player for local testing
             var default_player_id = 1 # Server ID
-            var _result = add_player(default_player_id, "Debug Player", 0) # Explicitly discard return value
+            var _result = add_player(default_player_id, "Debug Player", 0)
             log_debug("Added default debug player with ID: " + str(default_player_id), "info", "GameManager")
     
     var worker_scene = load("res://scenes/units/worker.tscn")
@@ -356,7 +356,7 @@ func _create_player_workers() -> void:
         
         log_debug("Processing player ID: " + str(player_id) + " on team " + str(team), "info", "GameManager")
         
-        # Create worker instance
+        # Create worker instance - make sure 'worker' is declared here
         var worker = worker_scene.instance()
         
         # Set worker properties
