@@ -883,34 +883,24 @@ func _sync_player_data_to_game_manager() -> void:
     log_debug("Player sync complete. GameManager now has " + str(players.size()) + " players", "info", "GameManager")
 
 func toggle_grid_visualization() -> void:
-    if grid_system:
-        if grid_system.has_node("DebugGridVisualizer"):
-            var visualizer = grid_system.get_node("DebugGridVisualizer")
+    # Get grid system reference
+    var grid_sys = get_node_or_null("/root/GridSystem")
+    if not grid_sys:
+        grid_sys = get_node_or_null("GridSystem")
+        
+    if grid_sys:
+        if grid_sys.has_node("DebugGridVisualizer"):
+            var visualizer = grid_sys.get_node("DebugGridVisualizer")
             visualizer.visible = !visualizer.visible
-            log_debug("Grid visualization " + ("enabled" if visualizer.visible else "disabled"), "info", "GameManager")
+            print("Grid visualization " + ("enabled" if visualizer.visible else "disabled"))
         else:
-            grid_system.draw_debug_grid()
-            log_debug("Grid visualization created and enabled", "info", "GameManager")
-
-    # Spread initialization across multiple frames
-    var systems_to_initialize = [
-        "_initialize_grid_system",
-        "_initialize_combat_system",
-        "_initialize_economy_manager",
-        "_initialize_building_manager",
-        "_initialize_unit_factory",
-        "_initialize_ui_manager",
-        "_initialize_tech_tree_manager",
-        "_initialize_map_manager"
-    ]
-
-    # Initialize one system at a time
-    for system_method in systems_to_initialize:
-        call(system_method)
-        # Small yield to prevent freezing
-        yield (get_tree(), "idle_frame")
-    
-    print("Safe systems initialization complete")
+            if grid_sys.has_method("draw_debug_grid"):
+                grid_sys.draw_debug_grid()
+                print("Grid visualization created and enabled")
+            else:
+                print("Grid system doesn't have draw_debug_grid method")
+    else:
+        print("Grid system not found")
 
 func ensure_data_directories_exist() -> void:
     # List of required directories

@@ -250,7 +250,8 @@ func initialize() -> void:
         if game_manager.has_method("get_system"):
             # Use the get_system helper if available
             var building_manager = game_manager.get_system("BuildingManager")
-            var unit_factory = game_manager.get_system("UnitFactory")
+            # Note: We're prefixing with underscore to indicate intentionally unused variable
+            var _unit_factory = game_manager.get_system("UnitFactory")
             
             # Connect signals if needed
             if building_manager and not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):

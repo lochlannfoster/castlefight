@@ -1162,49 +1162,43 @@ func log_debug(message: String, level: String = "debug", context: String = "") -
         print(level.to_upper() + " [" + context + "]: " + message)
 
 func _on_scene_changed() -> void:
-    # Defensive programming: check if we can actually modify visibility
-    if not has_method("set_visible"):
-        print("Cannot modify UI visibility")
+    # Safety check for valid tree
+    if not is_inside_tree() or not get_tree():
+        print("WARNING: Scene change called but tree is not valid")
         return
     
-    # Add a flag to prevent recursive calls
+    # Prevent recursive calls
     if is_creating_ui:
         return
     
-    # Determine current scene type
+    # Safe scene type determination
     var current_scene = get_tree().current_scene
+    if not current_scene:
+        print("WARNING: No current scene found")
+        return
     
-    if current_scene:
-        match current_scene.name:
-            "MainMenu":
-                # Explicitly hide UI
-                set_visible(false)
-            "Lobby":
-                # Show UI for lobby
-                set_visible(true)
-            "game": # Lowercase to match Godot's typical scene naming
-                # Fully set up game UI
-                set_visible(true)
-                
-                # Use a flag to prevent recursion
-                is_creating_ui = true
-                _create_ui_elements()
-                is_creating_ui = false
-            _:
-                # Default: hide UI
-                set_visible(false)
+    # Explicit, safe visibility management
+    match current_scene.name.to_lower():
+        "mainmenu":
+            set_ui_visibility(false)
+        "lobby", "game":
+            set_ui_visibility(true)
+            # Defer complex UI setup
+            call_deferred("_create_ui_elements")
+        _:
+            set_ui_visibility(false)
 
 func initialize() -> void:
     print("UIManager: Initializing...")
     
     # Get references to game systems
-    var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager:
-        economy_manager = game_manager.get_node_or_null("EconomyManager")
+    var current_game_manager = get_node_or_null("/root/GameManager")
+    if current_game_manager:
+        economy_manager = current_game_manager.get_node_or_null("EconomyManager")
         if not economy_manager:
             economy_manager = get_node_or_null("/root/EconomyManager")
             
-        building_manager = game_manager.get_node_or_null("BuildingManager")
+        building_manager = current_game_manager.get_node_or_null("BuildingManager")
         if not building_manager:
             building_manager = get_node_or_null("/root/BuildingManager")
     else:
@@ -1220,3 +1214,37 @@ func initialize() -> void:
     _connect_signals()
     
     print("UIManager: Initialization complete")
+
+func set_ui_visibility(is_visible: bool) -> void:
+    # This function controls the visibility of all UI elements
+    # First, set our own visibility if possible
+    if has_method("set_visible"):
+        set_visible(is_visible)
+    elif "visible" in self:
+        visible = is_visible
+    
+    # If we have child UI elements, set their visibility too
+    if has_node("ResourceDisplay"):
+        get_node("ResourceDisplay").visible = is_visible
+    
+    if has_node("BuildingMenu"):
+        get_node("BuildingMenu").visible = false # Always start with building menu closed
+    
+    if has_node("UnitInfoPanel"):
+        get_node("UnitInfoPanel").visible = false # Always start with unit info panel closed
+    
+    if has_node("GameStatusPanel"):
+        get_node("GameStatusPanel").visible = is_visible
+    
+    if has_node("Minimap"):
+        get_node("Minimap").visible = is_visible
+    
+    if has_node("FloatingTextContainer"):
+        get_node("FloatingTextContainer").visible = is_visible
+    
+    # Apply to any CanvasItem children
+    for child in get_children():
+        if child is CanvasItem and child.name != "BuildingMenu" and child.name != "UnitInfoPanel":
+            child.visible = is_visible
+            
+    print("UI visibility set to: " + str(is_visible))

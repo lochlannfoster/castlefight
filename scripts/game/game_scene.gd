@@ -95,28 +95,32 @@ func _load_map_safely() -> void:
 func _initialize_managers_sequentially() -> void:
     _log("Initializing game managers...")
     
-    var managers_to_init = [
-        {"name": "GameManager", "ref_var": "game_manager_ref"},
-        {"name": "GridSystem", "ref_var": "grid_system"},
-        {"name": "EconomyManager", "ref_var": "economy_manager"},
-        {"name": "BuildingManager", "ref_var": "building_manager"},
-        {"name": "NetworkManager", "ref_var": "network_manager"},
-        {"name": "UIManager", "ref_var": "ui_manager"}
-    ]
+    # First check if GameManager exists, as it's often a dependency for others
+    game_manager_ref = get_node_or_null("/root/GameManager")
     
-    for manager_config in managers_to_init:
-        var manager_name = manager_config["name"]
-        var ref_var_name = manager_config["ref_var"]
+    # Get references to all managers first
+    grid_system = get_node_or_null("/root/GridSystem")
+    combat_system = get_node_or_null("/root/CombatSystem")
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    building_manager = get_node_or_null("/root/BuildingManager")
+    network_manager = get_node_or_null("/root/NetworkManager")
+    ui_manager = get_node_or_null("/root/UIManager")
+    
+    # Create missing critical managers if needed
+    if not grid_system and is_instance_valid(GridSystemScript):
+        _log("Creating missing GridSystem")
+        grid_system = GridSystemScript.new()
+        grid_system.name = "GridSystem"
+        get_tree().root.call_deferred("add_child", grid_system)
         
-        var manager = get_node_or_null("/root/" + manager_name)
-        if manager and manager.has_method("initialize"):
-            _log("Initializing " + manager_name)
-            manager.initialize()
-            
-            # Dynamically set reference using set()
-            set(ref_var_name, manager)
-        else:
-            _log("Manager " + manager_name + " not found or lacks initialization method", "warning")
+    if not building_manager and is_instance_valid(BuildingManagerScript):
+        _log("Creating missing BuildingManager")
+        building_manager = BuildingManagerScript.new()
+        building_manager.name = "BuildingManager"
+        get_tree().root.call_deferred("add_child", building_manager)
+    
+    # Initialize managers with a delay to ensure they're properly added
+    call_deferred("_deferred_initialize_managers")
 
 # Prepare initial game state without spawning test entities
 func _prepare_game_state() -> void:
@@ -148,7 +152,6 @@ func _validate_game_initialization() -> void:
     else:
         _log("Game initialization encountered issues!", "warning")
 
-# Optional: Input handling for game scene
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed:
         match event.scancode:
@@ -236,18 +239,103 @@ func _validate_system_readiness() -> void:
             _log("Critical system not initialized!", "error")
 
 func _explicitly_draw_grid() -> void:
-    _log("Explicitly drawing grid...")
+    _log("Setting up permanent grid visualization...")
     
     # Try multiple ways to get the grid system
     var grid_sys = get_node_or_null("/root/GridSystem")
     if not grid_sys:
         grid_sys = get_node_or_null("GridSystem")
     
-    if grid_sys:
-        if grid_sys.has_method("draw_debug_grid"):
-            grid_sys.draw_debug_grid()
-            _log("Debug grid drawn successfully")
+    if not grid_sys:
+        # Try to create grid system if it doesn't exist
+        if is_instance_valid(GridSystemScript):
+            grid_sys = GridSystemScript.new()
+            grid_sys.name = "GridSystem"
+            get_tree().root.call_deferred("add_child", grid_sys)
+            _log("Created missing GridSystem")
+            
+            # We need to wait until it's added to the tree
+            yield (get_tree(), "idle_frame")
         else:
-            _log("Grid system found but lacks draw_debug_grid method", "error")
+            _log("Cannot create grid system - script not valid", "error")
+            return
+    
+    # Now try to draw the grid
+    if grid_sys and grid_sys.has_method("draw_debug_grid"):
+        # Use call_deferred to ensure grid system is ready
+        call_deferred("_draw_grid_deferred", grid_sys)
     else:
-        _log("Could not find GridSystem to draw grid", "error")
+        _log("GridSystem found but lacks draw_debug_grid method", "error")
+
+func _verify_system_availability() -> void:
+    _log("Verifying system availability...")
+    
+    # Check for critical autoloaded systems
+    var autoload_systems = [
+        "GameManager",
+        "GridSystem",
+        "EconomyManager",
+        "BuildingManager",
+        "UIManager",
+        "NetworkManager",
+        "CombatSystem"
+    ]
+    
+    for system in autoload_systems:
+        var node = get_node_or_null("/root/" + system)
+        if node:
+            _log("Found system: " + system)
+        else:
+            _log("System not found: " + system, "warning")
+    
+    # Check for required children nodes
+    var required_children = ["GameWorld", "Ground", "Units", "Buildings", "Camera2D"]
+    
+    for child_name in required_children:
+        var child = get_node_or_null(child_name)
+        if child:
+            _log("Found child node: " + child_name)
+        else:
+            _log("Child node not found: " + child_name, "warning")
+            
+            # Create essential missing nodes
+            if child_name in ["GameWorld", "Ground", "Units", "Buildings"]:
+                var new_node = Node2D.new()
+                new_node.name = child_name
+                call_deferred("add_child", new_node)
+                _log("Created missing essential node: " + child_name)
+
+func _deferred_initialize_managers() -> void:
+    # Initialize each manager if it has the method
+    var managers = [
+        {"node": grid_system, "name": "GridSystem"},
+        {"node": combat_system, "name": "CombatSystem"},
+        {"node": economy_manager, "name": "EconomyManager"},
+        {"node": building_manager, "name": "BuildingManager"},
+        {"node": network_manager, "name": "NetworkManager"},
+        {"node": ui_manager, "name": "UIManager"}
+    ]
+    
+    for manager in managers:
+        if manager.node and manager.node.has_method("initialize"):
+            _log("Initializing " + manager.name)
+            manager.node.initialize()
+        elif manager.node:
+            _log(manager.name + " found but lacks initialization method", "warning")
+        else:
+            _log(manager.name + " not found", "warning")
+
+func _draw_grid_deferred(grid_sys) -> void:
+    if is_instance_valid(grid_sys) and grid_sys.has_method("draw_debug_grid"):
+        grid_sys.draw_debug_grid()
+        
+        # Make sure the grid visualizer is visible by default
+        yield (get_tree(), "idle_frame") # Wait for visualizer to be created
+        var visualizer = grid_sys.get_node_or_null("DebugGridVisualizer")
+        if visualizer:
+            visualizer.visible = true
+            _log("Grid visualizer setup complete and visible")
+        else:
+            _log("Grid visualizer not found after creation", "warning")
+    else:
+        _log("Grid system invalid or missing draw method", "error")

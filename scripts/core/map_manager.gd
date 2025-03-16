@@ -518,9 +518,10 @@ func initialize() -> void:
     # Connect grid signals
     if grid_system:
         if not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
-            grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+            # Store the connection result to avoid warning
+            var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
     
-    # Try to load default map
-    load_map_config()
+    # Try to load default map and store the result
+    var _map_config_result = load_map_config()
     
     print("MapManager: Initialization complete")
