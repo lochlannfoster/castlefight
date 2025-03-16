@@ -22,10 +22,16 @@ var game_manager
 
 # Ready function
 func _ready() -> void:
-    # Get references to required systems
-    grid_system = get_node("/root/GameManager/GridSystem")
-    economy_manager = get_node("/root/GameManager/EconomyManager")
-    game_manager = get_node("/root/GameManager")
+    # Get references to required systems using more robust lookups
+    grid_system = get_node_or_null("/root/GridSystem")
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GameManager/GridSystem")
+        
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    if not economy_manager:
+        economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
+        
+    game_manager = get_node_or_null("/root/GameManager")
     
     # Load building data
     _load_building_data()

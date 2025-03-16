@@ -84,13 +84,37 @@ func _physics_process(delta: float) -> void:
 
 # Get references to manager nodes
 func _get_manager_references() -> void:
+    # Try multiple paths for each manager
     grid_system = get_node_or_null("/root/GridSystem")
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GameManager/GridSystem")
     
+    # Get game manager
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        building_manager = game_manager.building_manager
-        economy_manager = game_manager.economy_manager
-        ui_manager = game_manager.ui_manager
+        # Try to get managers from game manager
+        building_manager = game_manager.get_node_or_null("BuildingManager")
+        if not building_manager:
+            building_manager = get_node_or_null("/root/BuildingManager")
+            
+        economy_manager = game_manager.get_node_or_null("EconomyManager")
+        if not economy_manager:
+            economy_manager = get_node_or_null("/root/EconomyManager")
+            
+        ui_manager = game_manager.get_node_or_null("UIManager")
+        if not ui_manager:
+            ui_manager = get_node_or_null("/root/UIManager")
+    else:
+        # Fallback to root level managers
+        building_manager = get_node_or_null("/root/BuildingManager")
+        economy_manager = get_node_or_null("/root/EconomyManager")
+        ui_manager = get_node_or_null("/root/UIManager")
+    
+    # Additional logging for debugging
+    print("Worker references - Grid: ", grid_system != null,
+          " Building: ", building_manager != null,
+          " Economy: ", economy_manager != null,
+          " UI: ", ui_manager != null)
 
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:

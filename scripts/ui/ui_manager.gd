@@ -383,25 +383,29 @@ func _create_floating_text_container() -> void:
 
 # Create tooltip
 func _create_tooltip() -> void:
-    # Explicitly create tooltip if it doesn't exist
-    if not has_node("Tooltip"):
-        tooltip = Control.new()
-        tooltip.name = "Tooltip"
-        tooltip.visible = false
-        tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        add_child(tooltip)
+    # Check if we already have a tooltip
+    if has_node("Tooltip"):
+        tooltip = get_node("Tooltip")
+        return
         
-        var panel = Panel.new()
-        panel.name = "Panel"
-        panel.rect_min_size = Vector2(200, 80)
-        tooltip.add_child(panel)
-        
-        var label = Label.new()
-        label.name = "Label"
-        label.rect_position = Vector2(10, 10)
-        label.rect_size = Vector2(180, 60)
-        label.autowrap = true
-        panel.add_child(label)
+    # Create the tooltip if it doesn't exist
+    tooltip = Control.new()
+    tooltip.name = "Tooltip"
+    tooltip.visible = false
+    tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(tooltip)
+    
+    var panel = Panel.new()
+    panel.name = "Panel"
+    panel.rect_min_size = Vector2(200, 80)
+    tooltip.add_child(panel)
+    
+    var label = Label.new()
+    label.name = "Label"
+    label.rect_position = Vector2(10, 10)
+    label.rect_size = Vector2(180, 60)
+    label.autowrap = true
+    panel.add_child(label)
 
 # Create debug overlay
 func _create_debug_overlay() -> void:

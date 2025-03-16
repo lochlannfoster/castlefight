@@ -1160,7 +1160,8 @@ func verify_game_state() -> void:
 func initialize_game_systems() -> void:
     log_debug("Initializing all game systems...", "info", "GameManager")
     
-    # Initialize grid system
+    # Initialize in dependency order:
+    # 1. Grid System (no dependencies)
     grid_system = get_node_or_null("/root/GridSystem")
     if not grid_system:
         var grid_system_class = load("res://scripts/core/grid_system.gd")
@@ -1172,18 +1173,8 @@ func initialize_game_systems() -> void:
             if grid_system.has_method("initialize_grid"):
                 grid_system.initialize_grid()
             log_debug("Created and initialized GridSystem", "info", "GameManager")
-    
-    # Initialize combat system
-    combat_system = get_node_or_null("/root/CombatSystem")
-    if not combat_system:
-        var combat_system_class = load("res://scripts/combat/combat_system.gd")
-        if combat_system_class:
-            combat_system = combat_system_class.new()
-            combat_system.name = "CombatSystem"
-            add_child(combat_system)
-            log_debug("Created CombatSystem", "info", "GameManager")
-    
-    # Initialize economy manager
+            
+    # 2. Economy Manager (no dependencies)
     economy_manager = get_node_or_null("/root/EconomyManager")
     if not economy_manager:
         var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
@@ -1193,7 +1184,20 @@ func initialize_game_systems() -> void:
             add_child(economy_manager)
             log_debug("Created EconomyManager", "info", "GameManager")
     
-    # Initialize building manager
+    # 3. Combat System (no dependencies) 
+    combat_system = get_node_or_null("/root/CombatSystem")
+    if not combat_system:
+        var combat_system_class = load("res://scripts/combat/combat_system.gd")
+        if combat_system_class:
+            combat_system = combat_system_class.new()
+            combat_system.name = "CombatSystem"
+            add_child(combat_system)
+            log_debug("Created CombatSystem", "info", "GameManager")
+    
+    # 4. Unit Factory (typically a singleton)
+    unit_factory = get_node_or_null("/root/UnitFactory")
+    
+    # 5. Building Manager (depends on grid, economy)
     building_manager = get_node_or_null("/root/BuildingManager")
     if not building_manager:
         var building_manager_class = load("res://scripts/building/building_manager.gd")
@@ -1203,11 +1207,7 @@ func initialize_game_systems() -> void:
             add_child(building_manager)
             log_debug("Created BuildingManager", "info", "GameManager")
     
-    # Initialize unit factory
-    unit_factory = get_node_or_null("/root/UnitFactory")
-    # UnitFactory is usually a singleton, so we don't need to create it
-    
-    # Initialize tech tree manager
+    # 6. Tech Tree Manager
     tech_tree_manager = get_node_or_null("/root/TechTreeManager")
     if not tech_tree_manager:
         var tech_tree_manager_class = load("res://scripts/core/tech_tree_manager.gd")
@@ -1217,7 +1217,7 @@ func initialize_game_systems() -> void:
             add_child(tech_tree_manager)
             log_debug("Created TechTreeManager", "info", "GameManager")
     
-    # Initialize map manager if needed
+    # 7. Map Manager
     map_manager = get_node_or_null("/root/MapManager")
     if not map_manager:
         var map_manager_class = load("res://scripts/core/map_manager.gd")
@@ -1227,12 +1227,70 @@ func initialize_game_systems() -> void:
             add_child(map_manager)
             log_debug("Created MapManager", "info", "GameManager")
     
-    # Set default tech trees
+    # Set default tech trees after tech tree manager is initialized
     if tech_tree_manager and tech_tree_manager.has_method("set_team_tech_tree"):
         tech_tree_manager.set_team_tech_tree(0, "human")
         tech_tree_manager.set_team_tech_tree(1, "orc")
+    
+    # 8. UI Manager (depends on most other systems)
+    ui_manager = get_node_or_null("/root/UIManager")
+    if not ui_manager:
+        var ui_manager_class = load("res://scripts/ui/ui_manager.gd")
+        if ui_manager_class:
+            ui_manager = ui_manager_class.new()
+            ui_manager.name = "UIManager"
+            add_child(ui_manager)
+            log_debug("Created UIManager", "info", "GameManager")
+    
+    # Wait a frame for all systems to finish initializing
+    yield (get_tree(), "idle_frame")
     
     # Connect signals after all systems are initialized
     _connect_signals()
     
     log_debug("All game systems initialized successfully", "info", "GameManager")
+
+func get_system(system_name: String) -> Node:
+    # First check if the system is a direct child
+    var system = get_node_or_null(system_name)
+    if system:
+        return system
+        
+    # Then check if it's at root level (autoload)
+    system = get_node_or_null("/root/" + system_name)
+    if system:
+        return system
+        
+    # Finally check in common parent nodes
+    var parent_paths = ["/root/game", "/root/game/GameWorld", "/root/GameManager"]
+    for path in parent_paths:
+        var parent = get_node_or_null(path)
+        if parent:
+            system = parent.get_node_or_null(system_name)
+            if system:
+                return system
+                
+    # Not found
+    print("WARNING: System not found: " + system_name)
+    return null
+
+func verify_critical_nodes() -> void:
+    var critical_paths = [
+        "/root/GameManager",
+        "/root/GridSystem",
+        "/root/EconomyManager",
+        "/root/BuildingManager"
+    ]
+    
+    for path in critical_paths:
+        var node = get_node_or_null(path)
+        if node:
+            print("VERIFIED: " + path + " exists")
+        else:
+            print("MISSING: " + path + " does not exist")
+            
+    # Also check local paths
+    if has_node("GameWorld"):
+        print("VERIFIED: GameWorld exists")
+    else:
+        print("MISSING: GameWorld does not exist")
