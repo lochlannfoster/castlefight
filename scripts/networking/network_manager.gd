@@ -681,24 +681,24 @@ func start_match() -> void:
 
 # New function to sync player data to GameManager
 func _sync_player_data_to_game_manager() -> void:
-    var game_manager = get_node_or_null("/root/GameManager")
-    if not game_manager:
+    var current_gm = get_node_or_null("/root/GameManager") # Renamed to avoid shadowing
+    if not current_gm:
         print("ERROR: Cannot sync player data - GameManager not found")
         return
         
     print("Syncing player data to GameManager...")
     
     # Clear existing players and add from player_info
-    game_manager.players.clear()
+    current_gm.players.clear()
     
     for player_id in player_info.keys():
         var player_data = player_info[player_id]
         # Only add players that have a team assigned
         if player_data.has("team") and player_data.team >= 0:
             print("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(player_data.name) + ", Team=" + str(player_data.team))
-            game_manager.add_player(player_id, player_data.name, player_data.team)
+            var _result = current_gm.add_player(player_id, player_data.name, player_data.team)
     
-    print("Player sync complete. GameManager now has " + str(game_manager.players.size()) + " players")
+    print("Player sync complete. GameManager now has " + str(current_gm.players.size()) + " players")
 
 remote func _match_started() -> void:
     if is_server:
@@ -1740,3 +1740,6 @@ remote func _request_change_team(new_team: int) -> void:
     
     var player_id = get_tree().get_rpc_sender_id()
     var _change_result = change_player_team(player_id, new_team)
+
+func get_player_info() -> Dictionary:
+    return player_info

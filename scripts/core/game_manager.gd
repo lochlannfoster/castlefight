@@ -315,6 +315,11 @@ func start_game() -> void:
         log_debug("Cannot start game: Current state is " + str(current_state), "error", "GameManager")
 
     log_debug("Game started function completed", "info", "GameManager")
+    var camera = get_tree().current_scene.get_node_or_null("Camera2D")
+    if camera:
+        log_debug("Camera position: " + str(camera.global_position), "info", "GameManager")
+        # Ensure camera sees the right area - for testing, move it to the expected HQ position
+        camera.global_position = get_headquarters_position(0)
     
 func _create_player_workers() -> void:
     log_debug("Creating player workers", "info", "GameManager")
@@ -379,6 +384,8 @@ func _create_player_workers() -> void:
             log_debug("Current scene: " + current_scene.name, "info", "GameManager")
             current_scene.add_child(worker)
             log_debug("Worker added to scene successfully", "info", "GameManager")
+            log_debug("Worker created at position: " + str(worker.position), "info", "GameManager")
+            log_debug("Worker has valid texture: " + str(worker.get_node_or_null("Sprite") != null && worker.get_node("Sprite").texture != null), "info", "GameManager")
         else:
             log_debug("CRITICAL ERROR: No current scene found!", "error", "GameManager")
             return
@@ -731,21 +738,26 @@ func log_debug(message: String, level: String = "debug", context: String = "") -
         print(level.to_upper() + " [" + context + "]: " + message)
 
 func _sync_player_data_to_game_manager() -> void:
-    var gm = get_node_or_null("/root/GameManager") # Use different name to avoid shadowing
-    if not gm:
-        print("ERROR: Cannot sync player data - GameManager not found")
+    # Use a different variable name to avoid shadowing the class member
+    var nm = get_node_or_null("NetworkManager")
+    if not nm or not nm.has_method("get_player_info"):
+        log_debug("ERROR: Cannot sync player data - NetworkManager not found or incompatible", "error", "GameManager")
         return
         
-    print("Syncing player data to GameManager...")
+    log_debug("Syncing player data to GameManager...", "info", "GameManager")
     
-    # Clear existing players and add from player_info
-    gm.players.clear()
+    # Get player info from NetworkManager
+    var player_data = nm.get_player_info()
     
-    for player_id in player_info.keys():
-        var player_data = player_info[player_id]
+    # Clear existing players
+    players.clear()
+    
+    # Add all players from network_manager
+    for player_id in player_data.keys():
+        var p_data = player_data[player_id]
         # Only add players that have a team assigned
-        if player_data.has("team") and player_data.team >= 0:
-            print("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(player_data.name) + ", Team=" + str(player_data.team))
-            var _result = gm.add_player(player_id, player_data.name, player_data.team) # Explicitly discard return value
+        if p_data.has("team") and p_data.team >= 0:
+            log_debug("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(p_data.name) + ", Team=" + str(p_data.team), "info", "GameManager")
+            var _result = add_player(player_id, p_data.name, p_data.team)
     
-    print("Player sync complete. GameManager now has " + str(gm.players.size()) + " players")
+    log_debug("Player sync complete. GameManager now has " + str(players.size()) + " players", "info", "GameManager")
