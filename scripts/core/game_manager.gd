@@ -117,9 +117,6 @@ func _initialize_systems() -> void:
         fog_of_war_manager = service_locator.get_service("FogOfWarManager")
         network_manager = service_locator.get_service("NetworkManager")
         map_manager = service_locator.get_service("MapManager")
-    else:
-        # Fallback to old initialization if ServiceLocator not available
-        _initialize_managers_directly()
 
 # Connect signals between systems
 func _connect_signals() -> void:

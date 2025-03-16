@@ -47,8 +47,8 @@ func _ready() -> void:
     call_deferred("_explicitly_draw_grid")
 
 # Centralized game systems initialization method
-func _initialize_game_systems() -> void:
-    _log("Beginning game systems initialization...")
+func initialize_game_systems() -> void:
+    log_debug("Initializing all game systems...", "info", "GameManager")
     
     # Initialize all services through ServiceLocator
     var service_locator = get_node("/root/ServiceLocator")
@@ -63,7 +63,13 @@ func _initialize_game_systems() -> void:
     network_manager = service_locator.get_service("NetworkManager")
     ui_manager = service_locator.get_service("UIManager")
     
-    _log("Game systems initialization complete.")
+    # Wait a frame for all systems to finish initializing
+    yield (get_tree(), "idle_frame")
+    
+    # Connect signals after all systems are initialized
+    _connect_signals()
+
+        _log("Game systems initialization complete.")
 
 # Safely set up game camera with deferred addition
 func _setup_safe_camera() -> void:
