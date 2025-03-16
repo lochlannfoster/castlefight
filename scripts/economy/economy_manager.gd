@@ -50,34 +50,28 @@ var total_resources_spent: Dictionary = {}
 var player_teams: Dictionary = {}
 var player_resources_spent: Dictionary = {}
 
-func log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
-    # Skip logs below current configuration level
-    if level < _config.current_level:
-        return
-    
-    var entry = LogEntry.new()
-    entry.timestamp = OS.get_unix_time()
-    entry.level = level
-    entry.category = category
-    entry.message = message
-    entry.context = context
-    
-    # Store in log buffer
-    _log_buffer.append(entry)
-    
-    # Trim buffer if it gets too large
-    if _log_buffer.size() > 1000:
-        _log_buffer.pop_front()
-    
-    # Output based on destination configuration
-    match _config.destination:
-        LogDestination.CONSOLE:
-            _log_to_console(entry)
-        LogDestination.FILE:
-            _log_to_file(entry)
-        LogDestination.BOTH:
-            _log_to_console(entry)
-            _log_to_file(entry)
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        elif service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 func _init() -> void:
     service_name = "EconomyManager"
@@ -94,16 +88,8 @@ func _initialize_impl() -> void:
     # Reset resources to starting values
     reset_team_resources()
     
-    log("Economy manager initialized", "info")
+    log(level, message, category, context)
 
-func _process(delta: float) -> void:
-    income_timer += delta
-    
-    if income_timer >= income_interval:
-        income_timer -= income_interval
-        _distribute_income()
-
-# Process function for handling income ticks
 func _process(delta: float) -> void:
     income_timer += delta
     

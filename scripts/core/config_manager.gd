@@ -73,7 +73,7 @@ func load_config(path: String = "res://config.json") -> bool:
 func save_config(path: String = "user://config.json") -> bool:
     var file = File.new()
     if file.open(path, File.WRITE) != OK:
-        push_error(f"Could not open file for writing: {path}")
+        push_error("Could not open file for writing: " + path)
         return false
     
     file.store_string(JSON.print(_config, "  "))

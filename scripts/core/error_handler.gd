@@ -33,25 +33,27 @@ var _error_history: Array = []
 signal error_occurred(report)
 signal critical_error(report)
 
-func log(message: String, level: String = "info", context: String = "ErrorHandler") -> void:
-    var logger = get_node_or_null("/root/UnifiedLogger")
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
             "error":
-                logger.error(message, context)
+                logger.error(message, context if context else service_name)
             "warning":
-                logger.warning(message, context)
+                logger.warning(message, context if context else service_name)
             "debug":
-                logger.debug(message, context)
+                logger.debug(message, context if context else service_name)
             "verbose":
-                logger.verbose(message, context)
+                logger.debug(message, context if context else service_name)
             _:
-                logger.info(message, context)
+                logger.info(message, context if context else service_name)
     else:
         # Fallback to print
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
+        elif service_name:
+            prefix += "[" + service_name + "]"
         print(prefix + " " + message)
 
 func _ready():

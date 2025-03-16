@@ -115,7 +115,7 @@ func log(message: String, level: String = "info", context: String = "") -> void:
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        else if service_name:
+        elif service_name:
             prefix += "[" + service_name + "]"
         print(prefix + " " + message)
 
@@ -1029,11 +1029,11 @@ func show_end_game_screen(winner: int, reason: String) -> void:
 func _on_end_game_continue() -> void:
     # Switch back to lobby scene
     var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager and game_manager.has_method("change_scene"):
-		game_manager.change_scene("res://scenes/lobby/lobby.tscn")
-	else:
-		# Fallback if not available
-		get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+        # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:

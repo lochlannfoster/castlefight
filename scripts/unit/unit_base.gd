@@ -73,6 +73,19 @@ func _ready() -> void:
     _setup_core_components()
     _configure_default_behavior()
 
+func _initialize_core_systems() -> void:
+    # Get references to managers
+    combat_manager = get_node_or_null("/root/CombatSystem")
+    grid_system = get_node_or_null("/root/GridSystem")
+    
+    # Set up core components if needed
+    if not has_node("CollisionShape2D"):
+        var collision = CollisionShape2D.new()
+        var shape = CircleShape2D.new()
+        shape.radius = collision_radius
+        collision.shape = shape
+        add_child(collision)
+
 # Process function
 func _physics_process(delta: float) -> void:
     # Skip processing if dead

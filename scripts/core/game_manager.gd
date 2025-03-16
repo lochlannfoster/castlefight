@@ -79,7 +79,7 @@ func log(message: String, level: String = "info", context: String = "") -> void:
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        else if service_name:
+        elif service_name:
             prefix += "[" + service_name + "]"
         print(prefix + " " + message)
 
@@ -1207,11 +1207,11 @@ func change_scene(scene_path: String, transition: bool = false) -> bool:
     
     # Change to the scene
     var game_manager = get_node_or_null("/root/GameManager")
-	if game_manager and game_manager.has_method("change_scene"):
-		game_manager.change_scene("res://scenes/lobby/lobby.tscn")
-	else:
-		# Fallback if not available
-		get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+        # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
     
     if error != OK:
         log("message", "level", "GameManager")

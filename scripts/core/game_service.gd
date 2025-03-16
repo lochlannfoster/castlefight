@@ -136,8 +136,8 @@ func log(message: String, level: String = "info", context: String = "") -> void:
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        else if service_name:
-            prefix += "[" + service_name + "]"
+        elif service_name:
+                prefix += "[" + service_name + "]"
         print(prefix + " " + message)
 
 # Handle scene changes

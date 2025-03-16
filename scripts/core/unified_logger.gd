@@ -29,12 +29,12 @@ class LogEntry:
 class UnifiedLogger:
     # Configuration for logging behavior
     var _config: Dictionary = {
-        "current_level": LogLevel.INFO, # Default log level
-        "destination": LogDestination.BOTH,
-        "log_file_path": "user://logs/game_log.txt",
-        "max_log_files": 5, # Number of log files to keep
-        "max_file_size_mb": 10 # Maximum log file size before rotation
-    }
+    "current_level": LogLevel.INFO,
+    "destination": LogDestination.BOTH,
+    "log_file_path": "user://logs/game_log.txt",
+    "max_log_files": 5,
+    "max_file_size_mb": 10
+}
 
     # Log storage for potential replay or analysis
     var _log_buffer: Array = []

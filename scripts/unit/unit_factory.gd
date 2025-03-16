@@ -111,7 +111,7 @@ func create_unit(unit_type: String, position: Vector2, team: int):
     return unit
     
 # Configure a unit instance with data
-func _configure_unit(unit: Unit, unit_type: String, data: Dictionary, team: int) -> void:
+func _configure_unit(unit, unit_type: String, data: Dictionary, team: int) -> void:
     # Set basic properties
     unit.unit_id = unit_type
     unit.display_name = data.display_name if data.has("display_name") else unit_type
