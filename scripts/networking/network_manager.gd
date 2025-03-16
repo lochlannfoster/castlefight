@@ -216,17 +216,40 @@ func _create_minimal_scene(scene_path: String) -> void:
         else:
             push_error("Failed to save scene: " + str(save_result))
 
+# This already exists, but update to make it more robust:
 func _initialize_game_references() -> void:
+    # Get direct references
     game_manager = get_node_or_null("/root/GameManager")
     economy_manager = get_node_or_null("/root/EconomyManager")
     unit_factory = get_node_or_null("/root/UnitFactory")
     tech_tree_manager = get_node_or_null("/root/TechTreeManager")
     
-    # Get UI manager from game manager if available
+    # Try alternative paths if not found
+    if not game_manager:
+        game_manager = get_node_or_null("/root/game/GameManager")
+    
+    if not economy_manager and game_manager:
+        economy_manager = game_manager.get_node_or_null("EconomyManager")
+    
+    if not unit_factory and game_manager:
+        unit_factory = game_manager.get_node_or_null("UnitFactory")
+    
+    if not tech_tree_manager and game_manager:
+        tech_tree_manager = game_manager.get_node_or_null("TechTreeManager")
+    
+    # Get UI manager and other managers from game manager if available
     if game_manager:
         ui_manager = game_manager.get_node_or_null("UIManager")
+        if not ui_manager:
+            ui_manager = get_node_or_null("/root/UIManager")
+            
         map_manager = game_manager.get_node_or_null("MapManager")
+        if not map_manager:
+            map_manager = get_node_or_null("/root/MapManager")
+            
         fog_of_war_manager = game_manager.get_node_or_null("FogOfWarManager")
+        if not fog_of_war_manager:
+            fog_of_war_manager = get_node_or_null("/root/FogOfWarManager")
     
     if debug_mode:
         print("Game system references initialized")

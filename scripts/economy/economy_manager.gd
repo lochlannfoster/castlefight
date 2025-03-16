@@ -14,16 +14,16 @@ signal bounty_earned(team, amount, source)
 enum ResourceType {GOLD, WOOD, SUPPLY}
 
 # Income settings
-export var base_income: float = 10.0  # Base income per tick
-export var income_interval: float = 10.0  # Seconds between income ticks
+export var base_income: float = 10.0 # Base income per tick
+export var income_interval: float = 10.0 # Seconds between income ticks
 
 var team_resources: Dictionary = {
-    0: {  # Team A
-        0: 100,  # GOLD - using direct integers instead of enum
-        1: 50,   # WOOD
-        2: 10    # SUPPLY
+    0: { # Team A
+        0: 100, # GOLD - using direct integers instead of enum
+        1: 50, # WOOD
+        2: 10 # SUPPLY
     },
-    1: {  # Team B
+    1: { # Team B
         0: 100,
         1: 50,
         2: 10
@@ -32,8 +32,8 @@ var team_resources: Dictionary = {
 
 # Team income rates
 var team_income: Dictionary = {
-    0: base_income,  # Team A
-    1: base_income   # Team B
+    0: base_income, # Team A
+    1: base_income # Team B
 }
 
 # Costs for buildings, units, and items
@@ -206,7 +206,7 @@ func add_resource(team: int, resource_type: int, amount: float) -> void:
     if amount > 0:
         total_resources_collected[team][resource_type] += amount
     else:
-        total_resources_spent[team][resource_type] -= amount  # Convert to positive
+        total_resources_spent[team][resource_type] -= amount # Convert to positive
     
     emit_signal("resources_changed", team, resource_type, team_resources[team][resource_type])
 
@@ -270,7 +270,7 @@ func purchase_building(team: int, building_type: String) -> bool:
         add_resource(team, resource_type, -cost)
         
         if resource_type == ResourceType.GOLD:
-            total_cost = cost  # For income calculations, we only care about gold
+            total_cost = cost # For income calculations, we only care about gold
     
     emit_signal("purchase_made", team, building_type, total_cost)
     
@@ -482,3 +482,57 @@ func get_total_resources_collected(team: int, resource_type: int) -> float:
         return 0.0
     
     return total_resources_collected[team][resource_type]
+
+func initialize() -> void:
+    print("EconomyManager: Initializing...")
+    
+    # Try to get reference to UI manager for displaying income ticks
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager:
+        ui_manager = game_manager.get_node_or_null("UIManager")
+        if not ui_manager:
+            ui_manager = get_node_or_null("/root/UIManager")
+    
+    # Reset team resources to default values
+    reset_team_resources()
+    
+    # Load cost data
+    _load_cost_data()
+    
+    print("EconomyManager: Initialization complete")
+
+# Add this helper method for resetting resources
+func reset_team_resources() -> void:
+    # Default starting resources for each team
+    team_resources = {
+        0: { # Team A
+            0: 100, # GOLD
+            1: 50, # WOOD
+            2: 10 # SUPPLY
+        },
+        1: { # Team B
+            0: 100,
+            1: 50,
+            2: 10
+        }
+    }
+    
+    # Reset income rates
+    team_income = {
+        0: base_income, # Team A
+        1: base_income # Team B
+    }
+    
+    # Reset statistics tracking
+    total_resources_collected = {
+        0: {0: 0, 1: 0, 2: 0}, # Team A
+        1: {0: 0, 1: 0, 2: 0} # Team B
+    }
+    
+    total_resources_spent = {
+        0: {0: 0, 1: 0, 2: 0}, # Team A
+        1: {0: 0, 1: 0, 2: 0} # Team B
+    }
+    
+    # Reset income timer
+    income_timer = 0.0

@@ -357,3 +357,32 @@ func get_building_data(building_type: String) -> Dictionary:
 # Track statistics for destroyed buildings
 var buildings_destroyed_by_team: Dictionary = {0: 0, 1: 0}
 var buildings_constructed_by_player: Dictionary = {}
+
+func initialize() -> void:
+    print("BuildingManager: Initializing...")
+    
+    # Get references to required systems
+    grid_system = get_node_or_null("/root/GridSystem")
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GameManager/GridSystem")
+        if not grid_system:
+            log_debug("Error: GridSystem not found", "error", "BuildingManager")
+        
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    if not economy_manager:
+        economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
+        if not economy_manager:
+            log_debug("Error: EconomyManager not found", "error", "BuildingManager")
+        
+    game_manager = get_node_or_null("/root/GameManager")
+    if not game_manager:
+        log_debug("Error: GameManager not found", "error", "BuildingManager")
+    
+    # Clear building tracking
+    buildings.clear()
+    selected_building = null
+    
+    # Load building data
+    _load_building_data()
+    
+    print("BuildingManager: Initialization complete with " + str(building_data.size()) + " building types loaded")

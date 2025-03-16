@@ -9,13 +9,13 @@ signal map_generated
 signal lane_created(lane_id, lane_data)
 
 # Map properties
-export var map_width: int = 40  # Width in grid cells
-export var map_height: int = 30  # Height in grid cells
-export var lane_count: int = 3  # Number of lanes
-export var base_size: int = 8  # Size of team bases in grid cells
-export var team_a_color: Color = Color(0, 0, 1)  # Blue
-export var team_b_color: Color = Color(1, 0, 0)  # Red
-export var neutral_color: Color = Color(0.5, 0.5, 0.5)  # Gray
+export var map_width: int = 40 # Width in grid cells
+export var map_height: int = 30 # Height in grid cells
+export var lane_count: int = 3 # Number of lanes
+export var base_size: int = 8 # Size of team bases in grid cells
+export var team_a_color: Color = Color(0, 0, 1) # Blue
+export var team_b_color: Color = Color(1, 0, 0) # Red
+export var neutral_color: Color = Color(0.5, 0.5, 0.5) # Gray
 
 # Map data
 var map_data: Dictionary = {}
@@ -118,11 +118,11 @@ func load_map(map_name: String) -> bool:
     base_size = data.base_size
     
     # Load team bases
-    team_a_base_rect = Rect2(data.team_a_base.x, data.team_a_base.y, 
+    team_a_base_rect = Rect2(data.team_a_base.x, data.team_a_base.y,
                              data.team_a_base.width, data.team_a_base.height)
-    team_b_base_rect = Rect2(data.team_b_base.x, data.team_b_base.y, 
+    team_b_base_rect = Rect2(data.team_b_base.x, data.team_b_base.y,
                              data.team_b_base.width, data.team_b_base.height)
-    neutral_zone_rect = Rect2(data.neutral_zone.x, data.neutral_zone.y, 
+    neutral_zone_rect = Rect2(data.neutral_zone.x, data.neutral_zone.y,
                               data.neutral_zone.width, data.neutral_zone.height)
     
     # Load positions
@@ -241,7 +241,7 @@ func apply_map_to_grid() -> void:
     # If grid is not initialized, do so now
     if grid_system.grid_cells.empty():
         grid_system.initialize_grid()
-        return  # Grid initialization will call _on_grid_initialized
+        return # Grid initialization will call _on_grid_initialized
     
     # Otherwise, update existing grid cells
     for key in map_data.keys():
@@ -267,16 +267,16 @@ func apply_map_to_grid() -> void:
 
 # Get team starting position
 func get_team_start_position(team: int) -> Vector2:
-    if team == 0:  # Team A
+    if team == 0: # Team A
         return grid_system.grid_to_world(team_a_start_pos)
-    else:  # Team B
+    else: # Team B
         return grid_system.grid_to_world(team_b_start_pos)
 
 # Get team HQ position
 func get_team_hq_position(team: int) -> Vector2:
-    if team == 0:  # Team A
+    if team == 0: # Team A
         return grid_system.grid_to_world(team_a_hq_pos)
-    else:  # Team B
+    else: # Team B
         return grid_system.grid_to_world(team_b_hq_pos)
 
 # Generate lanes for the map
@@ -309,7 +309,7 @@ func _generate_lane_waypoints(start_x: int, start_y: int, end_x: int, _end_y: in
     var waypoints = []
     
     # Simple straight lane for now
-    var steps = 5  # Number of waypoints to create
+    var steps = 5 # Number of waypoints to create
     var step_x = (end_x - start_x) / float(steps - 1)
     
     for i in range(steps):
@@ -351,7 +351,7 @@ func _get_lane_for_position(pos: Vector2) -> int:
         if pos.y >= start_y and pos.y < end_y:
             return i
     
-    return 0  # Default to first lane
+    return 0 # Default to first lane
 
 # Check if a position is buildable
 func _is_position_buildable(pos: Vector2) -> bool:
@@ -400,32 +400,32 @@ func _update_map_display() -> void:
             var marker = ColorRect.new()
             marker.rect_size = Vector2(8, 8)
             marker.rect_position = waypoint * 16 - Vector2(4, 4)
-            marker.color = Color(1, 1, 0)  # Yellow
+            marker.color = Color(1, 1, 0) # Yellow
             map_node.add_child(marker)
     
     # Draw start and HQ positions
     var team_a_start_marker = ColorRect.new()
     team_a_start_marker.rect_size = Vector2(10, 10)
     team_a_start_marker.rect_position = team_a_start_pos * 16 - Vector2(5, 5)
-    team_a_start_marker.color = Color(0, 1, 0)  # Green
+    team_a_start_marker.color = Color(0, 1, 0) # Green
     map_node.add_child(team_a_start_marker)
     
     var team_b_start_marker = ColorRect.new()
     team_b_start_marker.rect_size = Vector2(10, 10)
     team_b_start_marker.rect_position = team_b_start_pos * 16 - Vector2(5, 5)
-    team_b_start_marker.color = Color(0, 1, 0)  # Green
+    team_b_start_marker.color = Color(0, 1, 0) # Green
     map_node.add_child(team_b_start_marker)
     
     var team_a_hq_marker = ColorRect.new()
     team_a_hq_marker.rect_size = Vector2(12, 12)
     team_a_hq_marker.rect_position = team_a_hq_pos * 16 - Vector2(6, 6)
-    team_a_hq_marker.color = Color(1, 1, 1)  # White
+    team_a_hq_marker.color = Color(1, 1, 1) # White
     map_node.add_child(team_a_hq_marker)
     
     var team_b_hq_marker = ColorRect.new()
     team_b_hq_marker.rect_size = Vector2(12, 12)
     team_b_hq_marker.rect_position = team_b_hq_pos * 16 - Vector2(6, 6)
-    team_b_hq_marker.color = Color(1, 1, 1)  # White
+    team_b_hq_marker.color = Color(1, 1, 1) # White
     map_node.add_child(team_b_hq_marker)
 
 # Signal handlers
@@ -498,3 +498,29 @@ func load_map_config(map_name: String = "default_map") -> bool:
         lanes.append(lane)
     
     return true
+
+func initialize() -> void:
+    print("MapManager: Initializing...")
+    
+    # Get grid system reference
+    grid_system = get_node_or_null("/root/GridSystem")
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GameManager/GridSystem")
+        if not grid_system:
+            print("Error: GridSystem not found for MapManager")
+    
+    # Create map display node if it doesn't exist
+    if not has_node("MapDisplay"):
+        map_node = Node2D.new()
+        map_node.name = "MapDisplay"
+        add_child(map_node)
+    
+    # Connect grid signals
+    if grid_system:
+        if not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
+            grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+    
+    # Try to load default map
+    load_map_config()
+    
+    print("MapManager: Initialization complete")

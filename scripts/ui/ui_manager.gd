@@ -1193,3 +1193,30 @@ func _on_scene_changed() -> void:
             _:
                 # Default: hide UI
                 set_visible(false)
+
+func initialize() -> void:
+    print("UIManager: Initializing...")
+    
+    # Get references to game systems
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager:
+        economy_manager = game_manager.get_node_or_null("EconomyManager")
+        if not economy_manager:
+            economy_manager = get_node_or_null("/root/EconomyManager")
+            
+        building_manager = game_manager.get_node_or_null("BuildingManager")
+        if not building_manager:
+            building_manager = get_node_or_null("/root/BuildingManager")
+    else:
+        # Try to get them directly
+        economy_manager = get_node_or_null("/root/EconomyManager")
+        building_manager = get_node_or_null("/root/BuildingManager")
+    
+    # Create UI elements if needed
+    if not has_node("ResourceDisplay"):
+        _create_ui_elements()
+    
+    # Connect signals
+    _connect_signals()
+    
+    print("UIManager: Initialization complete")

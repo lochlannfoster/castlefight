@@ -237,3 +237,23 @@ func get_armor_types() -> Array:
                 types.append(armor_type)
     
     return types
+
+func initialize() -> void:
+    print("CombatSystem: Initializing...")
+    
+    # Load damage tables if needed
+    _load_damage_tables()
+    
+    # Add references to other systems
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager:
+        if game_manager.has_method("get_system"):
+            # Use the get_system helper if available
+            var building_manager = game_manager.get_system("BuildingManager")
+            var unit_factory = game_manager.get_system("UnitFactory")
+            
+            # Connect signals if needed
+            if building_manager and not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
+                building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+    
+    print("CombatSystem: Initialization complete")

@@ -4,15 +4,15 @@ class_name FogOfWar
 extends Node2D
 
 # Fog of War signals - ALL renamed to avoid conflict with parent class
-signal fog_changed(position, team, is_visible)  # Renamed from visibility_changed
-signal fog_unit_revealed(unit, team)  # Renamed from unit_revealed  
-signal fog_building_revealed(building, team)  # Renamed from building_revealed
+signal fog_changed(position, team, is_visible) # Renamed from visibility_changed
+signal fog_unit_revealed(unit, team) # Renamed from unit_revealed
+signal fog_building_revealed(building, team) # Renamed from building_revealed
 
 # Fog of War settings
-export var cell_size: Vector2 = Vector2(32, 32)  # Size of visibility grid cells
-export var map_width: int = 80  # Width of map in cells
-export var map_height: int = 60  # Height of map in cells
-export var update_interval: float = 0.25  # Time between visibility updates (seconds)
+export var cell_size: Vector2 = Vector2(32, 32) # Size of visibility grid cells
+export var map_width: int = 80 # Width of map in cells
+export var map_height: int = 60 # Height of map in cells
+export var update_interval: float = 0.25 # Time between visibility updates (seconds)
 
 # Visibility grid for each team
 # Format: {team_id -> {grid_x_y -> visibility_level}}
@@ -25,8 +25,8 @@ var visible_units: Dictionary = {}
 var visible_buildings: Dictionary = {}
 
 # Unit and building tracking
-var all_units: Dictionary = {}  # unit_id -> unit
-var all_buildings: Dictionary = {}  # building_id -> building
+var all_units: Dictionary = {} # unit_id -> unit
+var all_buildings: Dictionary = {} # building_id -> building
 
 # Update tracking
 var update_timer: float = 0.0
@@ -154,7 +154,7 @@ func _create_fog_textures() -> void:
     # Create texture for Team A
     var team_a_image = Image.new()
     team_a_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
-    team_a_image.fill(Color(0, 0, 0, 1))  # Start with black (fog)
+    team_a_image.fill(Color(0, 0, 0, 1)) # Start with black (fog)
     
     var team_a_texture = ImageTexture.new()
     team_a_texture.create_from_image(team_a_image)
@@ -162,7 +162,7 @@ func _create_fog_textures() -> void:
     # Create texture for Team B
     var team_b_image = Image.new()
     team_b_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
-    team_b_image.fill(Color(0, 0, 0, 1))  # Start with black (fog)
+    team_b_image.fill(Color(0, 0, 0, 1)) # Start with black (fog)
     
     var team_b_texture = ImageTexture.new()
     team_b_texture.create_from_image(team_b_image)
@@ -185,7 +185,7 @@ func _create_fog_sprites() -> void:
     if !file.file_exists(fog_texture_path):
         var image = Image.new()
         image.create(32, 32, false, Image.FORMAT_RGBA8)
-        image.fill(Color(0, 0, 0, 1))  # Black
+        image.fill(Color(0, 0, 0, 1)) # Black
         image.save_png(fog_texture_path)
     
     # Try to load the texture
@@ -254,15 +254,15 @@ func _update_fog_textures() -> void:
             
             # Team A visibility
             if visibility_grid[0].has(cell_key) and visibility_grid[0][cell_key] == 2:
-                team_a_image.set_pixel(x, y, Color(1, 1, 1, 0))  # Fully visible
+                team_a_image.set_pixel(x, y, Color(1, 1, 1, 0)) # Fully visible
             else:
-                team_a_image.set_pixel(x, y, Color(0, 0, 0, 0.7))  # Partially visible
+                team_a_image.set_pixel(x, y, Color(0, 0, 0, 0.7)) # Partially visible
             
             # Team B visibility
             if visibility_grid[1].has(cell_key) and visibility_grid[1][cell_key] == 2:
-                team_b_image.set_pixel(x, y, Color(1, 1, 1, 0))  # Fully visible
+                team_b_image.set_pixel(x, y, Color(1, 1, 1, 0)) # Fully visible
             else:
-                team_b_image.set_pixel(x, y, Color(0, 0, 0, 0.7))  # Partially visible
+                team_b_image.set_pixel(x, y, Color(0, 0, 0, 0.7)) # Partially visible
     
     # Update textures
     var team_a_texture = ImageTexture.new()
@@ -304,7 +304,7 @@ func notify_visibility_change(position, team, is_visible) -> void:
 func notify_unit_revealed(unit, team) -> void:
     emit_signal("fog_unit_revealed", unit, team)
     
-func notify_building_revealed(building, team) -> void: 
+func notify_building_revealed(building, team) -> void:
     emit_signal("fog_building_revealed", building, team)
 
 # Update visibility based on unit and building positions
@@ -316,8 +316,8 @@ func _update_visibility() -> void:
     # Reset current visibility to "previously seen" (1)
     for team in visibility_grid.keys():
         for cell_key in visibility_grid[team].keys():
-            if visibility_grid[team][cell_key] == 2:  # If currently visible
-                visibility_grid[team][cell_key] = 1   # Set to previously seen
+            if visibility_grid[team][cell_key] == 2: # If currently visible
+                visibility_grid[team][cell_key] = 1 # Set to previously seen
     
     # Update visibility from units
     for unit_id in all_units.keys():
@@ -377,3 +377,29 @@ func _update_cells_visibility(team: int, position: Vector2, vision_range: float)
                 # Set cell to visible (2)
                 var cell_key = str(x) + "_" + str(y)
                 visibility_grid[team][cell_key] = 2
+
+func initialize() -> void:
+    print("FogOfWarManager: Initializing...")
+    
+    # Initialize visibility grids
+    _initialize_grids()
+    
+    # Connect signals from game manager to track units and buildings
+    var game_manager = get_node_or_null("/root/GameManager")
+    var building_manager = null
+    
+    if game_manager:
+        building_manager = game_manager.get_node_or_null("BuildingManager")
+        if not building_manager:
+            building_manager = get_node_or_null("/root/BuildingManager")
+    
+    if building_manager:
+        if not building_manager.is_connected("building_placed", self, "_on_building_placed"):
+            building_manager.connect("building_placed", self, "_on_building_placed")
+        if not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
+            building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+    
+    # Setup fog rendering
+    _setup_fog_rendering()
+    
+    print("FogOfWarManager: Initialization complete")

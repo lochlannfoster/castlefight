@@ -419,3 +419,36 @@ func _on_game_ended(_winning_team: int) -> void:
         team_unlocked_buildings[team].clear()
         team_unlocked_units[team].clear()
         team_researched_upgrades[team].clear()
+
+func initialize() -> void:
+    print("TechTreeManager: Initializing...")
+    
+    # Clear any existing data
+    tech_trees.clear()
+    team_tech_trees = {
+        0: "", # Team A tech tree race
+        1: "" # Team B tech tree race
+    }
+    team_unlocked_buildings = {
+        0: [], # Team A unlocked buildings
+        1: [] # Team B unlocked buildings
+    }
+    team_unlocked_units = {
+        0: [], # Team A unlocked units
+        1: [] # Team B unlocked units
+    }
+    team_researched_upgrades = {
+        0: [], # Team A researched upgrades
+        1: [] # Team B researched upgrades
+    }
+    
+    # Load all tech trees
+    _load_tech_trees()
+    
+    # Connect signals
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager:
+        game_manager.connect("game_started", self, "_on_game_started")
+        game_manager.connect("game_ended", self, "_on_game_ended")
+    
+    print("TechTreeManager: Initialization complete with " + str(tech_trees.size()) + " tech trees loaded")

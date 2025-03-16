@@ -40,6 +40,7 @@ func _log(message: String, level: String = "info") -> void:
 func _ready() -> void:
     # Use call_deferred to ensure safe, non-blocking initialization
     call_deferred("_initialize_game_systems")
+    _verify_system_availability()
 
 # Centralized game systems initialization method
 func _initialize_game_systems() -> void:
@@ -229,3 +230,31 @@ func _validate_system_readiness() -> void:
     for system in critical_systems:
         if not system:
             _log("Critical system not initialized!", "error")
+
+func _verify_system_availability() -> void:
+    print("Verifying system availability...")
+    
+    var systems = [
+        {"name": "GameManager", "path": "/root/GameManager"},
+        {"name": "GridSystem", "path": "/root/GridSystem"},
+        {"name": "EconomyManager", "path": "/root/EconomyManager"},
+        {"name": "BuildingManager", "path": "/root/BuildingManager"},
+        {"name": "CombatSystem", "path": "/root/CombatSystem"},
+        {"name": "UnitFactory", "path": "/root/UnitFactory"},
+        {"name": "UIManager", "path": "/root/UIManager"},
+        {"name": "TechTreeManager", "path": "/root/TechTreeManager"},
+        {"name": "MapManager", "path": "/root/MapManager"},
+        {"name": "NetworkManager", "path": "/root/NetworkManager"}
+    ]
+    
+    for system in systems:
+        var node = get_node_or_null(system.path)
+        print(system.name + ": " + ("Available" if node else "Not found"))
+        
+        # Check for initialize method
+        if node and node.has_method("initialize"):
+            print("  - Has initialize() method")
+        elif node:
+            print("  - Missing initialize() method")
+    
+    print("System verification complete.")
