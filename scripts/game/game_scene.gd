@@ -25,33 +25,59 @@ func _ready() -> void:
     print("Initializing game...")
     _initialize_game()
     
+    # Add test entities for debugging
+    _add_test_entities()
+    
     # Add debug for texture loading
     print("Running texture debugging...")
     call_deferred("_debug_texture_loading")
     print("Texture debugging complete")
 
+# New method to add test entities
 func _add_test_entities() -> void:
     print("Adding test entities for debugging...")
     
-    # Add a test worker
-    _add_test_worker()
-    
-    # Force grid visualization
+    # Get references to game managers
     var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.grid_system:
-        game_manager.grid_system.draw_debug_grid()
-        print("Forced grid visualization enabled")
+    var network_manager = get_node_or_null("/root/NetworkManager")
+    
+    # Check if we're in debug mode
+    var is_debug_mode = network_manager and network_manager.debug_mode
+    
+    print("Debug mode status: " + str(is_debug_mode))
+    
+    if game_manager:
+        # Force creation of headquarters for both teams in debug mode
+        for team in [0, 1]:
+            var hq_position = game_manager.get_headquarters_position(team)
+            var hq = game_manager.building_manager.place_building("headquarters", hq_position, team)
+            
+            if hq:
+                game_manager.register_headquarters(hq, team)
+                print(f"Placed headquarters for Team {team} at {hq_position}")
+            else:
+                print(f"Failed to place headquarters for Team {team}")
         
-        # Force territory coloring
-        for x in range(game_manager.grid_system.grid_width):
-            for y in range(game_manager.grid_system.grid_height):
-                var pos = Vector2(x, y)
-                if game_manager.grid_system.grid_cells.has(pos):
-                    if x < game_manager.grid_system.grid_width / 3:
-                        game_manager.grid_system.grid_cells[pos].team_territory = 0
-                    elif x > game_manager.grid_system.grid_width * 2 / 3:
-                        game_manager.grid_system.grid_cells[pos].team_territory = 1
-        print("Forced territory coloring applied")
+        # Create workers for both teams in debug mode
+        if is_debug_mode:
+            for team in [0, 1]:
+                var start_position = game_manager.get_team_start_position(team)
+                var worker_scene = load("res://scenes/units/worker.tscn")
+                
+                if worker_scene:
+                    var worker = worker_scene.instance()
+                    worker.team = team
+                    worker.position = start_position
+                    
+                    # Add visual distinction
+                    if worker.has_node("Sprite"):
+                        var sprite = worker.get_node("Sprite")
+                        sprite.modulate = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
+                    
+                    add_child(worker)
+                    print(f"Created debug worker for Team {team} at {start_position}")
+                else:
+                    print("ERROR: Failed to load worker scene")
 
 # Initialize the game after a short delay
 func _initialize_game():

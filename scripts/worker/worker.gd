@@ -352,15 +352,31 @@ func move_to(pos: Vector2) -> void:
   is_moving_to_target = true
   current_target_building = false
 
-# Select this worker
 func select() -> void:
     print("DEBUG: Worker select() called. Current team: " + str(team))
     is_selected = true
+    
+    # Create or update selection indicator
     var selection_indicator = get_node_or_null("SelectionIndicator")
-    if selection_indicator:
+    if not selection_indicator:
+        selection_indicator = Node2D.new()
+        selection_indicator.name = "SelectionIndicator"
+        
+        # Create a simple selection visual
+        var selection_rect = ColorRect.new()
+        selection_rect.rect_size = Vector2(32, 32)
+        selection_rect.rect_position = Vector2(-16, -16)
+        selection_rect.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
+        selection_indicator.add_child(selection_rect)
+        
+        # Hide by default
+        selection_indicator.visible = true
+        add_child(selection_indicator)
+    else:
         selection_indicator.visible = true
     
     # More verbose logging for UI manager interaction
+    var ui_manager = get_node_or_null("/root/GameManager/UIManager")
     if ui_manager:
         print("DEBUG: Attempting to select worker with UI Manager. Team: " + str(team))
         ui_manager.select_worker(self)

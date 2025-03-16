@@ -293,20 +293,21 @@ func start_pregame_countdown() -> void:
 
 # In scripts/core/game_manager.gd
 func start_game() -> void:
-    log_debug("GameManager: Starting game...", "info", "GameManager")
+    log_debug("===== START GAME CALLED =====", "info", "GameManager")
     log_debug("Current state: " + str(current_state), "info", "GameManager")
+    log_debug("Debug mode: " + str(debug_mode), "info", "GameManager")
+    log_debug("Player count: " + str(players.size()), "info", "GameManager")
 
-    # Start the game properly
     if current_state == GameState.SETUP or current_state == GameState.PREGAME:
         change_game_state(GameState.PLAYING)
         log_debug("Game state changed to PLAYING", "info", "GameManager")
         
-        # Create player workers
+        # Extensive logging for worker creation
         log_debug("About to create workers...", "info", "GameManager")
         _create_player_workers()
         log_debug("Workers creation attempted", "info", "GameManager")
         
-        # Create initial buildings (HQs)
+        # Extensive logging for headquarters creation
         log_debug("About to create HQs...", "info", "GameManager")
         _create_starting_buildings()
         log_debug("HQ creation attempted", "info", "GameManager")
@@ -315,23 +316,8 @@ func start_game() -> void:
         log_debug("Game started signal emitted", "info", "GameManager")
     else:
         log_debug("Cannot start game: Current state is " + str(current_state), "error", "GameManager")
-
-    log_debug("Game started function completed", "info", "GameManager")
-    var camera = get_tree().current_scene.get_node_or_null("Camera2D")
-    if camera:
-        log_debug("Camera position: " + str(camera.global_position), "info", "GameManager")
-        # Ensure camera sees the right area - for testing, move it to the expected HQ position
-        camera.global_position = get_headquarters_position(0)
     
 func _create_player_workers() -> void:
-    # Check debug mode from network manager if available
-    var is_debug_mode = false
-    if network_manager:
-        is_debug_mode = network_manager.debug_mode
-    else:
-        # Fallback to class property
-        is_debug_mode = debug_mode
-    
     # Extensive logging and diagnostic information for worker creation
     log_debug("Initiating player worker creation process", "info", "GameManager")
     
@@ -340,18 +326,21 @@ func _create_player_workers() -> void:
         log_debug("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
         return
     
-    # In debug mode, ensure at least one player exists
-    if is_debug_mode and players.empty():
-        log_debug("Debug mode: No players found. Creating default player.", "warning", "GameManager")
-        
-        # Properly handle the return value
-        var player_added = add_player(1, "Debug Player", 0)
-        if not player_added:
-            log_debug("CRITICAL: Failed to add debug player", "error", "GameManager")
-            return
-    
     # Comprehensive logging of player information
     log_debug("Total players to process: " + str(players.size()), "info", "GameManager")
+    
+    # Iterate through all players and spawn workers
+    for player_id in players.keys():
+        var player_data = players[player_id]
+        var team = player_data.get("team", 0) # Default to Team A if no team assigned
+        
+        # Detailed logging for each player's worker creation
+        log_debug(
+            "Processing worker for Player ID: " + str(player_id) +
+            " | Team: " + str(team),
+            "info",
+            "GameManager"
+        )
     
     # Worker scene loading with robust error handling
     var worker_scene = load("res://scenes/units/worker.tscn")
