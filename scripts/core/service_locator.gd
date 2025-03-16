@@ -19,11 +19,10 @@ var _service_classes: Dictionary = {
 }
 
 # Initialization order to resolve dependencies correctly
-var _initialization_order: Array = [
+var _initialization_order = [
     "GridSystem",
     "EconomyManager",
     "CombatSystem",
-    "UnitFactory",
     "BuildingManager",
     "MapManager",
     "FogOfWarManager",
@@ -31,6 +30,8 @@ var _initialization_order: Array = [
     "UIManager",
     "NetworkManager"
 ]
+
+var _pending_initializations = []
 
 # Track initialization state
 var _initialized: bool = false
@@ -136,28 +137,45 @@ func _create_service(service_name: String) -> Node:
     
     return service
 
-# Initialize all services in the proper order
 func initialize_all_services() -> void:
-    # Prevent recursive initialization
     if _initializing:
         return
         
     _initializing = true
+    _pending_initializations.clear()
     
-    print("ServiceLocator: Initializing all services...")
+    print("ServiceLocator: Initializing all services in order...")
     
-    # First scan for existing services to avoid recreating them
+    # First register all existing services
     _scan_for_services()
     
-    # Then initialize services in the defined order
+    # Then initialize in the correct order
     for service_name in _initialization_order:
-        if not _services.has(service_name):
-            _create_service(service_name)
-        elif _services[service_name].has_method("initialize"):
-            _services[service_name].initialize()
+        # Get or create the service
+        var service = get_service(service_name)
+        
+        if service and service.has_method("initialize"):
+            # Connect to the initialization completed signal
+            if not service.is_connected("initialization_completed", self, "_on_service_initialized"):
+                service.connect("initialization_completed", self, "_on_service_initialized", [service_name])
+                
+            # Connect to the initialization failed signal
+            if not service.is_connected("initialization_failed", self, "_on_service_initialization_failed"):
+                service.connect("initialization_failed", self, "_on_service_initialization_failed", [service_name])
+                
+            # Add to pending initializations
+            _pending_initializations.append(service_name)
+            
+            # Start initialization
+            print("ServiceLocator: Starting initialization of " + service_name)
+            service.initialize()
     
-    print("ServiceLocator: All services initialized.")
-    _initializing = false
+    # Check if any services need to be waited on
+    if _pending_initializations.empty():
+        print("ServiceLocator: All services initialized immediately.")
+        _initializing = false
+    else:
+        print("ServiceLocator: Waiting for " + str(_pending_initializations.size()) + " services to complete initialization.")
 
 # Scan for existing services in the scene tree
 func _scan_for_services() -> void:
@@ -201,3 +219,21 @@ func initialize_services():
     if not _initialized:
         _initialized = true
         initialize_all_services()
+
+func _on_service_initialized(service_name: String) -> void:
+    print("ServiceLocator: Service initialized: " + service_name)
+    _pending_initializations.erase(service_name)
+    
+    # Check if all services are initialized
+    if _pending_initializations.empty():
+        print("ServiceLocator: All services initialized successfully.")
+        _initializing = false
+        
+func _on_service_initialization_failed(error_message: String, service_name: String) -> void:
+    print("ServiceLocator: Service initialization failed: " + service_name + " - " + error_message)
+    _pending_initializations.erase(service_name)
+    
+    # Even if a service fails, we continue with others
+    if _pending_initializations.empty():
+        print("ServiceLocator: All service initializations completed, but some failed.")
+        _initializing = false

@@ -15,8 +15,12 @@ export var debug_mode: bool = false
 export var verbose_logging: bool = false
 
 # Signal to indicate initialization complete
+signal initialization_started
 signal initialization_completed
+signal initialization_failed(error_message)
 signal service_ready
+
+var _initialization_state = "not_started" # "not_started", "in_progress", "completed", "failed"
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
@@ -65,38 +69,37 @@ func _ready() -> void:
     if not is_initialized:
         call_deferred("initialize")
 
-# Main initialization method - override in derived classes
 func initialize() -> void:
-    # KEY FIX: Check if node is in the scene tree yet
-    if not is_inside_tree():
-        # If not in tree yet, defer initialization
-        call_deferred("initialize")
+    # Prevent double initialization
+    if _initialization_state == "in_progress" or _initialization_state == "completed":
         return
         
-    if is_initialized:
-        return
+    # Mark as in progress and emit signal
+    _initialization_state = "in_progress"
+    emit_signal("initialization_started")
     
     # Log initialization start
     debug_log(service_name + ": Starting initialization", "info")
     
     # Resolve service dependencies
     if not _resolve_dependencies():
-        debug_log(service_name + ": Initialization deferred - waiting for dependencies", "warning")
-        call_deferred("initialize") # Try again next frame
+        debug_log(service_name + ": Initialization failed - dependencies not resolved", "error")
+        _initialization_state = "failed"
+        emit_signal("initialization_failed", "Dependencies not resolved")
         return
     
     # Call implementation-specific initialization
+    # This is where child classes will do their specific initialization
     _initialize_impl()
     
-    # Mark as initialized
-    is_initialized = true
+    # Mark as initialized and emit signal
+    _initialization_state = "completed"
     
     # Log initialization success
     debug_log(service_name + ": Initialization complete", "info")
     
-    # Emit signals
+    # Emit completion signal
     emit_signal("initialization_completed")
-    emit_signal("service_ready")
 
 # This is a virtual method to be implemented by derived classes
 func _initialize_impl() -> void:

@@ -35,6 +35,12 @@ var game_manager
 var debug_overlay: Control = null
 var is_debug_overlay_visible: bool = false
 
+var _last_scene_change_time = 0
+var _scene_change_debounce_ms = 100 # Minimum time between scene change processing
+var _ui_initialized = false # Has UI been initialized yet?
+var _scene_change_lock = false # Prevent recursive scene change handling
+
+
 enum SceneType {
     MAIN_MENU,
     LOBBY,
@@ -45,102 +51,74 @@ var current_scene_type = SceneType.NONE
 var is_creating_ui: bool = false
 
 func _ready() -> void:
-    # Ensure UI elements are created
-    if not has_node("Tooltip"):
-        _create_tooltip()
-    if not is_inside_tree():
-        print("WARNING: UIManager not properly added to scene tree")
-        return
-    
     # Set pause mode to ensure UI can be managed during game state changes
     pause_mode = Node.PAUSE_MODE_PROCESS
     
-    # Ensure visibility can be controlled
-    if has_method("set_visible"):
-        # Connect to the scene change signal with error handling
-        var connection_result = get_tree().connect("tree_changed", self, "_on_scene_changed")
+    # Connect to the scene change signal only once
+    if not get_tree().is_connected("tree_changed", self, "_on_scene_changed"):
+        get_tree().connect("tree_changed", self, "_on_scene_changed")
+    
+    # Initialize managers to prevent circular dependency issues
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    building_manager = get_node_or_null("/root/BuildingManager")
+    
+    # Initial scene detection
+    _scene_change_lock = true # Lock to prevent recursive calls
+    var current_scene = get_tree().current_scene
+    if current_scene:
+        var scene_name = current_scene.name.to_lower()
         
-        # Check if signal connection was successful
-        if connection_result != OK:
-            print("WARNING: Failed to connect 'tree_changed' signal in UIManager")
-        
-        # Perform initial scene context detection
-        _on_scene_changed()
-    else:
-        print("ERROR: UIManager cannot control visibility")
+        # Set initial scene type
+        if "mainmenu" in scene_name:
+            current_scene_type = SceneType.MAIN_MENU
+            visible = false
+        elif "lobby" in scene_name:
+            current_scene_type = SceneType.LOBBY
+            visible = true
+        elif "game" in scene_name:
+            current_scene_type = SceneType.GAME
+            visible = true
+            
+            # Initialize UI when starting directly in game scene
+            if not _ui_initialized:
+                call_deferred("_initialize_ui_once")
+    _scene_change_lock = false # Release lock
 
 func _create_ui_elements() -> void:
-    # Prevent recursive or multiple simultaneous UI creation attempts
+    # Double-check to avoid re-entrancy
     if is_creating_ui:
         debug_log("UI creation already in progress. Skipping.", "warning", "UIManager")
         return
     
     # Set flag to prevent re-entrancy
     is_creating_ui = true
+    debug_log("Starting UI element creation for scene type: " + str(current_scene_type), "info", "UIManager")
     
-    # Comprehensive debug log to track UI creation process
-    debug_log("Starting comprehensive UI element creation", "info", "UIManager")
+    # Only create UI elements for game scenes
+    if current_scene_type != SceneType.GAME:
+        is_creating_ui = false
+        debug_log("Skipping UI creation for non-game scene", "info", "UIManager")
+        return
     
-    # 1. Resource Display - Shows player's current resources
+    # Create UI elements in a safe manner
+    var creation_successful = true
+    
+    # Try to create each element, but don't try again if they fail
     if not has_node("ResourceDisplay"):
-        var creation_result = _safe_create_node("_create_resource_display")
-        if not creation_result:
-            debug_log("Failed to create resource display", "error", "UIManager")
+        if not _safe_create_resource_display():
+            creation_successful = false
     
-    # 2. Building Menu - Interface for selecting and placing buildings
     if not has_node("BuildingMenu"):
-        var creation_result = _safe_create_node("_create_building_menu")
-        if not creation_result:
-            debug_log("Failed to create building menu", "error", "UIManager")
+        if not _safe_create_building_menu():
+            creation_successful = false
     
-    # 3. Unit Info Panel - Displays details about selected units
-    if not has_node("UnitInfoPanel"):
-        var creation_result = _safe_create_node("_create_unit_info_panel")
-        if not creation_result:
-            debug_log("Failed to create unit info panel", "error", "UIManager")
+    # Add additional UI elements as needed
     
-    # 4. Game Status Panel - Shows game time, pause button, etc.
-    if not has_node("GameStatusPanel"):
-        var creation_result = _safe_create_node("_create_game_status_panel")
-        if not creation_result:
-            debug_log("Failed to create game status panel", "error", "UIManager")
+    debug_log("UI element creation " +
+              ("completed successfully" if creation_successful else "completed with some failures"),
+              "info", "UIManager")
     
-    # 5. Minimap - Scaled-down view of the game map
-    if not has_node("Minimap"):
-        var creation_result = _safe_create_node("_create_minimap")
-        if not creation_result:
-            debug_log("Failed to create minimap", "error", "UIManager")
-    
-    # 6. Floating Text Container - For temporary on-screen messages
-    if not has_node("FloatingTextContainer"):
-        var creation_result = _safe_create_node("_create_floating_text_container")
-        if not creation_result:
-            debug_log("Failed to create floating text container", "error", "UIManager")
-    
-    # 7. Tooltip - Hover information display
-    if not has_node("Tooltip"):
-        var creation_result = _safe_create_node("_create_tooltip")
-        if not creation_result:
-            debug_log("Failed to create tooltip", "error", "UIManager")
-    
-    # 8. Debug Overlay - Performance and debug information
-    if not has_node("DebugOverlay"):
-        var creation_result = _safe_create_node("_create_debug_overlay")
-        if not creation_result:
-            debug_log("Failed to create debug overlay", "error", "UIManager")
-    
-    # 9. Debug Mode Indicator
-    if not has_node("DebugIndicator"):
-        var creation_result = _safe_create_node("_create_debug_indicator")
-        if not creation_result:
-            debug_log("Failed to create debug indicator", "error", "UIManager")
-    
-    # Final setup and connection of signals
-    _connect_signals()
-    
-    debug_log("All UI elements creation process completed", "info", "UIManager")
-    
-    # Reset the creation flag
+    # Always reset creation flag when done
     is_creating_ui = false
 
 # Safe node creation method to prevent crashes
@@ -276,9 +254,11 @@ func _create_resource_display() -> void:
     income_label.text = "+10/tick"
     income_container.add_child(income_label)
 
-# Create building menu
 func _create_building_menu() -> void:
-    # Try to load the building menu scene
+    # Only try to create if it doesn't already exist
+    if has_node("BuildingMenu"):
+        return
+    
     var building_menu_scene = load("res://scenes/ui/building_menu.tscn")
     if building_menu_scene:
         building_menu = building_menu_scene.instance()
@@ -287,46 +267,13 @@ func _create_building_menu() -> void:
         # Connect signals
         var close_button = building_menu.get_node_or_null("Panel/CloseButton")
         if close_button:
-            close_button.connect("pressed", self, "_on_building_menu_close")
-    else:
-        # Create a fallback building menu
-        building_menu = Control.new()
-        building_menu.name = "BuildingMenu"
+            if not close_button.is_connected("pressed", self, "_on_building_menu_close"):
+                close_button.connect("pressed", self, "_on_building_menu_close")
+        
+        # Hide by default
         building_menu.visible = false
-        add_child(building_menu)
-        
-        # Create background panel
-        var panel = Panel.new()
-        panel.name = "Panel"
-        panel.rect_min_size = Vector2(400, 300)
-        panel.rect_position = Vector2(50, 50)
-        building_menu.add_child(panel)
-        
-        # Title label
-        var title_label = Label.new()
-        title_label.name = "TitleLabel"
-        title_label.text = "Building Menu"
-        title_label.rect_position = Vector2(10, 10)
-        title_label.rect_size = Vector2(380, 30)
-        title_label.align = Label.ALIGN_CENTER
-        panel.add_child(title_label)
-        
-        # Create a grid container for buildings
-        var grid = GridContainer.new()
-        grid.name = "BuildingGrid"
-        grid.columns = 3
-        grid.rect_position = Vector2(10, 50)
-        grid.rect_size = Vector2(380, 230)
-        panel.add_child(grid)
-        
-        # Close button
-        var close_button = Button.new()
-        close_button.name = "CloseButton"
-        close_button.text = "X"
-        close_button.rect_position = Vector2(370, 10)
-        close_button.rect_size = Vector2(20, 20)
-        close_button.connect("pressed", self, "_on_building_menu_close")
-        panel.add_child(close_button)
+        debug_log("Building menu created successfully", "info")
+
 
 # Create unit info panel
 func _create_unit_info_panel() -> void:
@@ -1235,53 +1182,58 @@ func _emit_worker_command(command_type, params: Dictionary = {}) -> void:
             selected_worker.handle_command(cmd_type, params)
 
 func _on_scene_changed() -> void:
-    # Safety check for valid tree
-    if not is_inside_tree() or not get_tree():
-        print("WARNING: Scene change called but tree is not valid")
+    # Break recursive scene change calls
+    if _scene_change_lock:
         return
     
-    # Prevent recursive calls
-    if is_creating_ui:
-        return
+    # Set lock to prevent recursion
+    _scene_change_lock = true
     
-    # Safe scene type determination
+    # Identify current scene
     var current_scene = get_tree().current_scene
-    if not current_scene:
-        print("WARNING: No current scene found")
-        return
+    if current_scene:
+        var scene_name = current_scene.name.to_lower()
+        
+        # Determine scene type
+        var new_scene_type = SceneType.NONE
+        if "mainmenu" in scene_name:
+            new_scene_type = SceneType.MAIN_MENU
+        elif "lobby" in scene_name:
+            new_scene_type = SceneType.LOBBY
+        elif "game" in scene_name:
+            new_scene_type = SceneType.GAME
+        
+        # Handle scene type change
+        if new_scene_type != current_scene_type:
+            debug_log("Scene changed from " + str(current_scene_type) + " to " + str(new_scene_type), "info")
+            current_scene_type = new_scene_type
+            
+            # Set UI visibility based on scene type
+            if current_scene_type == SceneType.MAIN_MENU:
+                visible = false
+            else:
+                visible = true
+                
+                # Initialize UI once when entering game scene
+                if current_scene_type == SceneType.GAME and not _ui_initialized:
+                    _initialize_ui_once()
     
-    # Explicit, safe visibility management
-    match current_scene.name.to_lower():
-        "mainmenu":
-            set_ui_visibility(false)
-        "lobby", "game":
-            set_ui_visibility(true)
-            # Defer complex UI setup
-            call_deferred("_create_ui_elements")
-        _:
-            set_ui_visibility(false)
+    # Release the lock
+    _scene_change_lock = false
+
+var _ui_created = false
 
 func initialize() -> void:
     print("UIManager: Initializing...")
     
-    # Get references to game systems
-    var current_game_manager = get_node_or_null("/root/GameManager")
-    if current_game_manager:
-        economy_manager = current_game_manager.get_node_or_null("EconomyManager")
-        if not economy_manager:
-            economy_manager = get_node_or_null("/root/EconomyManager")
-            
-        building_manager = current_game_manager.get_node_or_null("BuildingManager")
-        if not building_manager:
-            building_manager = get_node_or_null("/root/BuildingManager")
-    else:
-        # Try to get them directly
-        economy_manager = get_node_or_null("/root/EconomyManager")
-        building_manager = get_node_or_null("/root/BuildingManager")
-    
-    # Create UI elements if needed
-    if not has_node("ResourceDisplay"):
+    # Only create UI once
+    if not _ui_created:
         _create_ui_elements()
+        _ui_created = true
+    
+    # Get references to managers
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    building_manager = get_node_or_null("/root/BuildingManager")
     
     # Connect signals
     _connect_signals()
@@ -1310,3 +1262,24 @@ func set_ui_visibility(is_visible: bool) -> void:
         var element = get_node_or_null(element_name)
         if element and "visible" in element:
             element.visible = is_visible
+
+func _exit_tree() -> void:
+    # Disconnect from signals when leaving the tree
+    if get_tree() and get_tree().is_connected("tree_changed", self, "_on_scene_changed"):
+        get_tree().disconnect("tree_changed", self, "_on_scene_changed")
+
+func _initialize_ui_once() -> void:
+    if _ui_initialized:
+        return
+    
+    debug_log("Initializing UI elements (one-time initialization)", "info")
+    
+    # Create UI elements properly from their scenes
+    _create_building_menu()
+    _create_resource_display()
+    _create_unit_info_panel()
+    _create_game_status_panel()
+    
+    # Mark as initialized
+    _ui_initialized = true
+    debug_log("UI initialization complete", "info")
