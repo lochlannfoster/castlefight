@@ -324,32 +324,13 @@ func start_game() -> void:
 func _create_player_workers() -> void:
     log_debug("Creating player workers", "info", "GameManager")
     
-    # Check if player dictionary is empty and handle debug mode
-    if players.empty():
-        log_debug("WARNING: No players defined in player dictionary!", "warning", "GameManager")
-        
-        # In debug mode, create a default player if missing
-        var nm = get_node_or_null("/root/GameManager/NetworkManager")
-        if nm and nm.debug_mode:
-            log_debug("Debug mode active: Creating default player", "info", "GameManager")
-            
-            # Create a default player for local testing
-            var default_player_id = 1 # Server ID
-            var _result = add_player(default_player_id, "Debug Player", 0)
-            log_debug("Added default debug player with ID: " + str(default_player_id), "info", "GameManager")
-    
+    # Make sure worker scene loads properly
     var worker_scene = load("res://scenes/units/worker.tscn")
     if not worker_scene:
         log_debug("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
-    
-    log_debug("Player count: " + str(players.size()), "info", "GameManager")
-    
-    # If still no players, log error and exit
-    if players.empty():
-        log_debug("CRITICAL ERROR: No players to create workers for!", "error", "GameManager")
-        return
-    
+        
+    # Continue with normal worker creation for actual players
     for player_id in players.keys():
         var player_data = players[player_id]
         var team = player_data.team
@@ -407,46 +388,25 @@ func _create_starting_buildings() -> void:
         log_debug("CRITICAL ERROR: No building manager available!", "error", "GameManager")
         return
     
-    # First, ensure territories are properly set up for both teams
-    if grid_system:
-     log_debug("Setting up team territories in grid system", "info", "GameManager")
+    # Force creation of headquarters for debugging
+    var hq_position_team_a = Vector2(200, 300) # Adjust as needed for visibility
+    var hq_position_team_b = Vector2(600, 300) # Adjust as needed for visibility
     
-    # Define territories for both teams
-    var team_0_area = Rect2(0, 0, grid_system.grid_width / 3, grid_system.grid_height)
-    var team_1_area = Rect2(grid_system.grid_width * 2 / 3, 0, grid_system.grid_width / 3, grid_system.grid_height)
+    log_debug("Placing Team A headquarters at " + str(hq_position_team_a), "info", "GameManager")
+    var hq_a = building_manager.place_building("headquarters", hq_position_team_a, 0)
+    if hq_a:
+        register_headquarters(hq_a, 0)
+        log_debug("Team A headquarters placed successfully", "info", "GameManager")
+    else:
+        log_debug("Failed to place Team A headquarters", "error", "GameManager")
     
-    log_debug("Team A area: " + str(team_0_area), "info", "GameManager")
-    log_debug("Team B area: " + str(team_1_area), "info", "GameManager")
-    
-    # Debug grid cell count
-    log_debug("Grid cell count: " + str(grid_system.grid_cells.size()), "info", "GameManager")
-    
-    # Assign territories
-    var team_0_count = 0
-    var _team_1_count = 0 # Prefix with underscore since it's not used elsewhere
-    
-    # First, reset all territories
-    for x in range(grid_system.grid_width):
-        for y in range(grid_system.grid_height):
-            var pos = Vector2(x, y)
-            if grid_system.grid_cells.has(pos):
-                grid_system.grid_cells[pos].team_territory = null
-    
-    # Then assign new territories
-    for x in range(grid_system.grid_width):
-        for y in range(grid_system.grid_height):
-            var pos = Vector2(x, y)
-            if team_0_area.has_point(pos):
-                if grid_system.grid_cells.has(pos):
-                    grid_system.grid_cells[pos].team_territory = 0
-                    team_0_count += 1
-            elif team_1_area.has_point(pos):
-                if grid_system.grid_cells.has(pos):
-                    grid_system.grid_cells[pos].team_territory = 1
-                    _team_1_count += 1
-    
-    log_debug("Assigned " + str(team_0_count) + " cells to Team A territory", "info", "GameManager")
-    log_debug("Assigned " + str(_team_1_count) + " cells to Team B territory", "info", "GameManager")
+    log_debug("Placing Team B headquarters at " + str(hq_position_team_b), "info", "GameManager")
+    var hq_b = building_manager.place_building("headquarters", hq_position_team_b, 1)
+    if hq_b:
+        register_headquarters(hq_b, 1)
+        log_debug("Team B headquarters placed successfully", "info", "GameManager")
+    else:
+        log_debug("Failed to place Team B headquarters", "error", "GameManager")
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:

@@ -24,6 +24,34 @@ func _ready() -> void:
     # Initialize game
     print("Initializing game...")
     _initialize_game()
+    
+    # Add debug for texture loading
+    print("Running texture debugging...")
+    call_deferred("_debug_texture_loading")
+    print("Texture debugging complete")
+
+func _add_test_entities() -> void:
+    print("Adding test entities for debugging...")
+    
+    # Add a test worker
+    _add_test_worker()
+    
+    # Force grid visualization
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.grid_system:
+        game_manager.grid_system.draw_debug_grid()
+        print("Forced grid visualization enabled")
+        
+        # Force territory coloring
+        for x in range(game_manager.grid_system.grid_width):
+            for y in range(game_manager.grid_system.grid_height):
+                var pos = Vector2(x, y)
+                if game_manager.grid_system.grid_cells.has(pos):
+                    if x < game_manager.grid_system.grid_width / 3:
+                        game_manager.grid_system.grid_cells[pos].team_territory = 0
+                    elif x > game_manager.grid_system.grid_width * 2 / 3:
+                        game_manager.grid_system.grid_cells[pos].team_territory = 1
+        print("Forced territory coloring applied")
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -169,3 +197,32 @@ func _draw():
 func _process(_delta):
     # This will redraw the grid as the camera moves
     update()
+
+func _debug_texture_loading() -> void:
+    print("Debugging texture loading...")
+    
+    # Try to load worker texture
+    var worker_texture = load("res://assets/units/human/worker/idle/idle.png")
+    print("Worker texture loaded: " + str(worker_texture != null))
+    
+    # Try to load HQ texture
+    var hq_texture = load("res://assets/buildings/common/hq/idle/idle.png")
+    print("HQ texture loaded: " + str(hq_texture != null))
+    
+    # If textures fail to load, try creating fallback visuals
+    var worker_scene = load("res://scenes/units/worker.tscn")
+    if worker_scene:
+        var worker = worker_scene.instance()
+        worker.position = Vector2(400, 200)
+        
+        # Create a fallback visual if needed
+        var visual = ColorRect.new()
+        visual.rect_size = Vector2(32, 32)
+        visual.rect_position = Vector2(-16, -16)
+        visual.color = Color(0, 0, 1) # Blue
+        worker.add_child(visual)
+        
+        add_child(worker)
+        print("Added worker with fallback visual")
+    else:
+        print("Failed to load worker scene")
