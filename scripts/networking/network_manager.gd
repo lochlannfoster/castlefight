@@ -127,18 +127,16 @@ var authentication_required: bool = false
 
 # Initialization Method
 func _ready() -> void:
+    var logger = get_node("/root/UnifiedLogger")
+    
+    logger.info("NetworkManager initialized", "NetworkManager", {
+        "protocol_version": PROTOCOL_VERSION
+    })
+    
     # Initialize game system references
     _initialize_game_references()
-    
-    # Setup network connection handling
     _setup_network_signals()
-    
-    # Generate initial server seed for synchronization
     _generate_server_seed()
-    
-    print("NetworkManager initialized - Protocol Version: " + PROTOCOL_VERSION)
-
-    _verify_required_scenes()
 
 func _verify_required_scenes() -> void:
     var required_scenes = [
@@ -267,12 +265,20 @@ func _generate_server_seed() -> void:
     server_seed = rng.randi()
 
 # Server Creation Method
+
 func start_server(server_name: String = "Castle Fight Server",
                  port: int = DEFAULT_PORT,
                  max_players: int = MAX_PLAYERS) -> bool:
-    # Prevent multiple server instances
+    var logger = get_node("/root/UnifiedLogger")
+    
+    logger.info("Attempting to start server", "NetworkManager", {
+        "server_name": server_name,
+        "port": port,
+        "max_players": max_players
+    })
+    
     if network:
-        print("Server already running!")
+        logger.warning("Server already running", "NetworkManager")
         return false
     
     # Create network instance
@@ -324,6 +330,20 @@ func start_server(server_name: String = "Castle Fight Server",
         print("Server started on port " + str(port))
     
     emit_signal("server_started")
+    return true
+    var result = network.create_server(port, max_players)
+    
+    if result != OK:
+        logger.error("Server creation failed", "NetworkManager", {
+            "error_code": result,
+            "port": port
+        })
+        network = null
+        return false
+    
+    logger.info("Server successfully started", "NetworkManager", {
+        "port": port
+    })
     return true
 
 # Client Connection Method

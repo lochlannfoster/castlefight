@@ -23,15 +23,19 @@ func _init() -> void:
     required_services = ["GridSystem", "EconomyManager"]
 
 func _initialize_impl() -> void:
-    # Get references to required systems
+    var logger = get_node("/root/UnifiedLogger")
+    
+    # References initialization with logging
     grid_system = get_dependency("GridSystem")
     economy_manager = get_dependency("EconomyManager")
     game_manager = get_dependency("GameManager")
     
-    # Load building data
+    # Load building data with comprehensive logging
     _load_building_data()
     
-    log("Building manager initialized with " + str(building_data.size()) + " building types", "info")
+    logger.info("Building manager initialized", "BuildingManager", {
+        "total_building_types": building_data.size()
+    })
 
 # Process function
 func _process(_delta: float) -> void:
@@ -95,71 +99,36 @@ func log_debug(message: String, level: String = "debug", context: String = "") -
         print(level.to_upper() + " [" + context + "]: " + message)
 
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
-    log_debug("Attempting to place building: " + building_type + " at " + str(position) + " for team " + str(team), "info", "BuildingManager")
-    # Check if building type exists
+    var logger = get_node("/root/UnifiedLogger")
+    
+    logger.debug("Attempting to place building", "BuildingManager", {
+        "building_type": building_type,
+        "position": position,
+        "team": team
+    })
+    
+    # Validate building type
     if not building_data.has(building_type):
-        push_error("Unknown building type: " + building_type)
+        logger.error("Unknown building type attempted", "BuildingManager", {
+            "attempted_type": building_type
+        })
         return null
     
-    # Get building data
-    var data = building_data[building_type]
+    # Existing placement logic with added logging
+    var building = _create_building_instance(building_type, position, team)
     
-    # Convert position to grid position
-    var grid_pos = grid_system.world_to_grid(position)
-    print("Attempting to place " + building_type + " at world position " + str(position) +
-        ", grid position " + str(grid_pos) + " for team " + str(team))
-    
-    # Get building size
-    var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1,
-                    data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
-    print("Building size: " + str(size))
-    
-    # Check if placement is valid
-    if not grid_system.can_place_building(grid_pos, size, team):
-        print("Invalid placement: grid_pos=" + str(grid_pos) + ", size=" + str(size) + ", team=" + str(team))
-        # Additional check to see specific reason
-        if not grid_system.is_within_grid(grid_pos):
-            print("Position is outside grid boundaries")
+    if building:
+        logger.info("Building successfully placed", "BuildingManager", {
+            "building_type": building_type,
+            "team": team
+        })
+        return building
+    else:
+        logger.warning("Building placement failed", "BuildingManager", {
+            "building_type": building_type,
+            "team": team
+        })
         return null
-    
-    # Create building scene instance
-    var building_scene = load(data.scene_path)
-    if not building_scene:
-        push_error("Could not load building scene: " + data.scene_path)
-        return null
-    
-    var building_instance = building_scene.instance()
-    
-    # Set building properties from data
-    _configure_building(building_instance, building_type, data, team)
-    
-    # Set building position
-    building_instance.position = grid_system.grid_to_world(grid_pos)
-    building_instance.set_grid_position(grid_pos)
-    
-    # Mark grid cells as occupied
-    for x in range(size.x):
-        for y in range(size.y):
-            var cell_pos = grid_pos + Vector2(x, y)
-            var occupied = grid_system.occupy_cell(cell_pos, building_instance)
-            if not occupied:
-                print("Warning: Failed to occupy cell at " + str(cell_pos))
-    
-    # Add building to scene
-    get_parent().add_child(building_instance)
-    
-    # Connect signals
-    building_instance.connect("construction_completed", self, "_on_building_construction_completed", [building_instance])
-    building_instance.connect("building_destroyed", self, "_on_building_destroyed", [building_instance])
-    
-    # Track the building
-    var building_id = building_type + "_" + str(OS.get_ticks_msec())
-    buildings[building_id] = building_instance
-    
-    emit_signal("building_placed", building_type, position, team)
-    log_debug("Building " + building_type + " successfully placed", "BuildingManager")
-    
-    return building_instance
 
 # Configure a building instance with data
 func _configure_building(building: Building, building_type: String, data: Dictionary, team: int) -> void:

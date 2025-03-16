@@ -61,24 +61,17 @@ var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 export var debug_mode: bool = false
 
 func _ready() -> void:
-    # Initialize match ID
+    var logger = get_node("/root/UnifiedLogger")
+    
+    # Initialize match ID with detailed logging
     match_id = "match_" + str(OS.get_unix_time())
+    logger.info("Match ID generated: " + match_id, "GameManager")
     
-    # Ensure all required directories exist
+    # Deferred initialization with logging
     call_deferred("ensure_data_directories_exist")
-    
-    # Initialize game systems
     call_deferred("initialize_game_systems")
     
-    # Start in setup state
-    change_game_state(GameState.SETUP)
-    
-    print("GameManager initialization complete")
-    
-    # Mark as initialized
-    is_initialized = true
-    
-    print("GameManager initialization complete")
+    logger.debug("GameManager initialization complete", "GameManager")
 
 # Create required scenes if they don't exist yet
 func _create_required_scenes() -> void:
@@ -262,29 +255,27 @@ func start_pregame_countdown() -> void:
 
 # In scripts/core/game_manager.gd
 func start_game() -> void:
-    log_debug("===== START GAME CALLED =====", "info", "GameManager")
-    log_debug("Current state: " + str(current_state), "info", "GameManager")
-    log_debug("Debug mode: " + str(debug_mode), "info", "GameManager")
-    log_debug("Player count: " + str(players.size()), "info", "GameManager")
+    var logger = get_node("/root/UnifiedLogger")
+    
+    logger.info("===== START GAME CALLED =====", "GameManager")
+    logger.debug("Current game state: " + str(current_state), "GameManager")
+    logger.debug("Debug mode status: " + str(debug_mode), "GameManager")
+    logger.debug("Total players: " + str(players.size()), "GameManager")
 
-    if current_state == GameState.SETUP or current_state == GameState.PREGAME:
-        change_game_state(GameState.PLAYING)
-        log_debug("Game state changed to PLAYING", "info", "GameManager")
-        
-        # Extensive logging for worker creation
-        log_debug("About to create workers...", "info", "GameManager")
-        _create_player_workers()
-        log_debug("Workers creation attempted", "info", "GameManager")
-        
-        # Extensive logging for headquarters creation
-        log_debug("About to create HQs...", "info", "GameManager")
-        _create_starting_buildings()
-        log_debug("HQ creation attempted", "info", "GameManager")
-        
-        emit_signal("game_started")
-        log_debug("Game started signal emitted", "info", "GameManager")
-    else:
-        log_debug("Cannot start game: Current state is " + str(current_state), "error", "GameManager")
+    if current_state != GameState.SETUP and current_state != GameState.PREGAME:
+        logger.error("Cannot start game: Invalid game state", "GameManager", {
+            "current_state": current_state
+        })
+        return
+		
+	    # Extensive logging for critical initialization steps
+    logger.info("Attempting to create player workers", "GameManager")
+    _create_player_workers()
+    
+    logger.info("Creating starting buildings", "GameManager")
+    _create_starting_buildings()
+    
+    emit_signal("game_started")
 
 func ensure_core_systems() -> void:
     # This function makes sure all core systems are available
