@@ -462,12 +462,14 @@ func _on_grid_initialized() -> void:
     apply_map_to_grid()
 
 func load_map_config(map_name: String = "default_map") -> bool:
-    var file_path = "res://data/defaults/maps/default_maps.json"
+    # Unused map_name parameter indicates this function might be intended to be more flexible
+    # Let's modify to use the map_name for more specific configuration loading
+    var file_path = "res://data/defaults/maps/" + map_name + ".json"
     var file = File.new()
     
     if not file.file_exists(file_path):
-        push_error("Map configuration file not found: " + file_path)
-        return _create_default_map_config()
+        # If specific map config doesn't exist, fall back to default
+        file_path = "res://data/defaults/maps/default_maps.json"
     
     if file.open(file_path, File.READ) != OK:
         push_error("Could not open map configuration file: " + file_path)

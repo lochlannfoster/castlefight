@@ -186,7 +186,6 @@ func initialize_all_services() -> void:
     else:
         print("ServiceLocator: Waiting for " + str(_pending_initializations.size()) + " services to complete initialization.")
 
-# Scan for existing services in the scene tree
 func _scan_for_services() -> void:
     # Check for services at the root level (autoloads)
     for service_name in _service_classes.keys():
@@ -230,19 +229,46 @@ func initialize_services():
         initialize_all_services()
 
 func _on_service_initialized(service_name: String) -> void:
-    print("ServiceLocator: Service initialized: " + service_name)
-    _pending_initializations.erase(service_name)
+    debug_log("Service initialized: " + service_name, "info")
+    
+    # Explicitly ignore return value
+    var _erased = _pending_initializations.erase(service_name)
     
     # Check if all services are initialized
     if _pending_initializations.empty():
-        print("ServiceLocator: All services initialized successfully.")
+        debug_log("All services initialized successfully", "info")
         _initializing = false
         
 func _on_service_initialization_failed(error_message: String, service_name: String) -> void:
-    print("ServiceLocator: Service initialization failed: " + service_name + " - " + error_message)
-    _pending_initializations.erase(service_name)
+    debug_log("Service initialization failed: " + service_name + " - " + error_message, "error")
+    
+    # Explicitly ignore return value
+    var _erased = _pending_initializations.erase(service_name)
     
     # Even if a service fails, we continue with others
     if _pending_initializations.empty():
-        print("ServiceLocator: All service initializations completed, but some failed.")
+        debug_log("All service initializations completed, but some failed", "warning")
         _initializing = false
+
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.verbose(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        elif service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)

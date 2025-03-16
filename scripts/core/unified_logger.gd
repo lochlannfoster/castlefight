@@ -226,7 +226,7 @@ func _rotate_log_files() -> void:
     _open_log_file()
 
 func _sort_files_by_time(a: String, b: String) -> bool:
-    var dir = Directory.new()
+    var _dir = Directory.new()
     var file = File.new()
     
     # Safely get modification times

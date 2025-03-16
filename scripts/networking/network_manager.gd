@@ -1831,30 +1831,32 @@ func _set_ui_visibility(is_visible: bool) -> void:
     debug_log("Setting UI visibility: " + str(is_visible), "debug", "NetworkManager")
     
     # Safely manage UI visibility
-    var ui_manager = get_node_or_null("/root/UIManager")
-    if ui_manager and ui_manager.has_method("set_ui_visibility"):
-        ui_manager.set_ui_visibility(is_visible)
+    var current_ui_manager = get_node_or_null("/root/UIManager")
+    if current_ui_manager and current_ui_manager.has_method("set_ui_visibility"):
+        current_ui_manager.set_ui_visibility(is_visible)
 
-# New method to handle visibility with minimal recursion risk
 func _set_network_ui_visibility(is_visible: bool) -> void:
     # Prevent recursive calls
     if is_creating_ui:
         return
     
-    # Use a single, controlled print statement
-    print("Network UI visibility: " + str(is_visible))
-    
-    # Directly interact with UI manager
-    var ui_manager = get_node_or_null("/root/UIManager")
-    if ui_manager and ui_manager.has_method("set_ui_visibility"):
-        ui_manager.set_ui_visibility(is_visible)
+    # Use a different variable name to avoid shadowing
+    var local_ui_manager = get_node_or_null("/root/UIManager")
+    if local_ui_manager and local_ui_manager.has_method("set_ui_visibility"):
+        local_ui_manager.set_ui_visibility(is_visible)
+    else:
+        debug_log("Cannot set UI visibility - UIManager not found", "warning", "NetworkManager")
 
 func set_visible(is_visible: bool) -> void:
-    # This method exists to implement a common interface but doesn't directly 
-    # control visibility since NetworkManager doesn't inherit from a visible node type
-    print("NetworkManager: Visibility setting requested but not applicable")
+    # This method exists to implement a common interface 
+    debug_log("Visibility setting requested", "debug", "NetworkManager")
     
-    # If we have UI nodes as children, we could potentially set their visibility
+    # Try to find and set UI visibility through different methods
+    var current_ui_manager = get_node_or_null("/root/UIManager")
+    if current_ui_manager and current_ui_manager.has_method("set_ui_visibility"):
+        current_ui_manager.set_ui_visibility(is_visible)
+    
+    # If UI manager doesn't have the method, try alternative approaches
     for child in get_children():
         if child.has_method("set_visible"):
             child.set_visible(is_visible)
@@ -1863,28 +1865,21 @@ func set_visible(is_visible: bool) -> void:
 
 func set_ui_visibility(is_visible: bool) -> void:
     # NetworkManager doesn't inherit CanvasItem, so we need a different approach
-    # Check if this node has a set_visible method that can be called
-    if has_method("set_visible"):
-        call("set_visible", is_visible)
-    # Try finding a CanvasLayer child to control
-    elif has_node("CanvasLayer"):
-        get_node("CanvasLayer").visible = is_visible
-    # Try to manage visibility of UI children
-    else:
-        print("WARNING: Cannot set visibility directly on NetworkManager")
-        
-        # Look for UI elements in children
-        var ui_found = false
-        for child in get_children():
-            if child is CanvasItem:
-                child.visible = is_visible
-                ui_found = true
-        
-        # If no UI children found, try to find the UIManager singleton
-        if not ui_found:
-            # Use a different variable name to avoid shadowing the class member
-            var global_ui_manager = get_node_or_null("/root/UIManager")
-            if global_ui_manager and global_ui_manager.has_method("set_visible"):
-                global_ui_manager.set_visible(is_visible)
-            else:
-                print("Could not find any UI elements to set visibility")
+    debug_log("Setting UI visibility to " + str(is_visible), "debug", "NetworkManager")
+    
+    # Try various methods to set visibility
+    var network_ui_manager = get_node_or_null("/root/UIManager")
+    if network_ui_manager:
+        if network_ui_manager.has_method("set_visible"):
+            network_ui_manager.set_visible(is_visible)
+        elif network_ui_manager.has_method("set_ui_visibility"):
+            network_ui_manager.set_ui_visibility(is_visible)
+        elif "visible" in network_ui_manager:
+            network_ui_manager.visible = is_visible
+    
+    # If no direct method works, try children
+    for child in get_children():
+        if child.has_method("set_visible"):
+            child.set_visible(is_visible)
+        elif "visible" in child:
+            child.visible = is_visible

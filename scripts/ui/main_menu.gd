@@ -21,15 +21,14 @@ func _ready():
     
     print("Main menu buttons connection handling complete!")
 
-# Navigate to multiplayer lobby
 func _on_multiplayer_button_pressed():
     print("Multiplayer button pressed, changing to lobby scene")
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+        var _scene_change_result = game_manager.change_scene("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _scene_change_result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Open options menu
 func _on_options_button_pressed():

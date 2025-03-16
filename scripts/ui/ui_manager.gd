@@ -54,16 +54,18 @@ func _ready() -> void:
     # Set pause mode to ensure UI can be managed during game state changes
     pause_mode = Node.PAUSE_MODE_PROCESS
     
-    # Connect to the scene change signal only once
-    if not get_tree().is_connected("tree_changed", self, "_on_scene_changed"):
-        get_tree().connect("tree_changed", self, "_on_scene_changed")
+    # Connect to the scene change signal
+    var _scene_change_connection = get_tree().connect("tree_changed", self, "_on_scene_changed")
+    if _scene_change_connection != OK:
+        push_warning("Failed to connect tree_changed signal")
     
-    # Initialize managers to prevent circular dependency issues
+    # Initialize managers 
     economy_manager = get_node_or_null("/root/EconomyManager")
     building_manager = get_node_or_null("/root/BuildingManager")
+    game_manager = get_node_or_null("/root/GameManager")
     
     # Initial scene detection
-    _scene_change_lock = true # Lock to prevent recursive calls
+    _scene_change_lock = true
     var current_scene = get_tree().current_scene
     if current_scene:
         var scene_name = current_scene.name.to_lower()
@@ -82,7 +84,23 @@ func _ready() -> void:
             # Initialize UI when starting directly in game scene
             if not _ui_initialized:
                 call_deferred("_initialize_ui_once")
-    _scene_change_lock = false # Release lock
+    _scene_change_lock = false
+
+    # Initialize UI elements if not already done
+    if not _ui_created:
+        _create_ui_elements()
+        _ui_created = true
+    
+    # Connect our own signals
+    var _worker_command_connection = connect("worker_command_issued", self, "_emit_worker_command")
+    if _worker_command_connection != OK:
+        push_warning("Failed to connect worker_command_issued signal")
+
+    # Conditional signal connection based on scene type
+    if current_scene_type == SceneType.GAME:
+        _connect_signals()
+    
+    print("UI Manager initialization complete!")
 
 func _create_ui_elements() -> void:
     # Double-check to avoid re-entrancy
@@ -277,16 +295,18 @@ func _create_building_menu() -> void:
     if has_node("BuildingMenu"):
         return
     
+    # Load building menu scene
     var building_menu_scene = load("res://scenes/ui/building_menu.tscn")
     if building_menu_scene:
         building_menu = building_menu_scene.instance()
         add_child(building_menu)
         
-        # Connect signals
+        # Connect close button signal with error handling
         var close_button = building_menu.get_node_or_null("Panel/CloseButton")
         if close_button:
-            if not close_button.is_connected("pressed", self, "_on_building_menu_close"):
-                close_button.connect("pressed", self, "_on_building_menu_close")
+            var _close_button_result = close_button.connect("pressed", self, "_on_building_menu_close")
+            if _close_button_result != OK:
+                debug_log("Failed to connect building menu close button", "warning")
         
         # Hide by default
         building_menu.visible = false
@@ -523,65 +543,65 @@ func _create_debug_overlay() -> void:
 func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
-        # Add error handling for signal connections
-        var resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
-        if resources_connect_result != OK:
+        var _resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
+        if _resources_connect_result != OK:
             debug_log("Failed to connect resources_changed signal", "warning")
         
-        var income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
-        if income_connect_result != OK:
+        var _income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
+        if _income_connect_result != OK:
             debug_log("Failed to connect income_changed signal", "warning")
         
-        var income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
-        if income_tick_result != OK:
+        var _income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
+        if _income_tick_result != OK:
             debug_log("Failed to connect income_tick signal", "warning")
         
-        var bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
-        if bounty_result != OK:
+        var _bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+        if _bounty_result != OK:
             debug_log("Failed to connect bounty_earned signal", "warning")
     
     # Connect to Building Manager
     if building_manager:
-        var building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
-        if building_selected_result != OK:
+        var _building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
+        if _building_selected_result != OK:
             debug_log("Failed to connect building_selected signal", "warning")
         
-        var building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
-        if building_deselected_result != OK:
+        var _building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
+        if _building_deselected_result != OK:
             debug_log("Failed to connect building_deselected signal", "warning")
     
     # Connect to Game Manager
     if game_manager:
-        var game_started_result = game_manager.connect("game_started", self, "_on_game_started")
-        if game_started_result != OK:
+        var _game_started_result = game_manager.connect("game_started", self, "_on_game_started")
+        if _game_started_result != OK:
             debug_log("Failed to connect game_started signal", "warning")
         
-        var game_ended_result = game_manager.connect("game_ended", self, "_on_game_ended")
-        if game_ended_result != OK:
+        var _game_ended_result = game_manager.connect("game_ended", self, "_on_game_ended")
+        if _game_ended_result != OK:
             debug_log("Failed to connect game_ended signal", "warning")
         
-        var countdown_result = game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
-        if countdown_result != OK:
+        var _countdown_result = game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+        if _countdown_result != OK:
             debug_log("Failed to connect match_countdown_updated signal", "warning")
     
-    # Connect our own worker_command_issued signal
-    var worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
-    if worker_command_result != OK:
+    # Connect our own worker command signal
+    var _worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
+    if _worker_command_result != OK:
         debug_log("Failed to connect worker_command_issued signal", "warning")
 
 func _input(event) -> void:
-    # Ensure tooltip exists before accessing
+    # Safeguard against uninitialized tooltip
     if tooltip == null:
         _create_tooltip()
+    
     if not is_inside_tree():
         return
 
     # Handle key shortcuts
     if event is InputEventKey and event.pressed:
+        # F3 debug overlay toggle
         if event.scancode == KEY_F3:
             is_debug_overlay_visible = !is_debug_overlay_visible
             
-            # Add null check before accessing visible property
             if debug_overlay != null:
                 debug_overlay.visible = is_debug_overlay_visible
             else:
@@ -594,12 +614,22 @@ func _input(event) -> void:
                 else:
                     _on_pause_button_pressed()
             KEY_B:
-                # Toggle building menu
                 toggle_building_menu()
             KEY_R:
-                # Toggle auto-repair for selected worker
                 if selected_worker != null and selected_worker.has_method("toggle_auto_repair"):
                     selected_worker.toggle_auto_repair()
+
+    # Tooltip positioning
+    if event is InputEventMouseMotion:
+        if tooltip != null and tooltip.visible:
+            tooltip.rect_position = event.position + Vector2(15, 15)
+
+    # Right-click to cancel building placement
+    if event is InputEventMouseButton and event.pressed:
+        if event.button_index == BUTTON_RIGHT:
+            if selected_worker and selected_worker.is_placing_building:
+                selected_worker.cancel_building_placement()
+                emit_signal("building_placement_cancelled")
 
     # Handle mouse movement for tooltip
     if event is InputEventMouseMotion:
