@@ -25,59 +25,11 @@ func _ready() -> void:
     print("Initializing game...")
     _initialize_game()
     
-    # Add test entities for debugging
-    _add_test_entities()
     
     # Add debug for texture loading
     print("Running texture debugging...")
     call_deferred("_debug_texture_loading")
     print("Texture debugging complete")
-
-# New method to add test entities
-func _add_test_entities() -> void:
-    print("Adding test entities for debugging...")
-    
-    # Get references to game managers
-    var game_manager = get_node_or_null("/root/GameManager")
-    var network_manager = get_node_or_null("/root/NetworkManager")
-    
-    # Check if we're in debug mode
-    var is_debug_mode = network_manager and network_manager.debug_mode
-    
-    print("Debug mode status: " + str(is_debug_mode))
-    
-    if game_manager:
-        # Force creation of headquarters for both teams in debug mode
-        for team in [0, 1]:
-            var hq_position = game_manager.get_headquarters_position(team)
-            var hq = game_manager.building_manager.place_building("headquarters", hq_position, team)
-            
-            if hq:
-                game_manager.register_headquarters(hq, team)
-                print(f"Placed headquarters for Team {team} at {hq_position}")
-            else:
-                print(f"Failed to place headquarters for Team {team}")
-        
-        # Create workers for both teams in debug mode
-        if is_debug_mode:
-            for team in [0, 1]:
-                var start_position = game_manager.get_team_start_position(team)
-                var worker_scene = load("res://scenes/units/worker.tscn")
-                
-                if worker_scene:
-                    var worker = worker_scene.instance()
-                    worker.team = team
-                    worker.position = start_position
-                    
-                    # Add visual distinction
-                    if worker.has_node("Sprite"):
-                        var sprite = worker.get_node("Sprite")
-                        sprite.modulate = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
-                    
-                    add_child(worker)
-                    print(f"Created debug worker for Team {team} at {start_position}")
-                else:
-                    print("ERROR: Failed to load worker scene")
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -179,33 +131,6 @@ func _setup_camera():
     
     add_child(camera)
     print("Camera set up at position: " + str(camera.position))
-
-func _add_test_worker():
-    print("Adding test worker to scene...")
-    
-    # Try to load the worker scene
-    var worker_scene = load("res://scenes/units/worker.tscn")
-    if not worker_scene:
-        print("ERROR: Failed to load worker scene")
-        return
-        
-    # Create worker instance
-    var worker = worker_scene.instance()
-    
-    # Set team and position
-    worker.team = 0 # Team A (blue)
-    worker.position = Vector2(400, 300) # Center of screen
-    
-    # Add to scene
-    add_child(worker)
-    
-    print("Test worker added at position: " + str(worker.position))
-    
-    # Select the worker with UI manager if available
-    var ui_manager = get_node_or_null("UIManager")
-    if ui_manager and ui_manager.has_method("select_worker"):
-        ui_manager.select_worker(worker)
-        print("Worker selected by UI manager")
 
 func _draw():
     # Draw a grid every 100 pixels
