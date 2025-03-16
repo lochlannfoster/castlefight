@@ -53,7 +53,7 @@ func _ready() -> void:
     var service_locator = get_node_or_null("/root/ServiceLocator")
     if service_locator:
         service_locator.register_service(service_name, self)
-        
+    
     # Log service creation
     if verbose_logging:
         print(service_name + ": Ready")
@@ -67,11 +67,17 @@ func _ready() -> void:
 
 # Main initialization method - override in derived classes
 func initialize() -> void:
-    if is_initialized:
+    # KEY FIX: Check if node is in the scene tree yet
+    if not is_inside_tree():
+        # If not in tree yet, defer initialization
+        call_deferred("initialize")
         return
         
+    if is_initialized:
+        return
+    
     # Log initialization start
-    self.debug_log(service_name + ": Initialization complete", "info")
+    debug_log(service_name + ": Starting initialization", "info")
     
     # Resolve service dependencies
     if not _resolve_dependencies():
@@ -103,8 +109,12 @@ func reset() -> void:
     if verbose_logging:
         print(service_name + ": Reset")
 
-# Resolve dependencies from ServiceLocator
+# Resolve dependencies safely with the ServiceLocator
 func _resolve_dependencies() -> bool:
+    # KEY FIX: Must be in tree to use absolute paths
+    if not is_inside_tree():
+        return false
+    
     var service_locator = get_node_or_null("/root/ServiceLocator")
     if not service_locator:
         push_error(service_name + ": ServiceLocator not found")
@@ -129,13 +139,14 @@ func get_dependency(dependency_name: String) -> Node:
     if dependencies.has(dependency_name):
         return dependencies[dependency_name]
     
-    # Try to resolve on-demand
-    var service_locator = get_node_or_null("/root/ServiceLocator")
-    if service_locator:
-        var service = service_locator.get_service(dependency_name)
-        if service:
-            dependencies[dependency_name] = service
-            return service
+    # Try to resolve on-demand if in tree
+    if is_inside_tree():
+        var service_locator = get_node_or_null("/root/ServiceLocator")
+        if service_locator:
+            var service = service_locator.get_service(dependency_name)
+            if service:
+                dependencies[dependency_name] = service
+                return service
     
     push_warning(service_name + ": Dependency not found: " + dependency_name)
     return null
@@ -147,4 +158,7 @@ func _on_tree_changed() -> void:
         call_deferred("_resolve_dependencies")
 
 func get_logger():
-    return get_node_or_null("/root/UnifiedLogger")
+    # Only try to get logger if in tree
+    if is_inside_tree():
+        return get_node_or_null("/root/UnifiedLogger")
+    return null

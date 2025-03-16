@@ -53,19 +53,6 @@ func _ready() -> void:
     # Open initial log file
     _open_log_file()
 
-public enum LogLevel {Error, Warning, Info, Debug, Verbose}
-
-privateLogLevel_currentLogLevel = LogLevel.Warning; / / Onlyshowwarnings and errorsbydefault
-
-public void Log(stringmessage, LogLevellevel)
-{
-    if (level <= _currentLogLevel)
-    {
-        / / Actuallyoutputthelog
-        Debug.Log($"[{level}] {message}");
-    }
-}
-
 # Core logging method
 func debug_log(level: int, message: String, category: String = "General", context: Dictionary = {}) -> void:
     # Skip logs below current configuration level

@@ -1,5 +1,6 @@
 class_name BuildingManager
 extends GameService
+
 # Building signals
 signal building_placed(building_type, position, team)
 signal building_constructed(building_reference)
@@ -403,24 +404,34 @@ var buildings_destroyed_by_team: Dictionary = {0: 0, 1: 0}
 var buildings_constructed_by_player: Dictionary = {}
 
 func initialize() -> void:
+    # If we're not in the scene tree yet, defer initialization
+    if not is_inside_tree():
+        # Call deferred will wait until we're properly in the tree
+        call_deferred("initialize")
+        return
+    
     print("BuildingManager: Initializing...")
     
+    # NOW it's safe to get references using get_node
     # Get references to required systems
     grid_system = get_node_or_null("/root/GridSystem")
     if not grid_system:
-        grid_system = get_node_or_null("/root/GameManager/GridSystem")
+        # Local search for GridSystem - only after we're in the tree
+        grid_system = get_node_or_null("../GridSystem")
         if not grid_system:
             debug_log("Error: GridSystem not found", "error", "BuildingManager")
-        
+    
     economy_manager = get_node_or_null("/root/EconomyManager")
     if not economy_manager:
-        economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
+        economy_manager = get_node_or_null("../EconomyManager")
         if not economy_manager:
             debug_log("Error: EconomyManager not found", "error", "BuildingManager")
-        
+    
     game_manager = get_node_or_null("/root/GameManager")
     if not game_manager:
-        debug_log("Error: GameManager not found", "error", "BuildingManager")
+        game_manager = get_node_or_null("..")
+        if not game_manager:
+            debug_log("Error: GameManager not found", "error", "BuildingManager")
     
     # Clear building tracking
     buildings.clear()
