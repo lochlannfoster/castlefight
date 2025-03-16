@@ -360,6 +360,14 @@ func ensure_core_systems() -> void:
 func _create_player_workers() -> void:
     debug_log("Initiating player worker creation process", "info", "GameManager")
     
+    # First get or create the Units container
+    var units_container = get_tree().current_scene.get_node_or_null("Units")
+    if not units_container:
+        debug_log("Creating Units container node", "info", "GameManager")
+        units_container = Node2D.new()
+        units_container.name = "Units"
+        get_tree().current_scene.add_child(units_container)
+    
     # Critical: Verify game state and system readiness
     var unit_factory_ref = get_node_or_null("/root/UnitFactory")
     if not is_instance_valid(unit_factory_ref):
@@ -381,9 +389,20 @@ func _create_player_workers() -> void:
         )
         
         # Create worker instance using UnitFactory instead of direct scene loading
-        var worker = unit_factory_ref.create_unit("worker", Vector2(200 + (team * 400), 300), team)
+        var spawn_position = Vector2(200 + (team * 400), 300)
+        
+        # Try to get position from MapManager if available
+        var map_manager_ref = get_node_or_null("/root/MapManager")
+        if map_manager_ref and map_manager_ref.has_method("get_team_start_position"):
+            spawn_position = map_manager_ref.get_team_start_position(team)
+        
+        var worker = unit_factory_ref.create_unit("worker", spawn_position, team)
         
         if worker:
+            # Ensure worker is added to the correct parent
+            if units_container and !worker.get_parent():
+                units_container.add_child(worker)
+                
             # Store worker reference in player data
             player_data["worker"] = worker
             debug_log("Worker creation completed for player " + str(player_id), "info", "GameManager")
@@ -400,6 +419,14 @@ func safe_get_node(path):
 
 func _create_starting_buildings() -> void:
     debug_log("Creating starting buildings...", "info", "GameManager")
+    
+    # First get or create the Buildings container
+    var buildings_container = get_tree().current_scene.get_node_or_null("Buildings")
+    if not buildings_container:
+        debug_log("Creating Buildings container node", "info", "GameManager")
+        buildings_container = Node2D.new()
+        buildings_container.name = "Buildings"
+        get_tree().current_scene.add_child(buildings_container)
     
     # Get or create building manager if needed
     if not building_manager:
@@ -430,11 +457,22 @@ func _create_starting_buildings() -> void:
         hq_position_team_a = local_grid_system.grid_to_world(grid_pos_a)
         hq_position_team_b = local_grid_system.grid_to_world(grid_pos_b)
     
+    # Try to get positions from MapManager if available
+    var map_manager_ref = get_node_or_null("/root/MapManager")
+    if map_manager_ref:
+        if map_manager_ref.has_method("get_team_hq_position"):
+            hq_position_team_a = map_manager_ref.get_team_hq_position(0)
+            hq_position_team_b = map_manager_ref.get_team_hq_position(1)
+    
     debug_log("Placing Team A headquarters at " + str(hq_position_team_a), "info", "GameManager")
     
     # Create Team A HQ
     var hq_a = building_manager.place_building("headquarters", hq_position_team_a, 0)
     if hq_a:
+        # Ensure building is added to the buildings container if not already added
+        if buildings_container and !hq_a.get_parent():
+            buildings_container.add_child(hq_a)
+            
         register_headquarters(hq_a, 0)
         debug_log("Team A headquarters placed successfully", "info", "GameManager")
     else:
@@ -446,38 +484,31 @@ func _create_starting_buildings() -> void:
             hq_instance.team = 0
             hq_instance.position = hq_position_team_a
             
-            var current_scene = get_tree().current_scene
-            if current_scene:
-                current_scene.add_child(hq_instance)
-                register_headquarters(hq_instance, 0)
-                debug_log("Team A headquarters placed using alternative method", "info", "GameManager")
-            else:
-                debug_log("Failed to place Team A headquarters - no current scene", "error", "GameManager")
+            buildings_container.add_child(hq_instance)
+            register_headquarters(hq_instance, 0)
+            debug_log("Team A headquarters placed using alternative method", "info", "GameManager")
         else:
             debug_log("Failed to load headquarters scene", "error", "GameManager")
     
-    # Create Team B HQ with similar approach
     debug_log("Placing Team B headquarters at " + str(hq_position_team_b), "info", "GameManager")
     var hq_b = building_manager.place_building("headquarters", hq_position_team_b, 1)
     if hq_b:
+        if buildings_container and !hq_b.get_parent():
+            buildings_container.add_child(hq_b)
+            
         register_headquarters(hq_b, 1)
         debug_log("Team B headquarters placed successfully", "info", "GameManager")
     else:
         debug_log("Failed to place Team B headquarters - trying alternative method", "warning", "GameManager")
-        # Try alternative method - directly create and add HQ
         var hq_scene = load("res://scenes/buildings/hq_building.tscn")
         if hq_scene:
             var hq_instance = hq_scene.instance()
             hq_instance.team = 1
             hq_instance.position = hq_position_team_b
             
-            var current_scene = get_tree().current_scene
-            if current_scene:
-                current_scene.add_child(hq_instance)
-                register_headquarters(hq_instance, 1)
-                debug_log("Team B headquarters placed using alternative method", "info", "GameManager")
-            else:
-                debug_log("Failed to place Team B headquarters - no current scene", "error", "GameManager")
+            buildings_container.add_child(hq_instance)
+            register_headquarters(hq_instance, 1)
+            debug_log("Team B headquarters placed using alternative method", "info", "GameManager")
         else:
             debug_log("Failed to load headquarters scene", "error", "GameManager")
 
