@@ -67,9 +67,8 @@ func _ready() -> void:
     match_id = "match_" + str(OS.get_unix_time())
     logger.info("Match ID generated: " + match_id, "GameManager")
     
-    # Deferred initialization with logging
-    call_deferred("ensure_data_directories_exist")
-    call_deferred("initialize_game_systems")
+    # Ensure required data directories exist
+    ensure_data_directories_exist()
     
     logger.debug("GameManager initialization complete", "GameManager")
 
@@ -1097,99 +1096,6 @@ func verify_game_state() -> void:
 # Clean initialization of all game systems
 # Replace the problematic code that calls individual initialization functions
 # with this comprehensive initialization function
-
-func initialize_game_systems() -> void:
-    log_debug("Initializing all game systems...", "info", "GameManager")
-    
-    # Initialize in dependency order:
-    # 1. Grid System (no dependencies)
-    grid_system = get_node_or_null("/root/GridSystem")
-    if not grid_system:
-        var grid_system_class = load("res://scripts/core/grid_system.gd")
-        if grid_system_class:
-            grid_system = grid_system_class.new()
-            grid_system.name = "GridSystem"
-            add_child(grid_system)
-            # Initialize grid
-            if grid_system.has_method("initialize_grid"):
-                grid_system.initialize_grid()
-            log_debug("Created and initialized GridSystem", "info", "GameManager")
-            
-    # 2. Economy Manager (no dependencies)
-    economy_manager = get_node_or_null("/root/EconomyManager")
-    if not economy_manager:
-        var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
-        if economy_manager_class:
-            economy_manager = economy_manager_class.new()
-            economy_manager.name = "EconomyManager"
-            add_child(economy_manager)
-            log_debug("Created EconomyManager", "info", "GameManager")
-    
-    # 3. Combat System (no dependencies) 
-    combat_system = get_node_or_null("/root/CombatSystem")
-    if not combat_system:
-        var combat_system_class = load("res://scripts/combat/combat_system.gd")
-        if combat_system_class:
-            combat_system = combat_system_class.new()
-            combat_system.name = "CombatSystem"
-            add_child(combat_system)
-            log_debug("Created CombatSystem", "info", "GameManager")
-    
-    # 4. Unit Factory (typically a singleton)
-    unit_factory = get_node_or_null("/root/UnitFactory")
-    
-    # 5. Building Manager (depends on grid, economy)
-    building_manager = get_node_or_null("/root/BuildingManager")
-    if not building_manager:
-        var building_manager_class = load("res://scripts/building/building_manager.gd")
-        if building_manager_class:
-            building_manager = building_manager_class.new()
-            building_manager.name = "BuildingManager"
-            add_child(building_manager)
-            log_debug("Created BuildingManager", "info", "GameManager")
-    
-    # 6. Tech Tree Manager
-    tech_tree_manager = get_node_or_null("/root/TechTreeManager")
-    if not tech_tree_manager:
-        var tech_tree_manager_class = load("res://scripts/core/tech_tree_manager.gd")
-        if tech_tree_manager_class:
-            tech_tree_manager = tech_tree_manager_class.new()
-            tech_tree_manager.name = "TechTreeManager"
-            add_child(tech_tree_manager)
-            log_debug("Created TechTreeManager", "info", "GameManager")
-    
-    # 7. Map Manager
-    map_manager = get_node_or_null("/root/MapManager")
-    if not map_manager:
-        var map_manager_class = load("res://scripts/core/map_manager.gd")
-        if map_manager_class:
-            map_manager = map_manager_class.new()
-            map_manager.name = "MapManager"
-            add_child(map_manager)
-            log_debug("Created MapManager", "info", "GameManager")
-    
-    # Set default tech trees after tech tree manager is initialized
-    if tech_tree_manager and tech_tree_manager.has_method("set_team_tech_tree"):
-        tech_tree_manager.set_team_tech_tree(0, "human")
-        tech_tree_manager.set_team_tech_tree(1, "orc")
-    
-    # 8. UI Manager (depends on most other systems)
-    ui_manager = get_node_or_null("/root/UIManager")
-    if not ui_manager:
-        var ui_manager_class = load("res://scripts/ui/ui_manager.gd")
-        if ui_manager_class:
-            ui_manager = ui_manager_class.new()
-            ui_manager.name = "UIManager"
-            add_child(ui_manager)
-            log_debug("Created UIManager", "info", "GameManager")
-    
-    # Wait a frame for all systems to finish initializing
-    yield (get_tree(), "idle_frame")
-    
-    # Connect signals after all systems are initialized
-    _connect_signals()
-    
-    log_debug("All game systems initialized successfully", "info", "GameManager")
 
 func get_system(system_name: String) -> Node:
     # First check if the system is a direct child

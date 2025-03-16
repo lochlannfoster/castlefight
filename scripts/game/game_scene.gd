@@ -40,13 +40,12 @@ func _log(message: String, level: String = "info") -> void:
 # Then call this from _ready or initialize:
 func _ready() -> void:
     # Use call_deferred to ensure safe, non-blocking initialization
-    call_deferred("_initialize_game_systems")
+    call_deferred("initialize_game_systems")
     _verify_system_availability()
     
     # Add explicit grid drawing
     call_deferred("_explicitly_draw_grid")
 
-# Centralized game systems initialization method
 func initialize_game_systems() -> void:
     log_debug("Initializing all game systems...", "info", "GameManager")
     
@@ -68,8 +67,8 @@ func initialize_game_systems() -> void:
     
     # Connect signals after all systems are initialized
     _connect_signals()
-
-        _log("Game systems initialization complete.")
+    
+    log_debug("All game systems initialized successfully", "info", "GameManager")
 
 # Safely set up game camera with deferred addition
 func _setup_safe_camera() -> void:
@@ -96,37 +95,6 @@ func _load_map_safely() -> void:
         call_deferred("add_child", map_instance)
     else:
         _log("Map scene could not be loaded!", "error")
-
-# Sequential manager initialization
-func _initialize_managers_sequentially() -> void:
-    _log("Initializing game managers...")
-    
-    # First check if GameManager exists, as it's often a dependency for others
-    game_manager_ref = get_node_or_null("/root/GameManager")
-    
-    # Get references to all managers first
-    grid_system = get_node_or_null("/root/GridSystem")
-    combat_system = get_node_or_null("/root/CombatSystem")
-    economy_manager = get_node_or_null("/root/EconomyManager")
-    building_manager = get_node_or_null("/root/BuildingManager")
-    network_manager = get_node_or_null("/root/NetworkManager")
-    ui_manager = get_node_or_null("/root/UIManager")
-    
-    # Create missing critical managers if needed
-    if not grid_system and is_instance_valid(GridSystemScript):
-        _log("Creating missing GridSystem")
-        grid_system = GridSystemScript.new()
-        grid_system.name = "GridSystem"
-        get_tree().root.call_deferred("add_child", grid_system)
-        
-    if not building_manager and is_instance_valid(BuildingManagerScript):
-        _log("Creating missing BuildingManager")
-        building_manager = BuildingManagerScript.new()
-        building_manager.name = "BuildingManager"
-        get_tree().root.call_deferred("add_child", building_manager)
-    
-    # Initialize managers with a delay to ensure they're properly added
-    call_deferred("_deferred_initialize_managers")
 
 # Prepare initial game state without spawning test entities
 func _prepare_game_state() -> void:
@@ -165,55 +133,6 @@ func _input(event: InputEvent) -> void:
                 var game_manager = get_node_or_null("/root/GameManager")
                 if game_manager and game_manager.has_method("toggle_grid_visualization"):
                     game_manager.toggle_grid_visualization()
-
-func initialize() -> void:
-    if not is_initialized:
-        _safe_system_initialization()
-        is_initialized = true
-
-func _safe_system_initialization() -> void:
-    # Centralized, controlled initialization of game subsystems
-    _log("Beginning safe system initialization...", "info")
-    
-    # 1. Core Systems Initialization
-    grid_system = _initialize_subsystem("GridSystem", GridSystemScript)
-    combat_system = _initialize_subsystem("CombatSystem", CombatSystemScript)
-    economy_manager = _initialize_subsystem("EconomyManager", EconomyManagerScript)
-    building_manager = _initialize_subsystem("BuildingManager", BuildingManagerScript)
-    
-    # 2. Advanced System Setup
-    if grid_system:
-        grid_system.initialize_grid()
-    
-    if economy_manager:
-        economy_manager.reset_team_resources()
-    
-    # 3. Tech Tree and Race Preparation
-    _prepare_tech_trees()
-    
-    # 4. Network and Multiplayer Setup
-    _configure_network_systems()
-    
-    # 5. Final Validation
-    _validate_system_readiness()
-    
-    _log("Safe system initialization complete.", "info")
-
-func _initialize_subsystem(system_name: String, system_script) -> Node:
-    # Safely initialize a game subsystem
-    var existing_system = get_node_or_null(system_name)
-    if existing_system:
-        return existing_system
-    
-    if system_script:
-        var new_system = system_script.new()
-        new_system.name = system_name
-        add_child(new_system)
-        _log("Initialized subsystem: " + system_name, "info")
-        return new_system
-    
-    _log("Failed to initialize subsystem: " + system_name, "error")
-    return null
 
 func _prepare_tech_trees() -> void:
     # Prepare default tech trees for teams
