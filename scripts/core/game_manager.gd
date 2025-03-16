@@ -323,6 +323,10 @@ func start_game() -> void:
     
 func _create_player_workers() -> void:
     log_debug("Creating player workers", "info", "GameManager")
+    log_debug("Total players: " + str(players.size()), "info", "GameManager")
+    for player_id in players.keys():
+        log_debug("Player ID: " + str(player_id) + " Details: " + str(players[player_id]), "info", "GameManager")
+    
     
     # Make sure worker scene loads properly
     var worker_scene = load("res://scenes/units/worker.tscn")
