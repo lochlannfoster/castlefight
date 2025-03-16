@@ -90,8 +90,14 @@ func verbose(message: String, category: String = "General") -> void:
 func debug(message: String, category: String = "General") -> void:
     debug_log(LogLevel.DEBUG, message, category)
 
-func info(message: String, category: String = "General") -> void:
+func info(message: String, category: String = "General", context: Dictionary = {}) -> void:
+    # Log the basic message
     debug_log(LogLevel.INFO, message, category)
+    
+    # Optionally log additional context if needed
+    if not context.empty():
+        for key in context.keys():
+            debug_log(LogLevel.VERBOSE, str(key) + ": " + str(context[key]), category)
 
 func warning(message: String, category: String = "General") -> void:
     debug_log(LogLevel.WARNING, message, category)

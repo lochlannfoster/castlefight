@@ -153,9 +153,13 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
 func _ready() -> void:
     var logger = get_node("/root/UnifiedLogger")
     
-    logger.info("NetworkManager initialized", "NetworkManager", {
+    # Use a dictionary for additional context if needed
+    var context = {
         "protocol_version": PROTOCOL_VERSION
-    })
+    }
+    
+    # Log the message with an optional category
+    logger.info("NetworkManager initialized with protocol version " + PROTOCOL_VERSION, "NetworkManager")
     
     # Initialize game system references
     _initialize_game_references()

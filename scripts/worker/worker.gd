@@ -59,22 +59,22 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
     if logger:
         match level.to_lower():
             "error":
-                logger.error(message, context if context else service_name)
+                logger.error(message, context if context else "Worker")
             "warning":
-                logger.warning(message, context if context else service_name)
+                logger.warning(message, context if context else "Worker")
             "debug":
-                logger.debug(message, context if context else service_name)
+                logger.debug(message, context if context else "Worker")
             "verbose":
-                logger.verbose(message, context if context else service_name)
+                logger.verbose(message, context if context else "Worker")
             _:
-                logger.info(message, context if context else service_name)
+                logger.info(message, context if context else "Worker")
     else:
         # Fallback to print
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        elif service_name:
-            prefix += "[" + service_name + "]"
+        else:
+            prefix += "[Worker]"
         print(prefix + " " + message)
 
 func _physics_process(delta: float) -> void:
@@ -107,7 +107,52 @@ func _physics_process(delta: float) -> void:
 
 # Get references to manager nodes
 func _get_manager_references() -> void:
-    _initialize_systems()
+    # Try to get references from game manager first
+    var game_manager = get_node_or_null("/root/GameManager")
+    var service_locator = get_node_or_null("/root/ServiceLocator")
+    
+    # Prioritize service locator if available
+    if service_locator:
+        grid_system = service_locator.get_service("GridSystem")
+        building_manager = service_locator.get_service("BuildingManager")
+        economy_manager = service_locator.get_service("EconomyManager")
+        ui_manager = service_locator.get_service("UIManager")
+    
+    # Fallback to direct node lookup
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GridSystem")
+    
+    if not building_manager:
+        building_manager = get_node_or_null("/root/BuildingManager")
+    
+    if not economy_manager:
+        economy_manager = get_node_or_null("/root/EconomyManager")
+    
+    if not ui_manager:
+        ui_manager = get_node_or_null("/root/UIManager")
+    
+    # If game manager exists, try getting references from there
+    if game_manager:
+        if not grid_system:
+            grid_system = game_manager.get_node_or_null("GridSystem")
+        if not building_manager:
+            building_manager = game_manager.get_node_or_null("BuildingManager")
+        if not economy_manager:
+            economy_manager = game_manager.get_node_or_null("EconomyManager")
+        if not ui_manager:
+            ui_manager = game_manager.get_node_or_null("UIManager")
+    
+    # Log any missing references
+    debug_log("Manager references initialized", "debug")
+    
+    if not grid_system:
+        debug_log("Warning: GridSystem not found", "warning")
+    if not building_manager:
+        debug_log("Warning: BuildingManager not found", "warning")
+    if not economy_manager:
+        debug_log("Warning: EconomyManager not found", "warning")
+    if not ui_manager:
+        debug_log("Warning: UIManager not found", "warning")
 
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:
@@ -172,6 +217,43 @@ func _handle_input() -> void:
     # Cancel building placement - right click
     if is_placing_building and Input.is_action_just_pressed("ui_cancel"):
         cancel_building_placement()
+
+func _execute_repair_command(params: Dictionary) -> void:
+    # Find the target building to repair
+    var target_building = params.get("target")
+    
+    # Validate the target
+    if not target_building or not is_instance_valid(target_building):
+        debug_log("Repair command failed: Invalid target", "warning")
+        return
+    
+    # Check if the building belongs to the worker's team
+    if target_building.team != team:
+        debug_log("Cannot repair enemy building", "warning")
+        return
+    
+    # Check if the building needs repair
+    if target_building.health >= target_building.max_health:
+        debug_log("Building is already at full health", "info")
+        return
+    
+    # Set the command state
+    current_command = CommandType.REPAIR
+    command_target = target_building
+    command_params = params
+    
+    # Move to the building if not in repair range
+    var distance = global_position.distance_to(target_building.global_position)
+    if distance > repair_range:
+        # Move closer to the building
+        move_to(target_building.global_position, {
+            "is_building_target": true,
+            "cancel_current_action": true
+        })
+    else:
+        # Already in range, start auto-repair
+        auto_repair = true
+        current_target_building = target_building
 
 func handle_command(command_type, params: Dictionary = {}) -> void:
     match command_type:
@@ -382,15 +464,6 @@ func deselect() -> void:
 func get_team() -> int:
     return team
 
-func _ready() -> void:
-    debug_log("Worker initialized. Team: " + str(team), "info")
-    
-    # Replace entire existing method with these calls
-    _initialize_systems()
-    _setup_visuals()
-    _setup_building_ghost()
-    _setup_selection_indicator()
-
 # Add or modify this function in your worker.gd script
 func _setup_visuals() -> void:
     debug_log("Setting up worker visuals for team " + str(team), "debug")
@@ -407,17 +480,6 @@ func _setup_visuals() -> void:
     var texture_path = "res://assets/units/human/worker/idle/idle.png"
     var texture = load(texture_path)
     
-    # If loading fails, try fallback method
-    if not texture:
-        debug_log("Failed to load worker texture, trying fallback", "warning")
-        
-        # Create a placeholder texture
-        # ... rest of code ...
-        
-        # Create texture
-        texture = ImageTexture.new()
-        texture.create_from_image(img)
-        debug_log("Created fallback worker texture", "debug")
     
     # Set the texture
     sprite.texture = texture
@@ -431,19 +493,27 @@ func _setup_visuals() -> void:
     debug_log("Worker visuals setup complete", "debug")
 
 func _execute_move_command(params: Dictionary) -> void:
-    var target_position = params.get("position", Vector2.ZERO)
+    var move_target_position = params.get("position", Vector2.ZERO)
     var move_options = params.get("options", {})
-    move_to(target_position, move_options)
+    move_to(move_target_position, move_options)
 
 func _execute_build_command(params: Dictionary) -> void:
     var building_type = params.get("building_type", "")
     var size = params.get("size", Vector2.ONE)
+    
+    # If a specific position is provided, consider how to handle it
+    # You might want to move to that position first
     var position = params.get("position", null)
     
     if position:
-        start_building_placement(building_type, size, position)
-    else:
-        start_building_placement(building_type, size)
+        # Move to the specified position first, then start building placement
+        move_to(position, {
+            "is_building_target": true,
+            "cancel_current_action": true
+        })
+    
+    # Always start building placement from current position
+    start_building_placement(building_type, size)
 
 func _stop_current_action() -> void:
     is_moving_to_target = false

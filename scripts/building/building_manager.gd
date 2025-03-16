@@ -265,10 +265,12 @@ func _handle_selection() -> void:
         emit_signal("building_deselected", selected_building)
         selected_building = null
     
-    # Cast a ray to select a building
-    var space_state = get_viewport().get_world_2d().direct_space_state
-    var mouse_pos = get_global_mouse_position()
+    # Get mouse position using viewport
+    var viewport = get_viewport()
+    var mouse_pos = viewport.get_mouse_position()
     
+    # Cast a ray to select a building
+    var space_state = viewport.get_world_2d().direct_space_state
     var result = space_state.intersect_point(mouse_pos, 1, [], 2) # Layer 2 for buildings
     
     if not result.empty():

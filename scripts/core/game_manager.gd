@@ -1230,8 +1230,12 @@ func does_scene_exist(scene_path: String) -> bool:
     var file = File.new()
     return file.file_exists(scene_path)
 
-# Load a scene as a PackedScene resource
 func load_scene_resource(scene_path: String) -> PackedScene:
     if does_scene_exist(scene_path):
-        return ResourceLoader.load(scene_path, "PackedScene")
+        var resource = ResourceLoader.load(scene_path)
+        if resource is PackedScene:
+            return resource
+        else:
+            push_error("Loaded resource is not a PackedScene")
+            return null
     return null
