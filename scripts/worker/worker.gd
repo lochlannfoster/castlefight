@@ -92,53 +92,6 @@ func _get_manager_references() -> void:
         economy_manager = game_manager.economy_manager
         ui_manager = game_manager.ui_manager
 
-# Set up visual appearance for the worker
-func _setup_visuals() -> void:
-    print("Setting up worker visuals for team " + str(team))
-    
-    # Create or get sprite
-    var sprite = $Sprite
-    if not has_node("Sprite"):
-        print("Creating new Sprite node")
-        sprite = Sprite.new()
-        sprite.name = "Sprite"
-        add_child(sprite)
-    else:
-        print("Using existing Sprite node")
-
-    var texture_path = "res://assets/units/human/worker/idle/idle.png"
-    print("Loading texture from: " + texture_path)
-    var texture = load(texture_path)
-    
-    if texture:
-        print("Texture loaded successfully!")
-        sprite.texture = texture
-    else:
-        print("ERROR: Worker texture not found at: " + texture_path)
-        print("Creating fallback visual")
-        
-        # Create a ColorRect as a fallback visual
-        var placeholder = ColorRect.new()
-        placeholder.rect_size = Vector2(32, 32)
-        placeholder.rect_position = Vector2(-16, -16)
-        
-        # Color based on team
-        if team == 0:
-            placeholder.color = Color(0, 0, 1) # Blue for Team A
-        else:
-            placeholder.color = Color(1, 0, 0) # Red for Team B
-            
-        sprite.add_child(placeholder)
-    
-    # Set color based on team
-    print("Setting team colors")
-    if team == 0:
-        sprite.modulate = Color(0, 0, 1) # Blue for Team A
-    else:
-        sprite.modulate = Color(1, 0, 0) # Red for Team B
-    
-    print("Worker visuals setup complete")
-
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:
     building_ghost = Node2D.new()
@@ -450,3 +403,50 @@ func _ready() -> void:
     
     print("Worker ready complete")
     print("Worker initialized. Team: " + str(team))
+
+# Add these helper functions
+func _setup_visuals() -> void:
+    print("Setting up worker visuals for team " + str(team))
+    
+    # Create or get sprite
+    var sprite = $Sprite
+    if not has_node("Sprite"):
+        print("Creating new Sprite node")
+        sprite = Sprite.new()
+        sprite.name = "Sprite"
+        add_child(sprite)
+    else:
+        print("Using existing Sprite node")
+
+    var texture_path = "res://assets/units/human/worker/idle/idle.png"
+    print("Loading texture from: " + texture_path)
+    var texture = load(texture_path)
+    
+    if texture:
+        print("Texture loaded successfully!")
+        sprite.texture = texture
+    else:
+        print("ERROR: Worker texture not found at: " + texture_path)
+        print("Creating fallback visual")
+        
+        # Create a ColorRect as a fallback visual
+        var placeholder = ColorRect.new()
+        placeholder.rect_size = Vector2(32, 32)
+        placeholder.rect_position = Vector2(-16, -16)
+        
+        # Color based on team
+        if team == 0:
+            placeholder.color = Color(0, 0, 1) # Blue for Team A
+        else:
+            placeholder.color = Color(1, 0, 0) # Red for Team B
+            
+        sprite.add_child(placeholder)
+    
+    # Set color based on team
+    print("Setting team colors")
+    if team == 0:
+        sprite.modulate = Color(0, 0, 1) # Blue for Team A
+    else:
+        sprite.modulate = Color(1, 0, 0) # Red for Team B
+    
+    print("Worker visuals setup complete")

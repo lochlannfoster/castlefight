@@ -278,7 +278,7 @@ func remove_player(player_id) -> void:
 func start_pregame_countdown() -> void:
     change_game_state(GameState.PREGAME)
 
-# Start the game
+# In scripts/core/game_manager.gd
 func start_game() -> void:
     log_debug("GameManager: Starting game...", "info", "GameManager")
     log_debug("Current state: " + str(current_state), "info", "GameManager")
