@@ -25,7 +25,7 @@ func _exit_tree():
   if log_file and log_file.is_open():
     log_file.close()
 
-func log(message, level = LogLevel.INFO, context = ""):
+func log(message: String, level: int = LogLevel.INFO, context: String = "") -> void:
   if level > current_log_level:
     return
     

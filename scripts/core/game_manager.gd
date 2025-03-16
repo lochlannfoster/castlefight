@@ -282,8 +282,8 @@ func start_pregame_countdown() -> void:
 
 # Start the game
 func start_game() -> void:
-    DebugLogger.info("GameManager: Starting game...", "GameManager")
-    DebugLogger.debug("Current state: " + str(current_state), "GameManager")
+    log_debug("GameManager: Starting game...", "GameManager")
+    log_debug("Current state: " + str(current_state), "GameManager")
 
     # Start the game properly
     if current_state == GameState.SETUP or current_state == GameState.PREGAME:
@@ -305,15 +305,15 @@ func start_game() -> void:
     else:
         print("Cannot start game: Current state is ", current_state)
 
-    DebugLogger.info("Game started signal emitted", "GameManager")
+    log_debug("Game started signal emitted", "GameManager")
     
 # Make _create_player_workers more robust
 func _create_player_workers() -> void:
-  DebugLogger.debug("Creating player workers", "GameManager")
+  log_debug("Creating player workers", "GameManager")
   
   var worker_scene = load("res://scenes/units/worker.tscn")
   if not worker_scene:
-    DebugLogger.error("Failed to load worker scene", "GameManager")
+    log_debug("Failed to load worker scene", "GameManager")
     return
     
   for player_id in players.keys():
@@ -337,11 +337,11 @@ func _create_player_workers() -> void:
     
     worker.position = start_position
     print("Spawning worker for team " + str(team) + " at " + str(start_position))
-    DebugLogger.verbose("Spawning worker for player " + str(player_id) + " on team " + str(team), "GameManager")
+    log_debug("Spawning worker for player " + str(player_id) + " on team " + str(team), "GameManager")
     
     # Add worker to scene
     get_tree().current_scene.add_child(worker)
-    DebugLogger.debug("Worker created and added to scene", "GameManager")
+    log_debug("Worker created and added to scene", "GameManager")
     
     # Store reference in player data
     player_data.worker = worker
@@ -679,3 +679,20 @@ func _create_worker_for_player(player_id: int) -> void:
     get_tree().current_scene.add_child(worker)
     player_data.worker = worker
     push_warning("Successfully restored worker for player " + str(player_id))
+
+func log_debug(message: String, level: String = "debug", context: String = "") -> void:
+    if Engine.has_singleton("DebugLogger"):
+        match level.to_lower():
+            "error":
+                log_debug(message, context)
+            "warning":
+                log_debug(message, context)
+            "info":
+                log_debug(message, context)
+            "verbose":
+                log_debug(message, context)
+            _: # Default to debug level
+                log_debug(message, context)
+    else:
+        # Fallback to print if DebugLogger is not available
+        print(level.to_upper() + " [" + context + "]: " + message)

@@ -75,7 +75,7 @@ func _load_building_file(building_id: String, file_path: String) -> void:
 
 # Place a new building at the given position
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
-    DebugLogger.debug("Attempting to place building: " + building_type + " at " + str(position) + " for team " + str(team), "BuildingManager")
+    log_debug("Attempting to place building: " + building_type + " at " + str(position) + " for team " + str(team), "BuildingManager")
     # Check if building type exists
     if not building_data.has(building_type):
         push_error("Unknown building type: " + building_type)
@@ -93,7 +93,7 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
     var size = Vector2(data.construction.size_x if data.has("construction") and data.construction.has("size_x") else 1, 
                     data.construction.size_y if data.has("construction") and data.construction.has("size_y") else 1)
     print("Building size: " + str(size))
-    DebugLogger.verbose("Grid position: " + str(grid_pos) + ", size: " + str(size), "BuildingManager")
+    log_debug("Grid position: " + str(grid_pos) + ", size: " + str(size), "BuildingManager")
 
     # Check if placement is valid
     if not grid_system.can_place_building(grid_pos, size, team):
@@ -101,7 +101,7 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
         # Additional check to see specific reason
         if not grid_system.is_within_grid(grid_pos):
             print("Position is outside grid boundaries")
-        DebugLogger.warning("Invalid building placement at " + str(grid_pos), "BuildingManager")
+        log_debug("Invalid building placement at " + str(grid_pos), "BuildingManager")
         return null
     
     # Create building scene instance
@@ -139,7 +139,7 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
     buildings[building_id] = building_instance
     
     emit_signal("building_placed", building_type, position, team)
-    DebugLogger.info("Building " + building_type + " successfully placed", "BuildingManager")
+    log_debug("Building " + building_type + " successfully placed", "BuildingManager")
     
     return building_instance
 

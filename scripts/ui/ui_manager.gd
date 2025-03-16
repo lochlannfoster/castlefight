@@ -392,7 +392,7 @@ func _input(event) -> void:
          is_debug_overlay_visible = !is_debug_overlay_visible
       if debug_overlay:
         debug_overlay.visible = is_debug_overlay_visible
-        DebugLogger.debug("Debug overlay toggled: " + str(is_debug_overlay_visible), "UIManager")
+        log_debug("Debug overlay toggled: " + str(is_debug_overlay_visible), "UIManager")
         match event.scancode:
             KEY_ESCAPE:
                 if is_building_menu_open:
@@ -467,11 +467,11 @@ func update_game_time(time_seconds: float) -> void:
 # Toggle building menu
 func toggle_building_menu() -> void:
   is_building_menu_open = !is_building_menu_open
-  DebugLogger.debug("Building menu toggled: " + str(is_building_menu_open), "UIManager")
+  log_debug("Building menu toggled: " + str(is_building_menu_open), "UIManager")
   building_menu.visible = is_building_menu_open
   
   if is_building_menu_open:
-    DebugLogger.verbose("Populating building menu", "UIManager")
+    log_debug("Populating building menu", "UIManager")
     _populate_building_menu()
 
 # Populate building menu with available buildings
@@ -856,3 +856,20 @@ func _create_debug_overlay() -> void:
   # Add to scene but hide by default
   add_child(debug_overlay)
   debug_overlay.visible = false
+
+func log_debug(message: String, level: String = "debug", context: String = "") -> void:
+    if Engine.has_singleton("DebugLogger"):
+        match level.to_lower():
+            "error":
+                log_debug(message, context)
+            "warning":
+                log_debug(message, context)
+            "info":
+                log_debug(message, context)
+            "verbose":
+                log_debug(message, context)
+            _: # Default to debug level
+                log_debug(message, context)
+    else:
+        # Fallback to print if DebugLogger is not available
+        print(level.to_upper() + " [" + context + "]: " + message)
