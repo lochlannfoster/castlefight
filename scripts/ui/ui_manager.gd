@@ -448,7 +448,7 @@ func _connect_signals() -> void:
 	
 	# Connect our own worker_command_issued signal to _emit_worker_command
 	if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
-		connect("worker_command_issued", self, "_emit_worker_command")
+		var _connect_result = connect("worker_command_issued", self, "_emit_worker_command")
 
 # Input handling
 func _input(event) -> void:
@@ -488,7 +488,7 @@ func _input(event) -> void:
 				emit_signal("building_placement_cancelled")
 
 # Process function to update game time and debug info
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
 		update_game_time(game_manager.match_timer)
 	

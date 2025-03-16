@@ -95,7 +95,7 @@ func _add_ui_manager(ui_manager):
 	# Set up a timer to add the worker after the UI manager is initialized
 	var worker_timer = Timer.new()
 	add_child(worker_timer)
-	worker_timer.wait_time = 0.2  
+	worker_timer.wait_time = 0.2
 	worker_timer.one_shot = true
 	worker_timer.autostart = true
 	worker_timer.connect("timeout", self, "_add_test_worker")
@@ -107,7 +107,7 @@ func _input(event):
 		print("Key pressed: " + str(event.scancode))
 		
 		if event.scancode == KEY_B:
-			print("B key pressed - opening building menu")  
+			print("B key pressed - opening building menu")
 			var ui_manager = get_node_or_null("UIManager")
 			if ui_manager and ui_manager.has_method("toggle_building_menu"):
 				ui_manager.toggle_building_menu()

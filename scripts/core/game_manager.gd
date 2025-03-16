@@ -11,10 +11,10 @@ signal team_eliminated(team)
 signal match_countdown_updated(time_remaining)
 
 # Game settings
-export var match_duration: float = 1800.0  # 30 minutes maximum match time
-export var pregame_countdown: float = 10.0  # 10 seconds countdown before game starts
+export var match_duration: float = 1800.0 # 30 minutes maximum match time
+export var pregame_countdown: float = 10.0 # 10 seconds countdown before game starts
 export var max_players_per_team: int = 3
-export var team_colors: Array = [Color(0, 0, 1), Color(1, 0, 0)]  # Blue, Red
+export var team_colors: Array = [Color(0, 0, 1), Color(1, 0, 0)] # Blue, Red
 
 # Game state
 enum GameState {SETUP, PREGAME, PLAYING, ENDED}
@@ -26,16 +26,16 @@ var winning_team: int = -1
 var match_id: String = ""
 
 # Player and team tracking
-var players: Dictionary = {}  # player_id -> player data
+var players: Dictionary = {} # player_id -> player data
 var team_players: Dictionary = {
-  0: [],  # Team A player IDs
-  1: []   # Team B player IDs
+  0: [], # Team A player IDs
+  1: [] # Team B player IDs
 }
 
 # Headquarters references
 var headquarters: Dictionary = {
-  0: null,  # Team A HQ
-  1: null   # Team B HQ
+  0: null, # Team A HQ
+  1: null # Team B HQ
 }
 
 # System references (will be initialized in _ready)
@@ -81,7 +81,7 @@ func _create_required_scenes() -> void:
   var file = File.new()
   
   if file.file_exists(scene_creator_path):
-  var SceneCreator = load(scene_creator_path)
+   var SceneCreator = load(scene_creator_path)
   if SceneCreator:
 	var creator = SceneCreator.new()
 	add_child(creator)
@@ -223,7 +223,7 @@ func _reset_game() -> void:
 func add_player(player_id, player_name: String, team: int) -> bool:
   # Ensure team is valid (0 or 1)
   if team < 0 or team > 1:
-  team = 0  # Default to Team A if invalid
+  team = 0 # Default to Team A if invalid
   
   # Check if teams are full
   if team_players[team].size() >= max_players_per_team:
@@ -234,7 +234,7 @@ func add_player(player_id, player_name: String, team: int) -> bool:
   "id": player_id,
   "name": player_name,
   "team": team,
-  "worker": null,  # Will be created when game starts
+  "worker": null, # Will be created when game starts
   "resources": {
 	"gold": 0,
 	"wood": 0,
@@ -349,7 +349,7 @@ func _create_player_workers() -> void:
   if sprite:
 	# Make sprite bright green or red depending on team
 	sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
-	sprite.scale = Vector2(2, 2)  # Make it twice as big
+	sprite.scale = Vector2(2, 2) # Make it twice as big
 
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):
@@ -491,7 +491,7 @@ func is_game_over() -> bool:
 func get_team_color(team: int) -> Color:
   if team >= 0 and team < team_colors.size():
   return team_colors[team]
-  return Color(1, 1, 1)  # White for invalid team
+  return Color(1, 1, 1) # White for invalid team
 
 # Reset the game after a match ends
 func reset_game() -> void:
