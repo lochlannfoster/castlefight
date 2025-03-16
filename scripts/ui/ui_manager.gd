@@ -30,15 +30,20 @@ var economy_manager
 var building_manager
 var game_manager
 
+# Debug elements
 var debug_overlay: Control = null
 var is_debug_overlay_visible: bool = false
 
 # Ready function
 func _ready() -> void:
 	# Get references to game systems
-	game_manager = get_node("/root/GameManager")
-	economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
-	building_manager = get_node_or_null("/root/GameManager/BuildingManager")
+	game_manager = get_node_or_null("/root/GameManager")
+	if game_manager:
+		economy_manager = game_manager.economy_manager
+		building_manager = game_manager.building_manager
+	else:
+		economy_manager = get_node_or_null("/root/EconomyManager")
+		building_manager = get_node_or_null("/root/BuildingManager")
 	
 	# Create UI elements
 	_create_ui_elements()
@@ -74,7 +79,8 @@ func _create_ui_elements() -> void:
 	
 	# Create debug mode indicator
 	_create_debug_indicator()
-
+	
+	# Create debug overlay
 	_create_debug_overlay()
 
 # Create debug mode indicator
@@ -172,32 +178,55 @@ func _create_resource_display() -> void:
 
 # Create building menu
 func _create_building_menu() -> void:
+	# Try to load the building menu scene
 	var building_menu_scene = load("res://scenes/ui/building_menu.tscn")
 	if building_menu_scene:
 		building_menu = building_menu_scene.instance()
 		add_child(building_menu)
 		
 		# Connect signals
-		var close_button = building_menu.get_node("Panel/CloseButton")
+		var close_button = building_menu.get_node_or_null("Panel/CloseButton")
 		if close_button:
 			close_button.connect("pressed", self, "_on_building_menu_close")
 	else:
-		push_error("Failed to load building menu scene")
-	
-	# Create background panel
-	var panel = Panel.new()
-	panel.name = "Panel"
-	panel.rect_min_size = Vector2(400, 100)
-	building_menu.add_child(panel)
-	
-	# Close button
-	var close_button = Button.new()
-	close_button.name = "CloseButton"
-	close_button.text = "X"
-	close_button.rect_position = Vector2(375, 5)
-	close_button.rect_size = Vector2(20, 20)
-	close_button.connect("pressed", self, "_on_building_menu_close")
-	panel.add_child(close_button)
+		# Create a fallback building menu
+		building_menu = Control.new()
+		building_menu.name = "BuildingMenu"
+		building_menu.visible = false
+		add_child(building_menu)
+		
+		# Create background panel
+		var panel = Panel.new()
+		panel.name = "Panel"
+		panel.rect_min_size = Vector2(400, 300)
+		panel.rect_position = Vector2(50, 50)
+		building_menu.add_child(panel)
+		
+		# Title label
+		var title_label = Label.new()
+		title_label.name = "TitleLabel"
+		title_label.text = "Building Menu"
+		title_label.rect_position = Vector2(10, 10)
+		title_label.rect_size = Vector2(380, 30)
+		title_label.align = Label.ALIGN_CENTER
+		panel.add_child(title_label)
+		
+		# Create a grid container for buildings
+		var grid = GridContainer.new()
+		grid.name = "BuildingGrid"
+		grid.columns = 3
+		grid.rect_position = Vector2(10, 50)
+		grid.rect_size = Vector2(380, 230)
+		panel.add_child(grid)
+		
+		# Close button
+		var close_button = Button.new()
+		close_button.name = "CloseButton"
+		close_button.text = "X"
+		close_button.rect_position = Vector2(370, 10)
+		close_button.rect_size = Vector2(20, 20)
+		close_button.connect("pressed", self, "_on_building_menu_close")
+		panel.add_child(close_button)
 
 # Create unit info panel
 func _create_unit_info_panel() -> void:
@@ -336,63 +365,100 @@ func _create_tooltip() -> void:
 	label.autowrap = true
 	panel.add_child(label)
 
+# Create debug overlay
+func _create_debug_overlay() -> void:
+	debug_overlay = Control.new()
+	debug_overlay.name = "DebugOverlay"
+	debug_overlay.anchor_right = 1.0
+	debug_overlay.anchor_bottom = 1.0
+	
+	var panel = Panel.new()
+	panel.name = "Panel"
+	panel.modulate = Color(0, 0, 0, 0.7) # Semi-transparent black
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 1.0
+	debug_overlay.add_child(panel)
+	
+	var vbox = VBoxContainer.new()
+	vbox.name = "Stats"
+	vbox.margin_left = 10
+	vbox.margin_top = 10
+	vbox.margin_right = 300
+	vbox.margin_bottom = 300
+	panel.add_child(vbox)
+	
+	# Add labels for different stat types
+	var fps_label = Label.new()
+	fps_label.name = "FPSLabel"
+	fps_label.text = "FPS: 0"
+	vbox.add_child(fps_label)
+	
+	var memory_label = Label.new()
+	memory_label.name = "MemoryLabel"
+	memory_label.text = "Memory: 0 MB"
+	vbox.add_child(memory_label)
+	
+	var object_count_label = Label.new()
+	object_count_label.name = "ObjectCountLabel"
+	object_count_label.text = "Objects: 0"
+	vbox.add_child(object_count_label)
+	
+	var building_count_label = Label.new()
+	building_count_label.name = "BuildingCountLabel"
+	building_count_label.text = "Buildings: 0"
+	vbox.add_child(building_count_label)
+	
+	var unit_count_label = Label.new()
+	unit_count_label.name = "UnitCountLabel"
+	unit_count_label.text = "Units: 0"
+	vbox.add_child(unit_count_label)
+	
+	# Add to scene but hide by default
+	add_child(debug_overlay)
+	debug_overlay.visible = false
+
 # Connect signals
-# Connect signals between systems
 func _connect_signals() -> void:
 	# Connect to Economy Manager
 	if economy_manager:
-		economy_manager.connect("resources_changed", self, "_on_resources_changed")
-		economy_manager.connect("income_changed", self, "_on_income_changed")
-		economy_manager.connect("income_tick", self, "_on_income_tick")
-		economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+		if not economy_manager.is_connected("resources_changed", self, "_on_resources_changed"):
+			economy_manager.connect("resources_changed", self, "_on_resources_changed")
+		if not economy_manager.is_connected("income_changed", self, "_on_income_changed"):
+			economy_manager.connect("income_changed", self, "_on_income_changed")
+		if not economy_manager.is_connected("income_tick", self, "_on_income_tick"):
+			economy_manager.connect("income_tick", self, "_on_income_tick")
+		if not economy_manager.is_connected("bounty_earned", self, "_on_bounty_earned"):
+			economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
 	
 	# Connect to Building Manager
 	if building_manager:
-		building_manager.connect("building_selected", self, "_on_building_selected")
-		building_manager.connect("building_deselected", self, "_on_building_deselected")
+		if not building_manager.is_connected("building_selected", self, "_on_building_selected"):
+			building_manager.connect("building_selected", self, "_on_building_selected")
+		if not building_manager.is_connected("building_deselected", self, "_on_building_deselected"):
+			building_manager.connect("building_deselected", self, "_on_building_deselected")
 	
 	# Connect to Game Manager
 	if game_manager:
-		game_manager.connect("game_started", self, "_on_game_started")
-		game_manager.connect("game_ended", self, "_on_game_ended")
-		game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+		if not game_manager.is_connected("game_started", self, "_on_game_started"):
+			game_manager.connect("game_started", self, "_on_game_started")
+		if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
+			game_manager.connect("game_ended", self, "_on_game_ended")
+		if not game_manager.is_connected("match_countdown_updated", self, "_on_match_countdown_updated"):
+			game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
 	
 	# Connect our own worker_command_issued signal to _emit_worker_command
 	if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
-		var _err = connect("worker_command_issued", self, "_emit_worker_command")
-		
-# Implement worker command functionality
-func _emit_worker_command(command_type: String, params: Dictionary = {}) -> void:
-	emit_signal("worker_command_issued", command_type, params)
-	
-	# If we have a selected worker, send the command directly to it
-	if selected_worker != null:
-		# Convert string command type to enum if worker has a CommandType enum
-		var cmd_type = command_type
-		if "CommandType" in selected_worker:
-			match command_type:
-				"move":
-					cmd_type = selected_worker.CommandType.MOVE
-				"build":
-					cmd_type = selected_worker.CommandType.BUILD
-				"repair":
-					cmd_type = selected_worker.CommandType.REPAIR
-				"stop":
-					cmd_type = selected_worker.CommandType.STOP
-		
-		# Call handle_command if it exists
-		if selected_worker.has_method("handle_command"):
-			selected_worker.handle_command(cmd_type, params)		
+		connect("worker_command_issued", self, "_emit_worker_command")
 
 # Input handling
 func _input(event) -> void:
 	# Handle key shortcuts
-	  if event is InputEventKey and event.pressed:
+	if event is InputEventKey and event.pressed:
 		if event.scancode == KEY_F3:
 			is_debug_overlay_visible = !is_debug_overlay_visible
-	  if debug_overlay:
-		debug_overlay.visible = is_debug_overlay_visible
-		log_debug("Debug overlay toggled: " + str(is_debug_overlay_visible), "UIManager")
+			if debug_overlay:
+				debug_overlay.visible = is_debug_overlay_visible
+		
 		match event.scancode:
 			KEY_ESCAPE:
 				if is_building_menu_open:
@@ -404,22 +470,86 @@ func _input(event) -> void:
 				toggle_building_menu()
 			KEY_R:
 				# Toggle auto-repair for selected worker
-				if selected_worker != null:
+				if selected_worker != null and selected_worker.has_method("toggle_auto_repair"):
 					selected_worker.toggle_auto_repair()
 	
-		# Handle mouse movement for tooltip
-		if event is InputEventMouseMotion:
-			# Update tooltip position
-			if tooltip.visible:
-				tooltip.rect_position = event.position + Vector2(15, 15)
+	# Handle mouse movement for tooltip
+	if event is InputEventMouseMotion:
+		# Update tooltip position
+		if tooltip.visible:
+			tooltip.rect_position = event.position + Vector2(15, 15)
 	
-		# Handle mouse button clicks
-		if event is InputEventMouseButton and event.pressed:
-			if event.button_index == BUTTON_RIGHT:
-				# Right-click to cancel building placement
-				if selected_worker and selected_worker.is_placing_building:
-					selected_worker.cancel_building_placement()
-					emit_signal("building_placement_cancelled")
+	# Handle mouse button clicks
+	if event is InputEventMouseButton and event.pressed:
+		if event.button_index == BUTTON_RIGHT:
+			# Right-click to cancel building placement
+			if selected_worker and selected_worker.is_placing_building:
+				selected_worker.cancel_building_placement()
+				emit_signal("building_placement_cancelled")
+
+# Process function to update game time and debug info
+func _process(delta: float) -> void:
+	if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
+		update_game_time(game_manager.match_timer)
+	
+	if is_debug_overlay_visible and debug_overlay:
+		var fps_label = debug_overlay.get_node_or_null("Panel/Stats/FPSLabel")
+		if fps_label:
+			fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
+		
+		var memory_label = debug_overlay.get_node_or_null("Panel/Stats/MemoryLabel")
+		if memory_label:
+			var mem_mb = OS.get_static_memory_usage() / 1048576.0
+			memory_label.text = "Memory: %.2f MB" % mem_mb
+		
+		var object_count_label = debug_overlay.get_node_or_null("Panel/Stats/ObjectCountLabel")
+		if object_count_label:
+			object_count_label.text = "Objects: " + str(Performance.get_monitor(Performance.OBJECT_COUNT))
+		
+		var building_count_label = debug_overlay.get_node_or_null("Panel/Stats/BuildingCountLabel")
+		if building_count_label and building_manager:
+			building_count_label.text = "Buildings: " + str(building_manager.buildings.size())
+		
+		var unit_count_label = debug_overlay.get_node_or_null("Panel/Stats/UnitCountLabel")
+		if unit_count_label:
+			var units = get_tree().get_nodes_in_group("units")
+			unit_count_label.text = "Units: " + str(units.size())
+
+# Toggle building menu
+func toggle_building_menu() -> void:
+	is_building_menu_open = !is_building_menu_open
+	building_menu.visible = is_building_menu_open
+	
+	if is_building_menu_open:
+		_populate_building_menu()
+
+# Populate building menu with available buildings
+func _populate_building_menu() -> void:
+	if not building_manager:
+		return
+	
+	var grid = building_menu.get_node_or_null("Panel/BuildingGrid")
+	if not grid:
+		return
+	
+	# Clear existing buttons
+	for child in grid.get_children():
+		child.queue_free()
+	
+	# Get available buildings for current team
+	var available_buildings = building_manager.get_available_buildings(current_team)
+	
+	# Create buttons for each building
+	for building_data in available_buildings:
+		var button = Button.new()
+		button.text = building_data.name
+		button.hint_tooltip = "%s\nCost: %d gold" % [building_data.description, building_data.cost]
+		button.rect_min_size = Vector2(70, 70)
+		
+		# Connect button press
+		button.connect("pressed", self, "_on_building_button_pressed", [building_data.id])
+		
+		grid.add_child(button)
 
 # Update resource display
 func update_resource_display() -> void:
@@ -464,45 +594,6 @@ func update_game_time(time_seconds: float) -> void:
 		var seconds = int(time_seconds) % 60
 		time_label.text = "Time: %02d:%02d" % [minutes, seconds]
 
-# Toggle building menu
-func toggle_building_menu() -> void:
-  is_building_menu_open = !is_building_menu_open
-  log_debug("Building menu toggled: " + str(is_building_menu_open), "UIManager")
-  building_menu.visible = is_building_menu_open
-  
-  if is_building_menu_open:
-	log_debug("Populating building menu", "UIManager")
-	_populate_building_menu()
-
-# Populate building menu with available buildings
-func _populate_building_menu() -> void:
-	if not building_manager:
-		return
-	
-	var grid = building_menu.get_node_or_null("Panel/BuildingGrid")
-	
-	if not grid:
-		return
-	
-	# Clear existing buttons
-	for child in grid.get_children():
-		child.queue_free()
-	
-	# Get available buildings for current team
-	var available_buildings = building_manager.get_available_buildings(current_team)
-	
-	# Create buttons for each building
-	for building_data in available_buildings:
-		var button = Button.new()
-		button.text = building_data.name
-		button.hint_tooltip = "%s\nCost: %d gold" % [building_data.description, building_data.cost]
-		button.rect_min_size = Vector2(70, 70)
-		
-		# Connect button press
-		button.connect("pressed", self, "_on_building_button_pressed", [building_data.id])
-		
-		grid.add_child(button)
-
 # Show unit info panel for a unit
 func show_unit_info(unit) -> void:
 	if not is_instance_valid(unit_info_panel):
@@ -516,16 +607,16 @@ func show_unit_info(unit) -> void:
 	var armor_label = unit_info_panel.get_node_or_null("Panel/StatsContainer/ArmorLabel")
 	
 	if name_label:
-		name_label.text = unit.display_name
+		name_label.text = unit.display_name if "display_name" in unit else "Worker"
 	
 	if health_label:
-		health_label.text = "Health: %.1f/%.1f" % [unit.health, unit.max_health]
+		health_label.text = "Health: %.1f/%.1f" % [unit.health, unit.max_health] if "health" in unit else "Health: N/A"
 	
 	if attack_label:
-		attack_label.text = "Attack: %.1f (%s)" % [unit.attack_damage, unit.attack_type]
+		attack_label.text = "Attack: %.1f (%s)" % [unit.attack_damage, unit.attack_type] if "attack_damage" in unit else "Attack: N/A"
 	
 	if armor_label:
-		armor_label.text = "Armor: %.1f (%s)" % [unit.armor, unit.armor_type]
+		armor_label.text = "Armor: %.1f (%s)" % [unit.armor, unit.armor_type] if "armor" in unit else "Armor: N/A"
 
 # Hide unit info panel
 func hide_unit_info() -> void:
@@ -644,6 +735,67 @@ func select_worker(worker) -> void:
 	else:
 		hide_unit_info()
 
+# Show match preparation
+func show_match_preparation() -> void:
+	# Show match preparation screen
+	var label = Label.new()
+	label.text = "Preparing Match..."
+	label.align = Label.ALIGN_CENTER
+	label.valign = Label.VALIGN_CENTER
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	label.rect_position = Vector2(viewport_rect.size.x / 2 - 100, viewport_rect.size.y / 2 - 25)
+	label.rect_size = Vector2(200, 50)
+	
+	floating_text_container.add_child(label)
+	
+	# Remove after delay
+	yield(get_tree().create_timer(2.0), "timeout")
+	label.queue_free()
+
+# Show end game screen
+func show_end_game_screen(winner: int, reason: String) -> void:
+	var panel = Panel.new()
+	panel.rect_size = Vector2(300, 200)
+	
+	var viewport_rect = get_viewport().get_visible_rect()
+	panel.rect_position = Vector2(viewport_rect.size.x / 2 - 150, viewport_rect.size.y / 2 - 100)
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.margin_left = 20
+	vbox.margin_top = 20
+	vbox.margin_right = -20
+	vbox.margin_bottom = -20
+	panel.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "Game Over"
+	title.align = Label.ALIGN_CENTER
+	vbox.add_child(title)
+	
+	var winner_label = Label.new()
+	winner_label.text = "Team " + ("A" if winner == 0 else "B") + " Wins!"
+	winner_label.align = Label.ALIGN_CENTER
+	vbox.add_child(winner_label)
+	
+	var reason_label = Label.new()
+	reason_label.text = "Reason: " + reason
+	reason_label.align = Label.ALIGN_CENTER
+	vbox.add_child(reason_label)
+	
+	var button = Button.new()
+	button.text = "Continue"
+	button.connect("pressed", self, "_on_end_game_continue")
+	vbox.add_child(button)
+	
+	floating_text_container.add_child(panel)
+
+# End game continue button handler
+func _on_end_game_continue() -> void:
+	# Switch back to lobby scene
+	var _err = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:
 	if team == current_team:
@@ -666,14 +818,10 @@ func _on_building_selected(building) -> void:
 	
 	# Hide unit info if showing
 	hide_unit_info()
-	
-	# TODO: Show building info panel
 
 func _on_building_deselected(building) -> void:
 	if selected_building == building:
 		selected_building = null
-		
-		# TODO: Hide building info panel
 
 func _on_building_menu_close() -> void:
 	is_building_menu_open = false
@@ -694,7 +842,8 @@ func _on_building_button_pressed(building_type: String) -> void:
 			building_data.size_y if building_data.has("size_y") else 1
 		)
 		
-		selected_worker.start_building_placement(building_type, size)
+		if selected_worker.has_method("start_building_placement"):
+			selected_worker.start_building_placement(building_type, size)
 		
 		# Emit the worker_command_issued signal
 		emit_signal("worker_command_issued", "build", {"building_type": building_type, "size": size})
@@ -762,115 +911,42 @@ func _on_match_countdown_updated(time_remaining: float) -> void:
 	if time_remaining <= 0:
 		countdown.queue_free()
 
-# Process function to update game time
-func _process(_delta: float) -> void:
-	if game_manager and game_manager.current_state == game_manager.GameState.PLAYING:
-		update_game_time(game_manager.match_timer)
-	
-	if is_debug_overlay_visible and debug_overlay:
-		var fps_label = debug_overlay.get_node_or_null("Panel/Stats/FPSLabel")
-		if fps_label:
-			fps_label.text = "FPS: " + str(Engine.get_frames_per_second())
+# Implement worker command functionality
+func _emit_worker_command(command_type, params: Dictionary = {}) -> void:
+	# If we have a selected worker, send the command directly to it
+	if selected_worker != null:
+		# Convert string command type to enum if worker has a CommandType enum
+		var cmd_type = command_type
+		if "CommandType" in selected_worker:
+			match command_type:
+				"move":
+					cmd_type = selected_worker.CommandType.MOVE
+				"build":
+					cmd_type = selected_worker.CommandType.BUILD
+				"repair":
+					cmd_type = selected_worker.CommandType.REPAIR
+				"stop":
+					cmd_type = selected_worker.CommandType.STOP
 		
-		var memory_label = debug_overlay.get_node_or_null("Panel/Stats/MemoryLabel")
-		if memory_label:
-			var mem_mb = OS.get_static_memory_usage() / 1048576.0
-			memory_label.text = "Memory: %.2f MB" % mem_mb
-	
-	var object_count_label = debug_overlay.get_node_or_null("Panel/Stats/ObjectCountLabel")
-	if object_count_label:
-	  object_count_label.text = "Objects: " + str(Performance.get_monitor(Performance.OBJECT_COUNT))
-	
-	var building_count_label = debug_overlay.get_node_or_null("Panel/Stats/BuildingCountLabel")
-	if building_count_label and game_manager and game_manager.building_manager:
-	  building_count_label.text = "Buildings: " + str(game_manager.building_manager.buildings.size())
-	
-	var unit_count_label = debug_overlay.get_node_or_null("Panel/Stats/UnitCountLabel")
-	if unit_count_label:
-	  var units = get_tree().get_nodes_in_group("units")
-	  unit_count_label.text = "Units: " + str(units.size())
+		# Call handle_command if it exists
+		if selected_worker.has_method("handle_command"):
+			selected_worker.handle_command(cmd_type, params)
 
-func show_match_preparation():
-	# Show match preparation screen
-	var label = Label.new()
-	label.text = "Preparing Match..."
-	label.align = Label.ALIGN_CENTER
-	label.valign = Label.VALIGN_CENTER
-	
-	var viewport_rect = get_viewport().get_visible_rect()
-	label.rect_position = Vector2(viewport_rect.size.x / 2 - 100, viewport_rect.size.y / 2 - 25)
-	label.rect_size = Vector2(200, 50)
-	
-	floating_text_container.add_child(label)
-	
-	# Remove after delay
-	yield(get_tree().create_timer(2.0), "timeout")
-	label.queue_free()
-
-func _create_debug_overlay() -> void:
-  debug_overlay = Control.new()
-  debug_overlay.name = "DebugOverlay"
-  debug_overlay.anchor_right = 1.0
-  debug_overlay.anchor_bottom = 1.0
-  
-  var panel = Panel.new()
-  panel.name = "Panel"
-  panel.modulate = Color(0, 0, 0, 0.7) # Semi-transparent black
-  panel.anchor_right = 1.0
-  panel.anchor_bottom = 1.0
-  debug_overlay.add_child(panel)
-  
-  var vbox = VBoxContainer.new()
-  vbox.name = "Stats"
-  vbox.margin_left = 10
-  vbox.margin_top = 10
-  vbox.margin_right = 300
-  vbox.margin_bottom = 300
-  panel.add_child(vbox)
-  
-  # Add labels for different stat types
-  var fps_label = Label.new()
-  fps_label.name = "FPSLabel"
-  fps_label.text = "FPS: 0"
-  vbox.add_child(fps_label)
-  
-  var memory_label = Label.new()
-  memory_label.name = "MemoryLabel"
-  memory_label.text = "Memory: 0 MB"
-  vbox.add_child(memory_label)
-  
-  var object_count_label = Label.new()
-  object_count_label.name = "ObjectCountLabel"
-  object_count_label.text = "Objects: 0"
-  vbox.add_child(object_count_label)
-  
-  var building_count_label = Label.new()
-  building_count_label.name = "BuildingCountLabel"
-  building_count_label.text = "Buildings: 0"
-  vbox.add_child(building_count_label)
-  
-  var unit_count_label = Label.new()
-  unit_count_label.name = "UnitCountLabel"
-  unit_count_label.text = "Units: 0"
-  vbox.add_child(unit_count_label)
-  
-  # Add to scene but hide by default
-  add_child(debug_overlay)
-  debug_overlay.visible = false
-
+# Log debug messages
 func log_debug(message: String, level: String = "debug", context: String = "") -> void:
 	if Engine.has_singleton("DebugLogger"):
+		var debug_logger = Engine.get_singleton("DebugLogger")
 		match level.to_lower():
 			"error":
-				log_debug(message, context)
+				debug_logger.error(message, context)
 			"warning":
-				log_debug(message, context)
+				debug_logger.warning(message, context)
 			"info":
-				log_debug(message, context)
+				debug_logger.info(message, context)
 			"verbose":
-				log_debug(message, context)
+				debug_logger.verbose(message, context)
 			_: # Default to debug level
-				log_debug(message, context)
+				debug_logger.debug(message, context)
 	else:
 		# Fallback to print if DebugLogger is not available
 		print(level.to_upper() + " [" + context + "]: " + message)
