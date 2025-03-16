@@ -59,26 +59,20 @@ var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 export var debug_mode: bool = false
 
-# Ready function
 func _ready() -> void:
-    # Add a guard to prevent potential infinite loops
-    if is_initialized:
-        return
-    
     # Initialize match ID
     match_id = "match_" + str(OS.get_unix_time())
     
     # Ensure all required directories exist
     call_deferred("ensure_data_directories_exist")
     
-    # Initialize and add subsystems in a deferred way
-    call_deferred("_initialize_systems_safely")
-    
-    # Connect signals after initialization is complete
-    call_deferred("_connect_signals")
+    # Initialize game systems
+    call_deferred("initialize_game_systems")
     
     # Start in setup state
     change_game_state(GameState.SETUP)
+    
+    print("GameManager initialization complete")
     
     # Mark as initialized
     is_initialized = true
@@ -897,87 +891,6 @@ func toggle_grid_visualization() -> void:
             grid_system.draw_debug_grid()
             log_debug("Grid visualization created and enabled", "info", "GameManager")
 
-func _safe_system_initialization() -> void:
-    # Centralized, controlled initialization of game subsystems
-    log_debug("Beginning safe system initialization...", "info")
-    
-    # 1. Core Systems Initialization
-    grid_system = _initialize_subsystem("GridSystem", GridSystemScript)
-    combat_system = _initialize_subsystem("CombatSystem", CombatSystemScript)
-    economy_manager = _initialize_subsystem("EconomyManager", EconomyManagerScript)
-    building_manager = _initialize_subsystem("BuildingManager", BuildingManagerScript)
-    
-    # 2. Advanced System Setup
-    if grid_system:
-        grid_system.initialize_grid()
-    
-    if economy_manager:
-        economy_manager.reset_team_resources()
-    
-    # 3. Tech Tree and Race Preparation
-    _prepare_tech_trees()
-    
-    # 4. Network and Multiplayer Setup
-    _configure_network_systems()
-    
-    # 5. Final Validation
-    _validate_system_readiness()
-    
-    log_debug("Safe system initialization complete.", "info")
-
-# Add helper methods referenced in _safe_system_initialization
-func _initialize_subsystem(system_name: String, system_script) -> Node:
-    var existing_system = get_node_or_null(system_name)
-    if existing_system:
-        return existing_system
-    
-    if system_script:
-        var new_system = system_script.new()
-        new_system.name = system_name
-        add_child(new_system)
-        log_debug("Initialized subsystem: " + system_name, "info")
-        return new_system
-    
-    log_debug("Failed to initialize subsystem: " + system_name, "error")
-    return null
-
-func _prepare_tech_trees() -> void:
-    var tech_tree_manager = get_node_or_null("TechTreeManager")
-    if tech_tree_manager:
-        tech_tree_manager.set_team_tech_tree(0, "human")
-        tech_tree_manager.set_team_tech_tree(1, "orc")
-
-func _configure_network_systems() -> void:
-    # Rename the local variable to avoid shadowing
-    var network_sys = get_node_or_null("NetworkManager")
-    if network_sys:
-        # Explicitly set debug mode and call method
-        network_sys.debug_mode = false # Default value
-        
-        # Replace ternary with explicit method call
-        if network_sys.has_method("initialize_network_settings"):
-            network_sys.initialize_network_settings()
-
-func _validate_system_readiness() -> void:
-    var critical_systems = [
-        grid_system,
-        combat_system,
-        economy_manager,
-        building_manager
-    ]
-    
-    for system in critical_systems:
-        if not system:
-            log_debug("Critical system not initialized!", "error")
-
-func initialize() -> void:
-    if not is_initialized:
-        _safe_system_initialization()
-        is_initialized = true
-
-func _initialize_systems_safely() -> void:
-    print("Beginning safe systems initialization...")
-    
     # Spread initialization across multiple frames
     var systems_to_initialize = [
         "_initialize_grid_system",
@@ -997,132 +910,6 @@ func _initialize_systems_safely() -> void:
         yield (get_tree(), "idle_frame")
     
     print("Safe systems initialization complete")
-
-func _initialize_grid_system() -> void:
-    if not grid_system:
-        grid_system = get_node_or_null("/root/GridSystem")
-        if not grid_system:
-            var grid_system_class = load("res://scripts/core/grid_system.gd")
-            if grid_system_class:
-                grid_system = grid_system_class.new()
-                grid_system.name = "GridSystem"
-                add_child(grid_system)
-                
-                # Add a safety yield to prevent freezing
-                yield (get_tree(), "idle_frame")
-                
-                # Initialize grid
-                if grid_system.has_method("initialize_grid"):
-                    grid_system.initialize_grid()
-                print("Created and initialized GridSystem")
-
-func _initialize_combat_system() -> void:
-    if not combat_system:
-        combat_system = get_node_or_null("/root/CombatSystem")
-        if not combat_system:
-            var combat_system_class = load("res://scripts/combat/combat_system.gd")
-            if combat_system_class:
-                combat_system = combat_system_class.new()
-                combat_system.name = "CombatSystem"
-                add_child(combat_system)
-                print("Created CombatSystem")
-
-func _initialize_economy_manager() -> void:
-    if not economy_manager:
-        economy_manager = get_node_or_null("/root/EconomyManager")
-        if not economy_manager:
-            var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
-            if economy_manager_class:
-                economy_manager = economy_manager_class.new()
-                economy_manager.name = "EconomyManager"
-                add_child(economy_manager)
-                
-                # Initialize resources if needed
-                if economy_manager.has_method("reset_team_resources"):
-                    economy_manager.reset_team_resources()
-                print("Created and initialized EconomyManager")
-
-func _initialize_building_manager() -> void:
-    if not building_manager:
-        building_manager = get_node_or_null("/root/BuildingManager")
-        if not building_manager:
-            var building_manager_class = load("res://scripts/building/building_manager.gd")
-            if building_manager_class:
-                building_manager = building_manager_class.new()
-                building_manager.name = "BuildingManager"
-                add_child(building_manager)
-                print("Created BuildingManager")
-                
-                # Wait a frame to ensure dependencies are available
-                yield (get_tree(), "idle_frame")
-                
-                # Set references to other systems
-                if building_manager.has_method("set_dependencies"):
-                    building_manager.set_dependencies(grid_system, economy_manager, self)
-
-func _initialize_unit_factory() -> void:
-    if not unit_factory:
-        unit_factory = get_node_or_null("/root/UnitFactory")
-        if not unit_factory:
-            var unit_factory_class = load("res://scripts/unit/unit_factory.gd")
-            if unit_factory_class:
-                unit_factory = unit_factory_class.new()
-                unit_factory.name = "UnitFactory"
-                add_child(unit_factory)
-                print("Created UnitFactory")
-                
-                # If UnitFactory has an initialization method, call it
-                if unit_factory.has_method("initialize_factory"):
-                    unit_factory.initialize_factory()
-
-func _initialize_ui_manager() -> void:
-    if not ui_manager:
-        ui_manager = get_node_or_null("/root/UIManager")
-        if not ui_manager:
-            var ui_manager_class = load("res://scripts/ui/ui_manager.gd")
-            if ui_manager_class:
-                ui_manager = ui_manager_class.new()
-                ui_manager.name = "UIManager"
-                add_child(ui_manager)
-                print("Created UIManager")
-                
-                # Wait a frame to ensure dependencies are available
-                yield (get_tree(), "idle_frame")
-                
-                # Connect UI signals if manager has the connect method
-                if ui_manager.has_method("connect_signals"):
-                    ui_manager.connect_signals()
-
-func _initialize_tech_tree_manager() -> void:
-    if not tech_tree_manager:
-        tech_tree_manager = get_node_or_null("/root/TechTreeManager")
-        if not tech_tree_manager:
-            var tech_tree_class = load("res://scripts/core/tech_tree_manager.gd")
-            if tech_tree_class:
-                tech_tree_manager = tech_tree_class.new()
-                tech_tree_manager.name = "TechTreeManager"
-                add_child(tech_tree_manager)
-                print("Created TechTreeManager")
-                
-                # Set default tech trees for teams
-                if tech_tree_manager.has_method("set_team_tech_tree"):
-                    tech_tree_manager.set_team_tech_tree(0, "human")
-                    tech_tree_manager.set_team_tech_tree(1, "orc")
-
-func _initialize_map_manager() -> void:
-    if not map_manager:
-        map_manager = get_node_or_null("/root/MapManager")
-        if not map_manager:
-            var map_manager_class = load("res://scripts/core/map_manager.gd")
-            if map_manager_class:
-                map_manager = map_manager_class.new()
-                map_manager.name = "MapManager"
-                add_child(map_manager)
-                print("Created MapManager")
-                
-                # Initialize the map if there's an initialization method
-                if map_manager.has_method("initialize_map"):
-                    map_manager.initialize_map()
 
 func ensure_data_directories_exist() -> void:
     # List of required directories
@@ -1364,3 +1151,31 @@ func verify_game_state() -> void:
             print("Warning: Required system missing: " + system_name)
     
     print("Game state verification complete")
+
+# Clean initialization of all game systems
+func initialize_game_systems() -> void:
+    print("Initializing core game systems...")
+    
+    # Get references to all autoloaded singletons
+    grid_system = get_node_or_null("/root/GridSystem")
+    combat_system = get_node_or_null("/root/CombatSystem")
+    economy_manager = get_node_or_null("/root/EconomyManager")
+    building_manager = get_node_or_null("/root/BuildingManager")
+    unit_factory = get_node_or_null("/root/UnitFactory")
+    tech_tree_manager = get_node_or_null("/root/TechTreeManager")
+    ui_manager = get_node_or_null("/root/UIManager")
+    map_manager = get_node_or_null("/root/MapManager")
+    
+    # Initialize grid system if it exists
+    if grid_system and grid_system.has_method("initialize_grid"):
+        grid_system.initialize_grid()
+    
+    # Set up default tech trees
+    if tech_tree_manager and tech_tree_manager.has_method("set_team_tech_tree"):
+        tech_tree_manager.set_team_tech_tree(0, "human")
+        tech_tree_manager.set_team_tech_tree(1, "orc")
+    
+    # Connect signals after all systems are initialized
+    _connect_signals()
+    
+    print("Core game systems initialized")
