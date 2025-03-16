@@ -323,7 +323,7 @@ func _create_game_status_panel() -> void:
     pause_button.connect("pressed", self, "_on_pause_button_pressed")
     panel.add_child(pause_button)
 
-# Create minimap
+# Create minimap with actual game map rendering
 func _create_minimap() -> void:
     minimap = Control.new()
     minimap.name = "Minimap"
@@ -340,15 +340,38 @@ func _create_minimap() -> void:
     panel.rect_min_size = Vector2(200, 100)
     minimap.add_child(panel)
     
-    # Minimap texture rect
+    # Minimap viewport - will show a scaled-down version of the actual game map
+    var minimap_viewport = Viewport.new()
+    minimap_viewport.name = "MinimapViewport"
+    minimap_viewport.size = Vector2(180, 80)
+    minimap_viewport.transparent_bg = true
+    minimap_viewport.render_target_v_flip = true
+    minimap_viewport.render_target_update_mode = Viewport.UPDATE_WHEN_VISIBLE
+    minimap.add_child(minimap_viewport)
+    
+    # Setup minimap camera
+    var minimap_camera = Camera2D.new()
+    minimap_camera.name = "MinimapCamera"
+    minimap_camera.current = true
+    minimap_camera.zoom = Vector2(5, 5) # Zoomed out to see more of the map
+    minimap_viewport.add_child(minimap_camera)
+    
+    # Create viewport texture
+    var minimap_texture = ViewportTexture.new()
+    minimap_texture.viewport_path = minimap_viewport.get_path()
+    
+    # Create texture rect to display minimap
     var minimap_rect = TextureRect.new()
     minimap_rect.name = "MinimapRect"
     minimap_rect.rect_position = Vector2(10, 10)
     minimap_rect.rect_size = Vector2(180, 80)
     minimap_rect.expand = true
-    minimap_rect.texture = preload("res://assets/ui/icons/minimap_placeholder.png")
+    minimap_rect.texture = minimap_texture
     panel.add_child(minimap_rect)
-
+    
+    # Add click handler to enable map navigation
+    minimap_rect.connect("gui_input", self, "_on_minimap_clicked")
+    
 # Create floating text container
 func _create_floating_text_container() -> void:
     floating_text_container = Control.new()
@@ -768,24 +791,175 @@ func select_worker(worker) -> void:
     else:
         hide_unit_info()
 
-# Show match preparation
+# Show full-featured match preparation screen with team information
 func show_match_preparation() -> void:
-    # Show match preparation screen
-    var label = Label.new()
-    label.text = "Preparing Match..."
-    label.align = Label.ALIGN_CENTER
-    label.valign = Label.VALIGN_CENTER
+    # Create container for preparation UI
+    var prep_container = Control.new()
+    prep_container.name = "MatchPreparation"
+    prep_container.set_anchors_preset(Control.PRESET_FULL_RECT)
     
-    var viewport_rect = get_viewport().get_visible_rect()
-    label.rect_position = Vector2(viewport_rect.size.x / 2 - 100, viewport_rect.size.y / 2 - 25)
-    label.rect_size = Vector2(200, 50)
+    # Add semi-transparent background
+    var bg = ColorRect.new()
+    bg.name = "Background"
+    bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+    bg.color = Color(0, 0, 0, 0.7)
+    prep_container.add_child(bg)
     
-    floating_text_container.add_child(label)
+    # Add title
+    var title = Label.new()
+    title.name = "Title"
+    title.text = "PREPARING MATCH"
+    title.set_anchors_preset(Control.PRESET_TOP_WIDE)
+    title.margin_top = 100
+    title.margin_bottom = 150
+    title.align = Label.ALIGN_CENTER
+    title.valign = Label.VALIGN_CENTER
+    prep_container.add_child(title)
     
-    # Remove after delay
-    yield (get_tree().create_timer(2.0), "timeout")
-    label.queue_free()
+    # Get team information from network manager
+    var network_manager = get_node_or_null("/root/NetworkManager")
+    var team_a_players = []
+    var team_b_players = []
+    
+    if network_manager and network_manager.player_info.size() > 0:
+        for player_id in network_manager.player_info:
+            var player_data = network_manager.player_info[player_id]
+            if player_data.has("team"):
+                if player_data.team == 0:
+                    team_a_players.append(player_data.get("name", "Player " + str(player_id)))
+                elif player_data.team == 1:
+                    team_b_players.append(player_data.get("name", "Player " + str(player_id)))
+    
+    # Create team displays
+    var team_container = HBoxContainer.new()
+    team_container.name = "TeamContainer"
+    team_container.set_anchors_preset(Control.PRESET_CENTER)
+    team_container.margin_left = -400
+    team_container.margin_right = 400
+    team_container.margin_top = -100
+    team_container.margin_bottom = 100
+    team_container.alignment = BoxContainer.ALIGN_CENTER
+    prep_container.add_child(team_container)
+    
+    # Create Team A panel
+    var team_a_panel = Panel.new()
+    team_a_panel.name = "TeamAPanel"
+    team_a_panel.rect_min_size = Vector2(350, 200)
+    team_container.add_child(team_a_panel)
+    
+    var team_a_label = Label.new()
+    team_a_label.name = "TeamALabel"
+    team_a_label.text = "TEAM A (BLUE)"
+    team_a_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+    team_a_label.margin_top = 10
+    team_a_label.margin_bottom = 40
+    team_a_label.align = Label.ALIGN_CENTER
+    team_a_label.add_color_override("font_color", Color(0, 0.5, 1))
+    team_a_panel.add_child(team_a_label)
+    
+    var team_a_players_list = VBoxContainer.new()
+    team_a_players_list.name = "PlayersList"
+    team_a_players_list.set_anchors_preset(Control.PRESET_FULL_RECT)
+    team_a_players_list.margin_left = 20
+    team_a_players_list.margin_top = 50
+    team_a_players_list.margin_right = -20
+    team_a_players_list.margin_bottom = -20
+    team_a_panel.add_child(team_a_players_list)
+    
+    for player_name in team_a_players:
+        var player_label = Label.new()
+        player_label.text = player_name
+        team_a_players_list.add_child(player_label)
+    
+    # Add spacer between teams
+    var spacer = Control.new()
+    spacer.rect_min_size = Vector2(50, 0)
+    team_container.add_child(spacer)
+    
+    # Create Team B panel (similar to Team A)
+    var team_b_panel = Panel.new()
+    team_b_panel.name = "TeamBPanel"
+    team_b_panel.rect_min_size = Vector2(350, 200)
+    team_container.add_child(team_b_panel)
+    
+    var team_b_label = Label.new()
+    team_b_label.name = "TeamBLabel"
+    team_b_label.text = "TEAM B (RED)"
+    team_b_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+    team_b_label.margin_top = 10
+    team_b_label.margin_bottom = 40
+    team_b_label.align = Label.ALIGN_CENTER
+    team_b_label.add_color_override("font_color", Color(1, 0, 0))
+    team_b_panel.add_child(team_b_label)
+    
+    var team_b_players_list = VBoxContainer.new()
+    team_b_players_list.name = "PlayersList"
+    team_b_players_list.set_anchors_preset(Control.PRESET_FULL_RECT)
+    team_b_players_list.margin_left = 20
+    team_b_players_list.margin_top = 50
+    team_b_players_list.margin_right = -20
+    team_b_players_list.margin_bottom = -20
+    team_b_panel.add_child(team_b_players_list)
+    
+    for player_name in team_b_players:
+        var player_label = Label.new()
+        player_label.text = player_name
+        team_b_players_list.add_child(player_label)
+    
+    # Add loading indicator
+    var loading_container = VBoxContainer.new()
+    loading_container.name = "LoadingContainer"
+    loading_container.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+    loading_container.margin_top = -100
+    loading_container.margin_bottom = -50
+    prep_container.add_child(loading_container)
+    
+    var loading_label = Label.new()
+    loading_label.name = "LoadingLabel"
+    loading_label.text = "Loading match..."
+    loading_label.align = Label.ALIGN_CENTER
+    loading_container.add_child(loading_label)
+    
+    var loading_bar = ProgressBar.new()
+    loading_bar.name = "LoadingBar"
+    loading_bar.rect_size = Vector2(400, 20)
+    loading_bar.rect_min_size = Vector2(400, 20)
+    loading_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+    loading_bar.max_value = 100
+    loading_bar.value = 0
+    loading_container.add_child(loading_bar)
+    
+    # Add to floating text container
+    floating_text_container.add_child(prep_container)
+    
+    # Animate loading bar
+    var tween = Tween.new()
+    prep_container.add_child(tween)
+    tween.interpolate_property(loading_bar, "value", 0, 100, 5.0, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT)
+    tween.start()
+    
+    # Remove after delay or on signal
+    var timer = Timer.new()
+    timer.one_shot = true
+    timer.wait_time = 5.0
+    timer.connect("timeout", self, "_on_prep_screen_timeout", [prep_container])
+    prep_container.add_child(timer)
+    timer.start()
 
+# Handle preparation screen timeout
+func _on_prep_screen_timeout(prep_container: Node) -> void:
+    # Fade out preparation screen
+    var tween = Tween.new()
+    prep_container.add_child(tween)
+    tween.interpolate_property(prep_container, "modulate",
+        Color(1, 1, 1, 1), Color(1, 1, 1, 0),
+        1.0, Tween.TRANS_CUBIC, Tween.EASE_IN)
+    tween.start()
+    
+    # Remove when done
+    yield (tween, "tween_all_completed")
+    prep_container.queue_free()
+    
 # Show end game screen
 func show_end_game_screen(winner: int, reason: String) -> void:
     var panel = Panel.new()

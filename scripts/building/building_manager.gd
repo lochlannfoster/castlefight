@@ -245,6 +245,8 @@ func _on_building_construction_completed(building: Building) -> void:
 
 # Handle building destruction
 func _on_building_destroyed(building: Building) -> void:
+    log_debug("Building destroyed: " + building.display_name + " (Team " + str(building.team) + ")", "info", "BuildingManager")
+    
     # Remove from tracking
     var building_id_to_remove = null
     for id in buildings.keys():
@@ -253,14 +255,31 @@ func _on_building_destroyed(building: Building) -> void:
             break
     
     if building_id_to_remove:
-        # Use the return value to silence the warning
         var _result = buildings.erase(building_id_to_remove)
     
-    emit_signal("building_destroyed", building)
+    # Free up grid cells
+    if grid_system and building.has_method("get_grid_position") and building.has_method("get_size"):
+        var grid_pos = building.get_grid_position()
+        var size = building.get_size()
+        
+        for x in range(size.x):
+            for y in range(size.y):
+                var cell_pos = grid_pos + Vector2(x, y)
+                grid_system.free_cell(cell_pos)
     
-    # If this is an HQ, trigger game end
-    if building.building_id == "hq" or building.building_id == "headquarters":
-        game_manager.headquarters_destroyed(building.team)
+    # Handle economy effects if applicable
+    if economy_manager and building.building_id == "bank_vault":
+        # Special handling for economy buildings like bank vault
+        var income_reduction = economy_manager.get_building_gold_cost(building.building_id) * 0.1
+        economy_manager.add_income(building.team, -income_reduction)
+    
+    # If this is an HQ building, tell game manager
+    if building.building_id == "headquarters" or building.building_id == "hq":
+        if game_manager and game_manager.has_method("headquarters_destroyed"):
+            game_manager.headquarters_destroyed(building.team)
+    
+    # Emit signal for other systems to respond
+    emit_signal("building_destroyed", building)
 
 # Get the cost of a building
 func _get_building_cost(building_type: String) -> float:
@@ -328,3 +347,7 @@ func get_building_data(building_type: String) -> Dictionary:
     if building_data.has(building_type):
         return building_data[building_type]
     return {}
+
+# Track statistics for destroyed buildings
+var buildings_destroyed_by_team: Dictionary = {0: 0, 1: 0}
+var buildings_constructed_by_player: Dictionary = {}

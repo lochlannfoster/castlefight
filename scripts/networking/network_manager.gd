@@ -1783,32 +1783,42 @@ func _on_scene_changed() -> void:
         _:
             set_ui_visibility(false)
 
-# Add this method to handle set_visible for compatibility
 func set_visible(is_visible: bool) -> void:
-    # Implement visibility logic directly in the method
-    if is_creating_ui:
-        return
+    # This method exists to implement a common interface but doesn't directly 
+    # control visibility since NetworkManager doesn't inherit from a visible node type
+    print("NetworkManager: Visibility setting requested but not applicable")
     
-    var current_scene = get_tree().current_scene
-    if not current_scene:
-        print("WARNING: No current scene found")
-        return
-    
-    match current_scene.name.to_lower():
-        "mainmenu":
-            visible = false
-        "lobby", "game":
-            visible = true
-        _:
-            visible = false
+    # If we have UI nodes as children, we could potentially set their visibility
+    for child in get_children():
+        if child.has_method("set_visible"):
+            child.set_visible(is_visible)
+        elif "visible" in child:
+            child.visible = is_visible
 
 func set_ui_visibility(is_visible: bool) -> void:
-    # Defensive programming to handle different node types
+    # NetworkManager doesn't inherit CanvasItem, so we need a different approach
+    # Check if this node has a set_visible method that can be called
     if has_method("set_visible"):
-        set_visible(is_visible)
+        call("set_visible", is_visible)
+    # Try finding a CanvasLayer child to control
     elif has_node("CanvasLayer"):
-        # If it's a CanvasLayer-based UI manager
         get_node("CanvasLayer").visible = is_visible
+    # Try to manage visibility of UI children
     else:
-        # Fallback visibility management
-        visible = is_visible
+        print("WARNING: Cannot set visibility directly on NetworkManager")
+        
+        # Look for UI elements in children
+        var ui_found = false
+        for child in get_children():
+            if child is CanvasItem:
+                child.visible = is_visible
+                ui_found = true
+        
+        # If no UI children found, try to find the UIManager singleton
+        if not ui_found:
+            # Use a different variable name to avoid shadowing the class member
+            var global_ui_manager = get_node_or_null("/root/UIManager")
+            if global_ui_manager and global_ui_manager.has_method("set_visible"):
+                global_ui_manager.set_visible(is_visible)
+            else:
+                print("Could not find any UI elements to set visibility")
