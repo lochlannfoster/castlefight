@@ -640,6 +640,23 @@ func start_match() -> void:
         print("Cannot start game: Not server or wrong game phase. Current phase: " + str(game_phase))
         return
     
+    # Ensure at least one player exists in debug mode
+    if debug_mode and player_info.size() <= 1:
+        print("Debug mode: Ensuring at least one player exists")
+        # Create a default player for the server in debug mode
+        if not player_info.has(1): # Server is always ID 1
+            player_info[1] = {
+                "name": "Debug Player",
+                "team": 0,
+                "is_host": true,
+                "ready": true,
+                "ping": 0
+            }
+        
+        # Make sure player is in a team
+        if player_info[1].get("team", -1) == -1:
+            player_info[1]["team"] = 0
+    
     # Set match start time and phase
     match_start_time = OS.get_unix_time()
     match_duration = 0.0
@@ -649,7 +666,10 @@ func start_match() -> void:
     match_winner = -1
     match_end_reason = ""
     
-    # Broadcast match start to all client
+    # Ensure player data is sent to GameManager
+    _sync_player_data_to_game_manager()
+    
+    # Broadcast match start to all clients
     rpc("_match_started")
     
     # Change to game scene
@@ -658,6 +678,27 @@ func start_match() -> void:
     if error != OK:
         print("ERROR: Failed to change to game scene with error code: " + str(error))
     emit_signal("match_started")
+
+# New function to sync player data to GameManager
+func _sync_player_data_to_game_manager() -> void:
+    var game_manager = get_node_or_null("/root/GameManager")
+    if not game_manager:
+        print("ERROR: Cannot sync player data - GameManager not found")
+        return
+        
+    print("Syncing player data to GameManager...")
+    
+    # Clear existing players and add from player_info
+    game_manager.players.clear()
+    
+    for player_id in player_info.keys():
+        var player_data = player_info[player_id]
+        # Only add players that have a team assigned
+        if player_data.has("team") and player_data.team >= 0:
+            print("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(player_data.name) + ", Team=" + str(player_data.team))
+            game_manager.add_player(player_id, player_data.name, player_data.team)
+    
+    print("Player sync complete. GameManager now has " + str(game_manager.players.size()) + " players")
 
 remote func _match_started() -> void:
     if is_server:
@@ -1673,9 +1714,22 @@ func change_team(new_team: int) -> bool:
         print("Cannot change team: No active network connection")
         return false
     
+    # Log the change
+    print("Changing team for player " + str(local_player_id) + " to team " + str(new_team))
+    
     if is_server:
         var change_result = change_player_team(local_player_id, new_team)
-        return change_result # Return the result from change_player_team
+        if debug_mode:
+            # In debug mode, update the player_info directly to ensure consistency
+            if player_info.has(local_player_id):
+                player_info[local_player_id]["team"] = new_team
+                print("Debug mode: Updated player team in player_info")
+                
+                # Broadcast updated player list to all clients
+                rpc("_update_player_list", player_info)
+                emit_signal("player_list_changed", player_info)
+                
+        return change_result
     else:
         rpc_id(1, "_request_change_team", new_team)
         return true
