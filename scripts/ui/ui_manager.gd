@@ -40,6 +40,7 @@ enum SceneType {
     NONE
 }
 var current_scene_type = SceneType.NONE
+var is_creating_ui: bool = false
 
 func _ready() -> void:
     # Ensure UI elements are created
@@ -988,6 +989,10 @@ func _on_scene_changed() -> void:
         print("Cannot modify UI visibility")
         return
     
+    # Add a flag to prevent recursive calls
+    if is_creating_ui:
+        return
+    
     # Determine current scene type
     var current_scene = get_tree().current_scene
     
@@ -1002,7 +1007,11 @@ func _on_scene_changed() -> void:
             "game": # Lowercase to match Godot's typical scene naming
                 # Fully set up game UI
                 set_visible(true)
+                
+                # Use a flag to prevent recursion
+                is_creating_ui = true
                 _create_ui_elements()
+                is_creating_ui = false
             _:
                 # Default: hide UI
                 set_visible(false)
