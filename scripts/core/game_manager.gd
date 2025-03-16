@@ -316,42 +316,42 @@ func _create_player_workers() -> void:
     DebugLogger.error("Failed to load worker scene", "GameManager")
     return
     
-    for player_id in players.keys():
-        var player_data = players[player_id]
-        var team = player_data.team
-        
-        # Create worker instance
-        var worker = worker_scene.instance()
-        
-        # Set worker properties
-        worker.team = team
-        
-        # Position worker at a guaranteed position
-        # Default positions if map_manager isn't available or fails
-        var start_position = Vector2(100 + team * 800, 300)
-        
-        if map_manager and map_manager.has_method("get_team_start_position"):
-            var map_position = map_manager.get_team_start_position(team)
-            if map_position:
-                start_position = map_position
-        
-        worker.position = start_position
-        print("Spawning worker for team " + str(team) + " at " + str(start_position))
-          DebugLogger.verbose("Spawning worker for player " + str(player_id) + " on team " + str(team), "GameManager")
-        
-        # Add worker to scene
-        get_tree().current_scene.add_child(worker)
-          DebugLogger.debug("Worker created and added to scene", "GameManager")
-        
-        # Store reference in player data
-        player_data.worker = worker
+  for player_id in players.keys():
+    var player_data = players[player_id]
+    var team = player_data.team
+    
+    # Create worker instance
+    var worker = worker_scene.instance()
+    
+    # Set worker properties
+    worker.team = team
+    
+    # Position worker at a guaranteed position
+    # Default positions if map_manager isn't available or fails
+    var start_position = Vector2(100 + team * 800, 300)
+    
+    if map_manager and map_manager.has_method("get_team_start_position"):
+      var map_position = map_manager.get_team_start_position(team)
+      if map_position:
+        start_position = map_position
+    
+    worker.position = start_position
+    print("Spawning worker for team " + str(team) + " at " + str(start_position))
+    DebugLogger.verbose("Spawning worker for player " + str(player_id) + " on team " + str(team), "GameManager")
+    
+    # Add worker to scene
+    get_tree().current_scene.add_child(worker)
+    DebugLogger.debug("Worker created and added to scene", "GameManager")
+    
+    # Store reference in player data
+    player_data.worker = worker
 
-        print("Making worker visible for team " + str(team))
-        var sprite = worker.get_node_or_null("Sprite")
-        if sprite:
-            # Make sprite bright green or red depending on team
-            sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
-            sprite.scale = Vector2(2, 2)  # Make it twice as big
+    print("Making worker visible for team " + str(team))
+    var sprite = worker.get_node_or_null("Sprite")
+    if sprite:
+      # Make sprite bright green or red depending on team
+      sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
+      sprite.scale = Vector2(2, 2)  # Make it twice as big
 
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):

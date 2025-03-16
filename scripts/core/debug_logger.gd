@@ -22,7 +22,7 @@ func _ready():
     log_file.close()
 
 func _exit_tree():
-  if log_file:
+  if log_file and log_file.is_open():
     log_file.close()
 
 func log(message, level = LogLevel.INFO, context = ""):
@@ -46,9 +46,10 @@ func log(message, level = LogLevel.INFO, context = ""):
   
   if log_to_file:
     log_file = File.new()
-    log_file.open(log_file_path, File.APPEND)
-    log_file.store_string(final_message + "\n")
-    log_file.close()
+    if log_file.open(log_file_path, File.READ_WRITE) == OK:
+      log_file.seek_end()
+      log_file.store_string(final_message + "\n")
+      log_file.close()
 
 func error(message, context = ""):
   log(message, LogLevel.ERROR, context)
