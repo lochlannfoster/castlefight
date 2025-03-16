@@ -37,10 +37,14 @@ func _log(message: String, level: String = "info") -> void:
 
 
 # Primary initialization entry point
+# Then call this from _ready or initialize:
 func _ready() -> void:
     # Use call_deferred to ensure safe, non-blocking initialization
     call_deferred("_initialize_game_systems")
     _verify_system_availability()
+    
+    # Add explicit grid drawing
+    call_deferred("_explicitly_draw_grid")
 
 # Centralized game systems initialization method
 func _initialize_game_systems() -> void:
@@ -231,30 +235,19 @@ func _validate_system_readiness() -> void:
         if not system:
             _log("Critical system not initialized!", "error")
 
-func _verify_system_availability() -> void:
-    print("Verifying system availability...")
+func _explicitly_draw_grid() -> void:
+    _log("Explicitly drawing grid...")
     
-    var systems = [
-        {"name": "GameManager", "path": "/root/GameManager"},
-        {"name": "GridSystem", "path": "/root/GridSystem"},
-        {"name": "EconomyManager", "path": "/root/EconomyManager"},
-        {"name": "BuildingManager", "path": "/root/BuildingManager"},
-        {"name": "CombatSystem", "path": "/root/CombatSystem"},
-        {"name": "UnitFactory", "path": "/root/UnitFactory"},
-        {"name": "UIManager", "path": "/root/UIManager"},
-        {"name": "TechTreeManager", "path": "/root/TechTreeManager"},
-        {"name": "MapManager", "path": "/root/MapManager"},
-        {"name": "NetworkManager", "path": "/root/NetworkManager"}
-    ]
+    # Try multiple ways to get the grid system
+    var grid_sys = get_node_or_null("/root/GridSystem")
+    if not grid_sys:
+        grid_sys = get_node_or_null("GridSystem")
     
-    for system in systems:
-        var node = get_node_or_null(system.path)
-        print(system.name + ": " + ("Available" if node else "Not found"))
-        
-        # Check for initialize method
-        if node and node.has_method("initialize"):
-            print("  - Has initialize() method")
-        elif node:
-            print("  - Missing initialize() method")
-    
-    print("System verification complete.")
+    if grid_sys:
+        if grid_sys.has_method("draw_debug_grid"):
+            grid_sys.draw_debug_grid()
+            _log("Debug grid drawn successfully")
+        else:
+            _log("Grid system found but lacks draw_debug_grid method", "error")
+    else:
+        _log("Could not find GridSystem to draw grid", "error")
