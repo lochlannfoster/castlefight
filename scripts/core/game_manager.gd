@@ -61,20 +61,29 @@ export var debug_mode: bool = false
 
 # Ready function
 func _ready() -> void:
+    # Add a guard to prevent potential infinite loops
+    if is_initialized:
+        return
+    
     # Initialize match ID
     match_id = "match_" + str(OS.get_unix_time())
     
-    # Run scene creator to ensure all required scenes exist
-    _create_required_scenes()
+    # Ensure all required directories exist
+    call_deferred("ensure_data_directories_exist")
     
-    # Initialize and add subsystems as needed
-    _initialize_systems()
+    # Initialize and add subsystems in a deferred way
+    call_deferred("_initialize_systems_safely")
     
-    # Connect signals
-    _connect_signals()
+    # Connect signals after initialization is complete
+    call_deferred("_connect_signals")
     
     # Start in setup state
     change_game_state(GameState.SETUP)
+    
+    # Mark as initialized
+    is_initialized = true
+    
+    print("GameManager initialization complete")
 
 # Create required scenes if they don't exist yet
 func _create_required_scenes() -> void:
@@ -318,46 +327,97 @@ func start_game() -> void:
         log_debug("Game started signal emitted", "info", "GameManager")
     else:
         log_debug("Cannot start game: Current state is " + str(current_state), "error", "GameManager")
+
+func ensure_core_systems() -> void:
+    # This function makes sure all core systems are available
+    # and creates them if they're missing
+    # Check for grid system
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GridSystem")
+        if not grid_system:
+            var grid_system_class = load("res://scripts/core/grid_system.gd")
+            if grid_system_class:
+                grid_system = grid_system_class.new()
+                grid_system.name = "GridSystem"
+                add_child(grid_system)
+                # Initialize grid
+                grid_system.initialize_grid()
+                log_debug("Created and initialized GridSystem", "info", "GameManager")
     
+    # Check for unit factory
+    if not unit_factory:
+        unit_factory = get_node_or_null("/root/UnitFactory")
+        if not unit_factory:
+            var unit_factory_class = load("res://scripts/unit/unit_factory.gd")
+            if unit_factory_class:
+                unit_factory = unit_factory_class.new()
+                unit_factory.name = "UnitFactory"
+                add_child(unit_factory)
+                log_debug("Created UnitFactory", "info", "GameManager")
+    
+    # Check for economy manager
+    if not economy_manager:
+        economy_manager = get_node_or_null("/root/EconomyManager")
+        if not economy_manager:
+            var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
+            if economy_manager_class:
+                economy_manager = economy_manager_class.new()
+                economy_manager.name = "EconomyManager"
+                add_child(economy_manager)
+                log_debug("Created EconomyManager", "info", "GameManager")
+    
+    # Check for building manager
+    if not building_manager:
+        building_manager = get_node_or_null("/root/BuildingManager")
+        if not building_manager:
+            var building_manager_class = load("res://scripts/building/building_manager.gd")
+            if building_manager_class:
+                building_manager = building_manager_class.new()
+                building_manager.name = "BuildingManager"
+                add_child(building_manager)
+                log_debug("Created BuildingManager", "info", "GameManager")
+    
+    # Check for UI manager
+    if not ui_manager:
+        ui_manager = get_node_or_null("/root/UIManager")
+        if not ui_manager:
+            var ui_manager_class = load("res://scripts/ui/ui_manager.gd")
+            if ui_manager_class:
+                ui_manager = ui_manager_class.new()
+                ui_manager.name = "UIManager"
+                add_child(ui_manager)
+                log_debug("Created UIManager", "info", "GameManager")
+
 func _create_player_workers() -> void:
-    # Extensive logging and diagnostic information for worker creation
     log_debug("Initiating player worker creation process", "info", "GameManager")
     
     # Critical: Verify game state and system readiness
     if not is_instance_valid(unit_factory):
         log_debug("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
-        return
-    
-    # Comprehensive logging of player information
-    log_debug("Total players to process: " + str(players.size()), "info", "GameManager")
-    
-    # Iterate through all players and spawn workers
-    for player_id in players.keys():
-        var player_data = players[player_id]
-        var team = player_data.get("team", 0) # Default to Team A if no team assigned
+        # Initialize unit factory if missing
+        unit_factory = get_node_or_null("/root/UnitFactory")
+        if not unit_factory:
+            log_debug("Attempting to create UnitFactory", "info", "GameManager")
+            unit_factory = load("res://scripts/unit/unit_factory.gd").new()
+            add_child(unit_factory)
         
-        # Detailed logging for each player's worker creation
-        log_debug(
-            "Processing worker for Player ID: " + str(player_id) +
-            " | Team: " + str(team),
-            "info",
-            "GameManager"
-        )
+    # Get worker scene path
+    var worker_scene_path = "res://scenes/units/worker.tscn"
+    var worker_scene = load(worker_scene_path)
     
-    # Worker scene loading with robust error handling
-    var worker_scene = load("res://scenes/units/worker.tscn")
     if not worker_scene:
         log_debug("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
     
     # Iterate through all players and spawn workers
+    log_debug("Total players to process: " + str(players.size()), "info", "GameManager")
     for player_id in players.keys():
         var player_data = players[player_id]
         var team = player_data.get("team", 0) # Default to Team A if no team assigned
         
         # Detailed logging for each player's worker creation
         log_debug(
-            "Processing worker for Player ID: " + str(player_id) +
+            "Creating worker for Player ID: " + str(player_id) +
             " | Team: " + str(team),
             "info",
             "GameManager"
@@ -383,7 +443,7 @@ func _create_player_workers() -> void:
                     "info",
                     "GameManager"
                 )
-        
+                
         # Set worker position
         worker.position = start_position
         
@@ -392,14 +452,6 @@ func _create_player_workers() -> void:
             var sprite = worker.get_node("Sprite")
             var team_color = get_team_color(team)
             sprite.modulate = team_color
-            log_debug(
-                "Worker visual team color set: " + str(team_color),
-                "info",
-                "GameManager"
-            )
-        
-        # Enhanced worker tracking
-        worker.display_name = "Player " + str(player_id) + " Worker"
         
         # Add worker to scene
         var current_scene = get_tree().current_scene
@@ -416,20 +468,19 @@ func _create_player_workers() -> void:
                 "error",
                 "GameManager"
             )
+            # Try adding to a known game node instead
+            var game_world = get_node_or_null("/root/game/GameWorld")
+            if game_world:
+                game_world.add_child(worker)
+                log_debug("Added worker to GameWorld node instead", "info", "GameManager")
+            else:
+                add_child(worker)
+                log_debug("Added worker to GameManager as fallback", "info", "GameManager")
         
         # Store worker reference in player data
         player_data["worker"] = worker
         
-        # Final verification logging
-        log_debug(
-            "Worker Creation Summary:\n" +
-            "Player ID: " + str(player_id) + "\n" +
-            "Team: " + str(team) + "\n" +
-            "Position: " + str(worker.position) + "\n" +
-            "Scene: " + (current_scene.name if current_scene else "N/A"),
-            "info",
-            "GameManager"
-        )
+        log_debug("Worker creation completed for player " + str(player_id), "info", "GameManager")
     
     log_debug("Player worker creation process completed", "info", "GameManager")
 
@@ -442,29 +493,85 @@ func safe_get_node(path):
 func _create_starting_buildings() -> void:
     log_debug("Creating starting buildings...", "info", "GameManager")
     
+    # Get or create building manager if needed
     if not building_manager:
-        log_debug("CRITICAL ERROR: No building manager available!", "error", "GameManager")
-        return
+        log_debug("Building manager not found, attempting to create", "warning", "GameManager")
+        building_manager = get_node_or_null("/root/BuildingManager")
+        if not building_manager:
+            var building_manager_class = load("res://scripts/building/building_manager.gd")
+            if building_manager_class:
+                building_manager = building_manager_class.new()
+                building_manager.name = "BuildingManager"
+                add_child(building_manager)
+                log_debug("Created BuildingManager", "info", "GameManager")
+            else:
+                log_debug("CRITICAL ERROR: Could not load BuildingManager script!", "error", "GameManager")
+                return
     
     # Force creation of headquarters for debugging
     var hq_position_team_a = Vector2(200, 300) # Adjust as needed for visibility
     var hq_position_team_b = Vector2(600, 300) # Adjust as needed for visibility
     
+    # Ensure we have grid system initialized
+    var local_grid_system = get_node_or_null("/root/GridSystem")
+    if local_grid_system and not local_grid_system.grid_cells.empty():
+        # Get positions from grid system if possible
+        var grid_pos_a = Vector2(5, local_grid_system.grid_height / 2)
+        var grid_pos_b = Vector2(local_grid_system.grid_width - 5, local_grid_system.grid_height / 2)
+        
+        hq_position_team_a = local_grid_system.grid_to_world(grid_pos_a)
+        hq_position_team_b = local_grid_system.grid_to_world(grid_pos_b)
+    
     log_debug("Placing Team A headquarters at " + str(hq_position_team_a), "info", "GameManager")
+    
+    # Create Team A HQ
     var hq_a = building_manager.place_building("headquarters", hq_position_team_a, 0)
     if hq_a:
         register_headquarters(hq_a, 0)
         log_debug("Team A headquarters placed successfully", "info", "GameManager")
     else:
-        log_debug("Failed to place Team A headquarters", "error", "GameManager")
+        log_debug("Failed to place Team A headquarters - trying alternative method", "warning", "GameManager")
+        # Try alternative method - directly create and add HQ
+        var hq_scene = load("res://scenes/buildings/hq_building.tscn")
+        if hq_scene:
+            var hq_instance = hq_scene.instance()
+            hq_instance.team = 0
+            hq_instance.position = hq_position_team_a
+            
+            var current_scene = get_tree().current_scene
+            if current_scene:
+                current_scene.add_child(hq_instance)
+                register_headquarters(hq_instance, 0)
+                log_debug("Team A headquarters placed using alternative method", "info", "GameManager")
+            else:
+                log_debug("Failed to place Team A headquarters - no current scene", "error", "GameManager")
+        else:
+            log_debug("Failed to load headquarters scene", "error", "GameManager")
     
+    # Create Team B HQ with similar approach
     log_debug("Placing Team B headquarters at " + str(hq_position_team_b), "info", "GameManager")
     var hq_b = building_manager.place_building("headquarters", hq_position_team_b, 1)
     if hq_b:
         register_headquarters(hq_b, 1)
         log_debug("Team B headquarters placed successfully", "info", "GameManager")
     else:
-        log_debug("Failed to place Team B headquarters", "error", "GameManager")
+        log_debug("Failed to place Team B headquarters - trying alternative method", "warning", "GameManager")
+        # Try alternative method - directly create and add HQ
+        var hq_scene = load("res://scenes/buildings/hq_building.tscn")
+        if hq_scene:
+            var hq_instance = hq_scene.instance()
+            hq_instance.team = 1
+            hq_instance.position = hq_position_team_b
+            
+            var current_scene = get_tree().current_scene
+            if current_scene:
+                current_scene.add_child(hq_instance)
+                register_headquarters(hq_instance, 1)
+                log_debug("Team B headquarters placed using alternative method", "info", "GameManager")
+            else:
+                log_debug("Failed to place Team B headquarters - no current scene", "error", "GameManager")
+        else:
+            log_debug("Failed to load headquarters scene", "error", "GameManager")
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:
@@ -867,3 +974,393 @@ func initialize() -> void:
     if not is_initialized:
         _safe_system_initialization()
         is_initialized = true
+
+func _initialize_systems_safely() -> void:
+    print("Beginning safe systems initialization...")
+    
+    # Spread initialization across multiple frames
+    var systems_to_initialize = [
+        "_initialize_grid_system",
+        "_initialize_combat_system",
+        "_initialize_economy_manager",
+        "_initialize_building_manager",
+        "_initialize_unit_factory",
+        "_initialize_ui_manager",
+        "_initialize_tech_tree_manager",
+        "_initialize_map_manager"
+    ]
+    
+    # Initialize one system at a time
+    for system_method in systems_to_initialize:
+        call(system_method)
+        # Small yield to prevent freezing
+        yield (get_tree(), "idle_frame")
+    
+    print("Safe systems initialization complete")
+
+func _initialize_grid_system() -> void:
+    if not grid_system:
+        grid_system = get_node_or_null("/root/GridSystem")
+        if not grid_system:
+            var grid_system_class = load("res://scripts/core/grid_system.gd")
+            if grid_system_class:
+                grid_system = grid_system_class.new()
+                grid_system.name = "GridSystem"
+                add_child(grid_system)
+                
+                # Add a safety yield to prevent freezing
+                yield (get_tree(), "idle_frame")
+                
+                # Initialize grid
+                if grid_system.has_method("initialize_grid"):
+                    grid_system.initialize_grid()
+                print("Created and initialized GridSystem")
+
+func _initialize_combat_system() -> void:
+    if not combat_system:
+        combat_system = get_node_or_null("/root/CombatSystem")
+        if not combat_system:
+            var combat_system_class = load("res://scripts/combat/combat_system.gd")
+            if combat_system_class:
+                combat_system = combat_system_class.new()
+                combat_system.name = "CombatSystem"
+                add_child(combat_system)
+                print("Created CombatSystem")
+
+func _initialize_economy_manager() -> void:
+    if not economy_manager:
+        economy_manager = get_node_or_null("/root/EconomyManager")
+        if not economy_manager:
+            var economy_manager_class = load("res://scripts/economy/economy_manager.gd")
+            if economy_manager_class:
+                economy_manager = economy_manager_class.new()
+                economy_manager.name = "EconomyManager"
+                add_child(economy_manager)
+                
+                # Initialize resources if needed
+                if economy_manager.has_method("reset_team_resources"):
+                    economy_manager.reset_team_resources()
+                print("Created and initialized EconomyManager")
+
+func _initialize_building_manager() -> void:
+    if not building_manager:
+        building_manager = get_node_or_null("/root/BuildingManager")
+        if not building_manager:
+            var building_manager_class = load("res://scripts/building/building_manager.gd")
+            if building_manager_class:
+                building_manager = building_manager_class.new()
+                building_manager.name = "BuildingManager"
+                add_child(building_manager)
+                print("Created BuildingManager")
+                
+                # Wait a frame to ensure dependencies are available
+                yield (get_tree(), "idle_frame")
+                
+                # Set references to other systems
+                if building_manager.has_method("set_dependencies"):
+                    building_manager.set_dependencies(grid_system, economy_manager, self)
+
+func _initialize_unit_factory() -> void:
+    if not unit_factory:
+        unit_factory = get_node_or_null("/root/UnitFactory")
+        if not unit_factory:
+            var unit_factory_class = load("res://scripts/unit/unit_factory.gd")
+            if unit_factory_class:
+                unit_factory = unit_factory_class.new()
+                unit_factory.name = "UnitFactory"
+                add_child(unit_factory)
+                print("Created UnitFactory")
+                
+                # If UnitFactory has an initialization method, call it
+                if unit_factory.has_method("initialize_factory"):
+                    unit_factory.initialize_factory()
+
+func _initialize_ui_manager() -> void:
+    if not ui_manager:
+        ui_manager = get_node_or_null("/root/UIManager")
+        if not ui_manager:
+            var ui_manager_class = load("res://scripts/ui/ui_manager.gd")
+            if ui_manager_class:
+                ui_manager = ui_manager_class.new()
+                ui_manager.name = "UIManager"
+                add_child(ui_manager)
+                print("Created UIManager")
+                
+                # Wait a frame to ensure dependencies are available
+                yield (get_tree(), "idle_frame")
+                
+                # Connect UI signals if manager has the connect method
+                if ui_manager.has_method("connect_signals"):
+                    ui_manager.connect_signals()
+
+func _initialize_tech_tree_manager() -> void:
+    if not tech_tree_manager:
+        tech_tree_manager = get_node_or_null("/root/TechTreeManager")
+        if not tech_tree_manager:
+            var tech_tree_class = load("res://scripts/core/tech_tree_manager.gd")
+            if tech_tree_class:
+                tech_tree_manager = tech_tree_class.new()
+                tech_tree_manager.name = "TechTreeManager"
+                add_child(tech_tree_manager)
+                print("Created TechTreeManager")
+                
+                # Set default tech trees for teams
+                if tech_tree_manager.has_method("set_team_tech_tree"):
+                    tech_tree_manager.set_team_tech_tree(0, "human")
+                    tech_tree_manager.set_team_tech_tree(1, "orc")
+
+func _initialize_map_manager() -> void:
+    if not map_manager:
+        map_manager = get_node_or_null("/root/MapManager")
+        if not map_manager:
+            var map_manager_class = load("res://scripts/core/map_manager.gd")
+            if map_manager_class:
+                map_manager = map_manager_class.new()
+                map_manager.name = "MapManager"
+                add_child(map_manager)
+                print("Created MapManager")
+                
+                # Initialize the map if there's an initialization method
+                if map_manager.has_method("initialize_map"):
+                    map_manager.initialize_map()
+
+func ensure_data_directories_exist() -> void:
+    # List of required directories
+    var dirs_to_check = [
+        "res://data/items/",
+        "res://data/buildings/",
+        "res://data/units/",
+        "res://data/combat/",
+        "res://data/tech_trees/"
+    ]
+    
+    # Create each directory
+    var dir = Directory.new()
+    for path in dirs_to_check:
+        if !dir.dir_exists(path):
+            print("Creating directory: " + path)
+            var err = dir.make_dir_recursive(path)
+            if err != OK:
+                print("Failed to create directory: " + path + " Error: " + str(err))
+            else:
+                print("Created directory: " + path)
+                
+                # Create a default file in each directory as needed
+                var default_files = {
+                    "res://data/items/": "health_potion.json",
+                    "res://data/buildings/": "", # Skip if you already have building files
+                    "res://data/units/": "", # Skip if you already have unit files
+                    "res://data/combat/": "", # Skip if you already have combat files
+                    "res://data/tech_trees/": "" # Skip if you already have tech tree files
+                }
+                
+                if default_files[path] != "":
+                    _create_default_file(path + default_files[path])
+
+func _create_default_file(file_path: String) -> void:
+    # Check if file already exists
+    var file = File.new()
+    if file.file_exists(file_path):
+        print("File already exists: " + file_path)
+        return
+    
+    # Create the file with appropriate content based on type
+    if file.open(file_path, File.WRITE) == OK:
+        var content = ""
+        
+        # Determine file type from path and create appropriate content
+        if file_path.ends_with(".json"):
+            if "items" in file_path:
+                # Create a default item
+                content = JSON.print({
+                    "item_id": file_path.get_file().get_basename(),
+                    "display_name": "Default Item",
+                    "description": "A default item created by the game",
+                    "gold_cost": 50,
+                    "wood_cost": 0,
+                    "supply_cost": 0,
+                    "effect": {
+                        "type": "heal",
+                        "value": 50
+                    },
+                    "icon_path": "res://assets/items/default_item.png"
+                }, "  ")
+            elif "buildings" in file_path:
+                # Create a default building
+                content = JSON.print({
+                    "building_id": file_path.get_file().get_basename(),
+                    "display_name": "Default Building",
+                    "description": "A default building created by the game",
+                    "race": "common",
+                    "scene_path": "res://scenes/buildings/base_building.tscn",
+                    "stats": {
+                        "health": 500,
+                        "armor": 5,
+                        "armor_type": "fortified",
+                        "vision_range": 300
+                    },
+                    "construction": {
+                        "time": 30,
+                        "gold_cost": 100,
+                        "wood_cost": 50,
+                        "supply_cost": 0,
+                        "size_x": 2,
+                        "size_y": 2
+                    }
+                }, "  ")
+            elif "units" in file_path:
+                # Create a default unit
+                content = JSON.print({
+                    "unit_id": file_path.get_file().get_basename(),
+                    "display_name": "Default Unit",
+                    "description": "A default unit created by the game",
+                    "race": "common",
+                    "scene_path": "res://scenes/units/base_unit.tscn",
+                    "stats": {
+                        "health": 100,
+                        "armor": 2,
+                        "armor_type": "medium",
+                        "attack_damage": 10,
+                        "attack_type": "normal",
+                        "attack_range": 60,
+                        "attack_speed": 1.2,
+                        "movement_speed": 90,
+                        "collision_radius": 16,
+                        "vision_range": 250,
+                        "health_regen": 0.25
+                    }
+                }, "  ")
+            elif "combat" in file_path:
+                # Create a default damage table
+                content = JSON.print({
+                    "normal": {
+                        "light": 1.0,
+                        "medium": 1.0,
+                        "heavy": 1.0,
+                        "fortified": 0.5,
+                        "hero": 1.0,
+                        "unarmored": 1.0
+                    },
+                    "piercing": {
+                        "light": 1.5,
+                        "medium": 0.75,
+                        "heavy": 1.0,
+                        "fortified": 0.35,
+                        "hero": 0.5,
+                        "unarmored": 1.0
+                    }
+                }, "  ")
+            elif "tech_trees" in file_path:
+                # Create a default tech tree
+                content = JSON.print({
+                    "race_id": file_path.get_file().get_basename().replace("_tech", ""),
+                    "race_name": "Default Race",
+                    "description": "A default race created by the game",
+                    "starting_buildings": ["headquarters"],
+                    "buildings": [
+                        {
+                            "id": "headquarters",
+                            "name": "Headquarters",
+                            "tier": 0,
+                            "description": "Main base structure.",
+                            "requirements": [],
+                            "unlocks": ["barracks"]
+                        },
+                        {
+                            "id": "barracks",
+                            "name": "Barracks",
+                            "tier": 1,
+                            "description": "Trains basic infantry units",
+                            "requirements": ["headquarters"],
+                            "unlocks": ["footman"]
+                        }
+                    ],
+                    "units": [
+                        {
+                            "id": "footman",
+                            "name": "Footman",
+                            "tier": 1,
+                            "building": "barracks",
+                            "description": "Basic melee infantry unit",
+                            "abilities": []
+                        }
+                    ]
+                }, "  ")
+        else:
+            # Default to an empty file for unknown types
+            content = "# Default file created by GameManager\n"
+        
+        # Write the content to the file
+        file.store_string(content)
+        file.close()
+        print("Created default file: " + file_path)
+    else:
+        print("Failed to create default file: " + file_path)
+
+func ensure_icon_exists() -> void:
+    var file = File.new()
+    if not file.file_exists("res://icon.png"):
+        print("Creating default icon.png")
+        var img = Image.new()
+        img.create(64, 64, false, Image.FORMAT_RGBA8)
+        
+        # Fill with blue color
+        img.fill(Color(0.2, 0.4, 0.8))
+        
+        # Draw simple castle shape
+        for x in range(10, 54):
+            # Base
+            for y in range(40, 50):
+                img.set_pixel(x, y, Color.white)
+            
+            # Towers
+            if x == 15 or x == 30 or x == 45:
+                for y in range(20, 40):
+                    img.set_pixel(x, y, Color.white)
+                
+                # Tower tops
+                for xt in range(x - 3, x + 4):
+                    if xt >= 10 and xt <= 54:
+                        img.set_pixel(xt, 20, Color.white)
+        
+        # Save the image
+        img.save_png("res://icon.png")
+        print("Created default icon.png")
+
+# Function to verify game state and fix if needed
+func verify_game_state() -> void:
+    print("Verifying game state...")
+    
+    # Check if we have the required scenes
+    var required_scenes = [
+        "res://scenes/units/worker.tscn",
+        "res://scenes/units/base_unit.tscn",
+        "res://scenes/buildings/base_building.tscn",
+        "res://scenes/buildings/hq_building.tscn",
+        "res://scenes/ui/building_menu.tscn"
+    ]
+    
+    var dir = Directory.new()
+    for scene_path in required_scenes:
+        if not dir.file_exists(scene_path):
+            print("Warning: Required scene not found: " + scene_path)
+            # You could call a scene creator function here to create the missing scene
+    
+    # Check if we have all required systems
+    var systems_check = {
+        "GridSystem": grid_system != null,
+        "CombatSystem": combat_system != null,
+        "EconomyManager": economy_manager != null,
+        "BuildingManager": building_manager != null,
+        "UnitFactory": unit_factory != null,
+        "UIManager": ui_manager != null,
+        "TechTreeManager": tech_tree_manager != null,
+        "MapManager": map_manager != null
+    }
+    
+    # Log any missing systems
+    for system_name in systems_check:
+        if not systems_check[system_name]:
+            print("Warning: Required system missing: " + system_name)
+    
+    print("Game state verification complete")

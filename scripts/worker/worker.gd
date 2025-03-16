@@ -424,46 +424,51 @@ func _ready() -> void:
     print("Worker ready complete")
     print("Worker initialized. Team: " + str(team))
 
-# Add these helper functions
+# Add or modify this function in your worker.gd script
 func _setup_visuals() -> void:
     print("Setting up worker visuals for team " + str(team))
     
     # Create or get sprite
-    var sprite = $Sprite
-    if not has_node("Sprite"):
+    var sprite = get_node_or_null("Sprite")
+    if not sprite:
         print("Creating new Sprite node")
         sprite = Sprite.new()
         sprite.name = "Sprite"
         add_child(sprite)
-    else:
-        print("Using existing Sprite node")
-
+    
+    # Try to load texture from path
     var texture_path = "res://assets/units/human/worker/idle/idle.png"
-    print("Loading texture from: " + texture_path)
     var texture = load(texture_path)
     
-    if texture:
-        print("Texture loaded successfully!")
-        sprite.texture = texture
-    else:
-        print("ERROR: Worker texture not found at: " + texture_path)
-        print("Creating fallback visual")
+    # If loading fails, try fallback method
+    if not texture:
+        print("Failed to load worker texture, trying fallback")
         
-        # Create a ColorRect as a fallback visual
-        var placeholder = ColorRect.new()
-        placeholder.rect_size = Vector2(32, 32)
-        placeholder.rect_position = Vector2(-16, -16)
+        # Create a placeholder texture
+        var img = Image.new()
+        img.create(32, 32, false, Image.FORMAT_RGBA8)
         
-        # Color based on team
-        if team == 0:
-            placeholder.color = Color(0, 0, 1) # Blue for Team A
-        else:
-            placeholder.color = Color(1, 0, 0) # Red for Team B
-            
-        sprite.add_child(placeholder)
+        # Fill with team color
+        var color = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
+        img.fill(color)
+        
+        # Draw a simple worker figure
+        for x in range(12, 20):
+            for y in range(16, 24):
+                img.set_pixel(x, y, Color.white)
+        
+        for y in range(16, 28):
+            img.set_pixel(16, y, Color.white)
+        
+        # Create texture
+        texture = ImageTexture.new()
+        texture.create_from_image(img)
+        print("Created fallback worker texture")
+    
+    # Set the texture
+    sprite.texture = texture
     
     # Set color based on team
-    print("Setting team colors")
     if team == 0:
         sprite.modulate = Color(0, 0, 1) # Blue for Team A
     else:
