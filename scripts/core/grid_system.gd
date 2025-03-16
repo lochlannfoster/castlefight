@@ -245,19 +245,23 @@ func highlight_valid_cells(size: Vector2, team: int) -> Array:
 func clear_highlights() -> void:
     emit_signal("cell_highlighted", Vector2.ZERO, false)
 
-func draw_debug_grid():
-    # Create a debug node for visualization
-    var debug_draw = Node2D.new()
-    debug_draw.name = "DebugGridVisualizer"
-    add_child(debug_draw)
+func draw_debug_grid() -> void:
+    # Create a debug node for visualization if it doesn't exist
+    if not has_node("DebugGridVisualizer"):
+        var debug_draw = Node2D.new()
+        debug_draw.name = "DebugGridVisualizer"
+        add_child(debug_draw)
+        
+        # Connect draw signal
+        debug_draw.connect("draw", self, "_on_debug_draw")
     
-    # Draw grid cells
-    debug_draw.connect("draw", self, "_on_debug_draw")
-    debug_draw.update()
+    # Force update
+    var debug_visualizer = get_node("DebugGridVisualizer")
+    debug_visualizer.update()
     
     print("Debug grid visualization enabled")
 
-func _on_debug_draw():
+func _on_debug_draw() -> void:
     var debug_draw = get_node("DebugGridVisualizer")
     if not debug_draw:
         return
@@ -283,7 +287,7 @@ func _on_debug_draw():
                 
                 if cell.team_territory == 0: # Team A
                     debug_draw.draw_rect(Rect2(world_pos - Vector2(cell_size.x / 2, cell_size.y / 2),
-                                         cell_size), Color(0, 0, 1, 0.2), true)
+                                        cell_size), Color(0, 0, 1, 0.2), true)
                 elif cell.team_territory == 1: # Team B
                     debug_draw.draw_rect(Rect2(world_pos - Vector2(cell_size.x / 2, cell_size.y / 2),
-                                         cell_size), Color(1, 0, 0, 0.2), true)
+                                        cell_size), Color(1, 0, 0, 0.2), true)

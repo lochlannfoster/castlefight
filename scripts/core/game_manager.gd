@@ -761,3 +761,13 @@ func _sync_player_data_to_game_manager() -> void:
             var _result = add_player(player_id, p_data.name, p_data.team)
     
     log_debug("Player sync complete. GameManager now has " + str(players.size()) + " players", "info", "GameManager")
+
+func toggle_grid_visualization() -> void:
+    if grid_system:
+        if grid_system.has_node("DebugGridVisualizer"):
+            var visualizer = grid_system.get_node("DebugGridVisualizer")
+            visualizer.visible = !visualizer.visible
+            log_debug("Grid visualization " + ("enabled" if visualizer.visible else "disabled"), "info", "GameManager")
+        else:
+            grid_system.draw_debug_grid()
+            log_debug("Grid visualization created and enabled", "info", "GameManager")

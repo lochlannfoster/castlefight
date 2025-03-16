@@ -100,6 +100,12 @@ func _input(event):
             var ui_manager = get_node_or_null("UIManager")
             if ui_manager and ui_manager.has_method("toggle_building_menu"):
                 ui_manager.toggle_building_menu()
+        elif event.scancode == KEY_G:
+            # Toggle grid visualization with G key
+            print("G key pressed - toggling grid visualization")
+            var game_manager = get_node_or_null("/root/GameManager")
+            if game_manager and game_manager.has_method("toggle_grid_visualization"):
+                game_manager.toggle_grid_visualization()
             
     # Handle other input types if needed
     elif event is InputEventMouseButton:
