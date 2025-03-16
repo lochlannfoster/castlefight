@@ -100,16 +100,20 @@ func _create_ui_elements() -> void:
         debug_log("Skipping UI creation for non-game scene", "info", "UIManager")
         return
     
-    # Create UI elements in a safe manner
+    # Create UI elements directly
     var creation_successful = true
     
-    # Try to create each element, but don't try again if they fail
+    # Try to create each element directly
     if not has_node("ResourceDisplay"):
-        if not _safe_create_resource_display():
+        _create_resource_display()
+        # Update success status based on creation result
+        if not has_node("ResourceDisplay"):
             creation_successful = false
     
     if not has_node("BuildingMenu"):
-        if not _safe_create_building_menu():
+        _create_building_menu()
+        # Update success status based on creation result
+        if not has_node("BuildingMenu"):
             creation_successful = false
     
     # Add additional UI elements as needed
@@ -180,8 +184,12 @@ func _create_debug_indicator() -> void:
     if network_manager and network_manager.debug_mode:
         debug_indicator.visible = true
 
-# Create resource display
+# Clean implementation for resource display
 func _create_resource_display() -> void:
+    # Only try to create if it doesn't already exist
+    if has_node("ResourceDisplay"):
+        return
+    
     resource_display = Control.new()
     resource_display.name = "ResourceDisplay"
     resource_display.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -191,13 +199,21 @@ func _create_resource_display() -> void:
     resource_display.margin_bottom = 50
     add_child(resource_display)
     
+    # Add background panel for better visibility
+    var background = ColorRect.new()
+    background.name = "Background"
+    background.rect_size = Vector2(190, 120)
+    background.color = Color(0, 0, 0, 0.5)
+    background.show_behind_parent = true
+    resource_display.add_child(background)
+    
     # Gold display
     var gold_container = HBoxContainer.new()
     gold_container.name = "GoldContainer"
     resource_display.add_child(gold_container)
     
     var gold_icon = TextureRect.new()
-    gold_icon.texture = preload("res://assets/ui/icons/gold_icon.png")
+    gold_icon.texture = load("res://assets/ui/icons/gold_icon.png")
     gold_icon.rect_min_size = Vector2(24, 24)
     gold_container.add_child(gold_icon)
     
@@ -213,7 +229,7 @@ func _create_resource_display() -> void:
     resource_display.add_child(wood_container)
     
     var wood_icon = TextureRect.new()
-    wood_icon.texture = preload("res://assets/ui/icons/wood_icon.png")
+    wood_icon.texture = load("res://assets/ui/icons/wood_icon.png")
     wood_icon.rect_min_size = Vector2(24, 24)
     wood_container.add_child(wood_icon)
     
@@ -229,7 +245,7 @@ func _create_resource_display() -> void:
     resource_display.add_child(supply_container)
     
     var supply_icon = TextureRect.new()
-    supply_icon.texture = preload("res://assets/ui/icons/supply_icon.png")
+    supply_icon.texture = load("res://assets/ui/icons/supply_icon.png")
     supply_icon.rect_min_size = Vector2(24, 24)
     supply_container.add_child(supply_icon)
     
@@ -245,7 +261,7 @@ func _create_resource_display() -> void:
     resource_display.add_child(income_container)
     
     var income_icon = TextureRect.new()
-    income_icon.texture = preload("res://assets/ui/icons/income_icon.png")
+    income_icon.texture = load("res://assets/ui/icons/income_icon.png")
     income_icon.rect_min_size = Vector2(24, 24)
     income_container.add_child(income_icon)
     
@@ -253,6 +269,8 @@ func _create_resource_display() -> void:
     income_label.name = "IncomeLabel"
     income_label.text = "+10/tick"
     income_container.add_child(income_label)
+    
+    debug_log("Resource display created successfully", "info")
 
 func _create_building_menu() -> void:
     # Only try to create if it doesn't already exist
@@ -274,9 +292,11 @@ func _create_building_menu() -> void:
         building_menu.visible = false
         debug_log("Building menu created successfully", "info")
 
-
-# Create unit info panel
 func _create_unit_info_panel() -> void:
+    # Only try to create if it doesn't already exist
+    if has_node("UnitInfoPanel"):
+        return
+    
     unit_info_panel = Control.new()
     unit_info_panel.name = "UnitInfoPanel"
     unit_info_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -322,9 +342,14 @@ func _create_unit_info_panel() -> void:
     armor_label.name = "ArmorLabel"
     armor_label.text = "Armor: 0 (Medium)"
     stats_container.add_child(armor_label)
+    
+    debug_log("Unit info panel created successfully", "info")
 
-# Create game status panel
 func _create_game_status_panel() -> void:
+    # Only try to create if it doesn't already exist
+    if has_node("GameStatusPanel"):
+        return
+    
     game_status_panel = Control.new()
     game_status_panel.name = "GameStatusPanel"
     game_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -356,6 +381,8 @@ func _create_game_status_panel() -> void:
     pause_button.text = "II"
     pause_button.connect("pressed", self, "_on_pause_button_pressed")
     panel.add_child(pause_button)
+    
+    debug_log("Game status panel created successfully", "info")
 
 # Create minimap with actual game map rendering
 func _create_minimap() -> void:

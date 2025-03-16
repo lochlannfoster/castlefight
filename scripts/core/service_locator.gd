@@ -137,6 +137,7 @@ func _create_service(service_name: String) -> Node:
     
     return service
 
+# In scripts/core/service_locator.gd
 func initialize_all_services() -> void:
     if _initializing:
         return
@@ -155,20 +156,28 @@ func initialize_all_services() -> void:
         var service = get_service(service_name)
         
         if service and service.has_method("initialize"):
-            # Connect to the initialization completed signal
-            if not service.is_connected("initialization_completed", self, "_on_service_initialized"):
-                service.connect("initialization_completed", self, "_on_service_initialized", [service_name])
-                
-            # Connect to the initialization failed signal
-            if not service.is_connected("initialization_failed", self, "_on_service_initialization_failed"):
-                service.connect("initialization_failed", self, "_on_service_initialization_failed", [service_name])
-                
-            # Add to pending initializations
-            _pending_initializations.append(service_name)
+            # Check if this is a GameService that has these signals
+            var has_initialization_signals = (service is GameService) or service.has_signal("initialization_completed")
+            
+            if has_initialization_signals:
+                # Connect to the initialization completed signal
+                if not service.is_connected("initialization_completed", self, "_on_service_initialized"):
+                    service.connect("initialization_completed", self, "_on_service_initialized", [service_name])
+                    
+                # Connect to the initialization failed signal
+                if not service.is_connected("initialization_failed", self, "_on_service_initialization_failed"):
+                    service.connect("initialization_failed", self, "_on_service_initialization_failed", [service_name])
+                    
+                # Add to pending initializations
+                _pending_initializations.append(service_name)
             
             # Start initialization
             print("ServiceLocator: Starting initialization of " + service_name)
             service.initialize()
+            
+            # If it doesn't have the signals, consider it initialized immediately
+            if not has_initialization_signals:
+                print("ServiceLocator: Service " + service_name + " initialized (no signals)")
     
     # Check if any services need to be waited on
     if _pending_initializations.empty():
