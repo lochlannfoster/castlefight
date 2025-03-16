@@ -6,19 +6,19 @@ signal cell_highlighted(grid_pos, is_valid)
 signal grid_initialized
 
 # Debug settings
-var debug_verbose = true  # Set to true for initial debugging
+var debug_verbose = true # Set to true for initial debugging
 
 # Grid dimensions
-var grid_width: int = 40  # Number of cells horizontally
-var grid_height: int = 30  # Number of cells vertically
-var cell_size: Vector2 = Vector2(64, 32)  # Size of each cell for isometric grid
+var grid_width: int = 40 # Number of cells horizontally
+var grid_height: int = 30 # Number of cells vertically
+var cell_size: Vector2 = Vector2(64, 32) # Size of each cell for isometric grid
 
 # Grid data storage
-var grid_cells: Dictionary = {}  # Stores information about each cell: position, occupancy, etc.
-var valid_placement_cells: Array = []  # Cells where buildings can be placed
-var team_a_cells: Array = []  # Cells in Team A's territory
-var team_b_cells: Array = []  # Cells in Team B's territory
-var lane_cells: Dictionary = {}  # Cells organized by lanes
+var grid_cells: Dictionary = {} # Stores information about each cell: position, occupancy, etc.
+var valid_placement_cells: Array = [] # Cells where buildings can be placed
+var team_a_cells: Array = [] # Cells in Team A's territory
+var team_b_cells: Array = [] # Cells in Team B's territory
+var lane_cells: Dictionary = {} # Cells organized by lanes
 
 # Team constants
 enum Team {TEAM_A, TEAM_B}
@@ -44,7 +44,7 @@ func initialize_grid() -> void:
             # Create a new cell data structure with no territory initially
             var cell_data = {
                 "grid_position": grid_pos,
-                "world_position": world_pos, 
+                "world_position": world_pos,
                 "occupied": false,
                 "building": null,
                 "walkable": true,
@@ -74,11 +74,11 @@ func initialize_grid() -> void:
 func determine_lane(grid_pos: Vector2) -> int:
     # Divide the grid into 3 lanes (top, middle, bottom)
     if grid_pos.y < float(grid_height) / 3.0:
-        return 0  # Top lane
+        return 0 # Top lane
     elif grid_pos.y < 2.0 * float(grid_height) / 3.0:
-        return 1  # Middle lane
+        return 1 # Middle lane
     else:
-        return 2  # Bottom lane
+        return 2 # Bottom lane
 
 # Convert grid coordinates to world coordinates
 func grid_to_world(grid_pos: Vector2) -> Vector2:
@@ -105,7 +105,7 @@ func is_within_grid(grid_pos: Vector2) -> bool:
 # Check if a cell is already occupied
 func is_cell_occupied(grid_pos: Vector2) -> bool:
     if not grid_cells.has(grid_pos):
-        return true  # Consider out-of-bounds as occupied
+        return true # Consider out-of-bounds as occupied
     return grid_cells[grid_pos].occupied
 
 # Mark a cell as occupied by a building
@@ -172,7 +172,7 @@ func is_valid_placement_cell(grid_pos: Vector2) -> bool:
         return false
         
     var cell_data = grid_cells[grid_pos]
-    if cell_data.team_territory == null:  # Neutral territory
+    if cell_data.team_territory == null: # Neutral territory
         return false
         
     return true
@@ -194,3 +194,46 @@ func highlight_valid_cells(size: Vector2, team: int) -> Array:
 # Clear all highlights
 func clear_highlights() -> void:
     emit_signal("cell_highlighted", Vector2.ZERO, false)
+
+func draw_debug_grid():
+    # Create a debug node for visualization
+    var debug_draw = Node2D.new()
+    debug_draw.name = "DebugGridVisualizer"
+    add_child(debug_draw)
+    
+    # Draw grid cells
+    debug_draw.connect("draw", self, "_on_debug_draw")
+    debug_draw.update()
+    
+    print("Debug grid visualization enabled")
+
+func _on_debug_draw():
+    var debug_draw = get_node("DebugGridVisualizer")
+    if not debug_draw:
+        return
+        
+    # Draw grid lines
+    for x in range(grid_width + 1):
+        var start_pos = grid_to_world(Vector2(x, 0))
+        var end_pos = grid_to_world(Vector2(x, grid_height))
+        debug_draw.draw_line(start_pos, end_pos, Color(0.5, 0.5, 0.5, 0.3), 1.0)
+        
+    for y in range(grid_height + 1):
+        var start_pos = grid_to_world(Vector2(0, y))
+        var end_pos = grid_to_world(Vector2(grid_width, y))
+        debug_draw.draw_line(start_pos, end_pos, Color(0.5, 0.5, 0.5, 0.3), 1.0)
+    
+    # Draw territory highlights
+    for x in range(grid_width):
+        for y in range(grid_height):
+            var grid_pos = Vector2(x, y)
+            if grid_cells.has(grid_pos):
+                var cell = grid_cells[grid_pos]
+                var world_pos = grid_to_world(grid_pos)
+                
+                if cell.team_territory == 0: # Team A
+                    debug_draw.draw_rect(Rect2(world_pos - Vector2(cell_size.x / 2, cell_size.y / 2),
+                                         cell_size), Color(0, 0, 1, 0.2), true)
+                elif cell.team_territory == 1: # Team B
+                    debug_draw.draw_rect(Rect2(world_pos - Vector2(cell_size.x / 2, cell_size.y / 2),
+                                         cell_size), Color(1, 0, 0, 0.2), true)

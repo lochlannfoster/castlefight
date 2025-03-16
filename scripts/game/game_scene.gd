@@ -16,14 +16,23 @@ func _ready() -> void:
     else:
         print("ERROR: Failed to load map scene")
     
-    # Setup camera
-    var camera = Camera2D.new()
-    camera.position = Vector2(400, 300)
-    camera.current = true
-    add_child(camera)
+    # Setup camera with improved debugging
+    print("Setting up camera...")
+    _setup_camera()
+    print("Camera setup complete")
     
     # Initialize game
+    print("Initializing game...")
     _initialize_game()
+    
+    # Add test worker after a short delay
+    print("Scheduling test worker spawn...")
+    var timer = Timer.new()
+    add_child(timer)
+    timer.wait_time = 1.0
+    timer.one_shot = true
+    timer.connect("timeout", self, "_add_test_worker")
+    timer.start()
 
 # Initialize the game after a short delay
 func _initialize_game():
@@ -43,12 +52,6 @@ func _initialize_game():
         print("Initializing grid system...")
         grid_system.initialize_grid()
     
-    # Setup simple UI for testing
-    print("DEBUG: About to call _setup_simple_ui()")
-    call_deferred("_setup_simple_ui")
-    
-    print("DEBUG: _initialize_game() completed")
-
 # Start the game in single player mode
 func _start_single_player_game(game_manager):
     print("DEBUG: _start_single_player_game() called with game_manager:" + str(game_manager))
@@ -57,16 +60,7 @@ func _start_single_player_game(game_manager):
         game_manager.start_game()
         print("DEBUG: game_manager.start_game() completed")
 
-# Setup a simple UI manager for testing
-func _setup_simple_ui():
-    print("Setting up UI manager for game...")
-    
-    # First check if a UI manager already exists
-    var existing_ui = get_node_or_null("/root/GameManager/UIManager")
-    if existing_ui:
-        print("Game already has a UI manager, using that")
-        return
-    
+
     # Load the comprehensive UI manager script
     var ui_manager_path = "res://scripts/ui/ui_manager.gd"
     var file = File.new()
@@ -116,3 +110,17 @@ func _input(event):
     elif event is InputEventMouseButton:
         # Mouse button code here
         pass
+
+func _setup_camera():
+    var camera = Camera2D.new()
+    camera.name = "GameCamera"
+    camera.position = Vector2(400, 300) # Center of the default view
+    camera.current = true
+    
+    # Add camera control script if available
+    var camera_script = load("res://scripts/core/camera_controller.gd")
+    if camera_script:
+        camera.set_script(camera_script)
+    
+    add_child(camera)
+    print("Camera set up at position: " + str(camera.position))

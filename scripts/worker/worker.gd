@@ -10,7 +10,7 @@ signal auto_repair_toggled(enabled)
 
 # Movement properties
 export var speed: float = 200.0
-export var team: int = 0  # 0 = Team A, 1 = Team B
+export var team: int = 0 # 0 = Team A, 1 = Team B
 export var acceleration: float = 800.0
 export var friction: float = 600.0
 
@@ -20,7 +20,7 @@ var current_building_type: String = ""
 var current_building_size: Vector2 = Vector2.ONE
 var building_ghost: Node2D
 var can_place: bool = false
-var placement_range: float = 100.0  # How far the worker can place a building from itself
+var placement_range: float = 100.0 # How far the worker can place a building from itself
 
 enum CommandType {
     MOVE,
@@ -58,7 +58,6 @@ var is_selected: bool = false
 # Add to worker.gd in _physics_process function:
 func _physics_process(delta: float) -> void:
     # Existing code...
-    
     # Check if we need to continue processing a command
     if current_command == CommandType.REPAIR and command_target != null:
         # Check if we're in range of repair target
@@ -83,36 +82,50 @@ func _get_manager_references() -> void:
 
 # Set up visual appearance for the worker
 func _setup_visuals() -> void:
+    print("Setting up worker visuals for team " + str(team))
+    
     # Create or get sprite
-    var sprite = $Sprite if has_node("Sprite") else Sprite.new()
+    var sprite = $Sprite
     if not has_node("Sprite"):
+        print("Creating new Sprite node")
+        sprite = Sprite.new()
         sprite.name = "Sprite"
         add_child(sprite)
+    else:
+        print("Using existing Sprite node")
 
     var texture_path = "res://assets/units/human/worker/idle/idle.png"
+    print("Loading texture from: " + texture_path)
     var texture = load(texture_path)
+    
     if texture:
+        print("Texture loaded successfully!")
         sprite.texture = texture
-
-    # Set color based on team
-    if team == 0:
-        sprite.modulate = Color(0, 0, 1)  # Blue for Team A
     else:
-        sprite.modulate = Color(1, 0, 0)  # Red for Team B
+        print("ERROR: Worker texture not found at: " + texture_path)
+        print("Creating fallback visual")
+        
+        # Create a ColorRect as a fallback visual
+        var placeholder = ColorRect.new()
+        placeholder.rect_size = Vector2(32, 32)
+        placeholder.rect_position = Vector2(-16, -16)
+        
+        # Color based on team
+        if team == 0:
+            placeholder.color = Color(0, 0, 1) # Blue for Team A
+        else:
+            placeholder.color = Color(1, 0, 0) # Red for Team B
+            
+        sprite.add_child(placeholder)
     
-    # Create selection indicator
-    var selection_indicator = Node2D.new()
-    selection_indicator.name = "SelectionIndicator"
-    add_child(selection_indicator)
+    # Set color based on team
+    print("Setting team colors")
+    if team == 0:
+        sprite.modulate = Color(0, 0, 1) # Blue for Team A
+    else:
+        sprite.modulate = Color(1, 0, 0) # Red for Team B
     
-    var indicator_visual = ColorRect.new()
-    indicator_visual.rect_size = Vector2(36, 36)
-    indicator_visual.rect_position = Vector2(-18, -18)
-    indicator_visual.color = Color(0, 1, 0, 0.3)  # Green transparent
-    selection_indicator.add_child(indicator_visual)
-    
-    # Hide by default
-    selection_indicator.visible = false
+    print("Worker visuals setup complete")
 
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:
@@ -122,9 +135,9 @@ func _setup_building_ghost() -> void:
     
     var ghost_visual = ColorRect.new()
     ghost_visual.name = "GhostVisual"
-    ghost_visual.rect_size = Vector2(64, 64)  # Default size, will be updated
+    ghost_visual.rect_size = Vector2(64, 64) # Default size, will be updated
     ghost_visual.rect_position = Vector2(-32, -32)
-    ghost_visual.color = Color(0, 1, 0, 0.5)  # Green transparent
+    ghost_visual.color = Color(0, 1, 0, 0.5) # Green transparent
     building_ghost.add_child(ghost_visual)
     
     # Hide by default
@@ -271,7 +284,7 @@ func start_building_placement(building_type: String, size: Vector2) -> void:
     var ghost_visual = building_ghost.get_node("GhostVisual")
     if ghost_visual:
         ghost_visual.rect_size = size * grid_system.cell_size if grid_system else Vector2(64, 64) * size
-        ghost_visual.rect_position = -ghost_visual.rect_size / 2
+        ghost_visual.rect_position = - ghost_visual.rect_size / 2
     
     building_ghost.visible = true
     
@@ -291,7 +304,7 @@ func _try_place_building(position: Vector2) -> void:
         # Too far to place, move closer
         target_position = position
         is_moving_to_target = true
-        current_target_building = true  # Flag that we're moving to place a building
+        current_target_building = true # Flag that we're moving to place a building
         return
     
     # Check if placement is valid
@@ -397,15 +410,15 @@ func get_team() -> int:
     return team
 
 func _ready() -> void:
-  print("Worker initialized. Team: " + str(team))
-  
-  # Get references to manager nodes
-  _get_manager_references()
-  
-  # Set up visual appearance for the worker
-  _setup_visuals()
-  
-  # Set up building ghost for placement preview
-  _setup_building_ghost()
-  
-  print("Worker ready complete")
+    print("Worker initialized. Team: " + str(team))
+    
+    # Get references to manager nodes
+    _get_manager_references()
+    
+    # Set up visual appearance for the worker
+    _setup_visuals()
+    
+    # Set up building ghost for placement preview
+    _setup_building_ghost()
+    
+    print("Worker ready complete")
