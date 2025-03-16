@@ -49,6 +49,8 @@ var fog_of_war_manager
 var network_manager
 var map_manager
 
+var is_initialized: bool = false
+
 # Script references for instantiation
 var GridSystemScript = load("res://scripts/core/grid_system.gd")
 var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
@@ -787,6 +789,79 @@ func toggle_grid_visualization() -> void:
         else:
             grid_system.draw_debug_grid()
             log_debug("Grid visualization created and enabled", "info", "GameManager")
+
+func _safe_system_initialization() -> void:
+    # Centralized, controlled initialization of game subsystems
+    log_debug("Beginning safe system initialization...", "info")
+    
+    # 1. Core Systems Initialization
+    grid_system = _initialize_subsystem("GridSystem", GridSystemScript)
+    combat_system = _initialize_subsystem("CombatSystem", CombatSystemScript)
+    economy_manager = _initialize_subsystem("EconomyManager", EconomyManagerScript)
+    building_manager = _initialize_subsystem("BuildingManager", BuildingManagerScript)
+    
+    # 2. Advanced System Setup
+    if grid_system:
+        grid_system.initialize_grid()
+    
+    if economy_manager:
+        economy_manager.reset_team_resources()
+    
+    # 3. Tech Tree and Race Preparation
+    _prepare_tech_trees()
+    
+    # 4. Network and Multiplayer Setup
+    _configure_network_systems()
+    
+    # 5. Final Validation
+    _validate_system_readiness()
+    
+    log_debug("Safe system initialization complete.", "info")
+
+# Add helper methods referenced in _safe_system_initialization
+func _initialize_subsystem(system_name: String, system_script) -> Node:
+    var existing_system = get_node_or_null(system_name)
+    if existing_system:
+        return existing_system
+    
+    if system_script:
+        var new_system = system_script.new()
+        new_system.name = system_name
+        add_child(new_system)
+        log_debug("Initialized subsystem: " + system_name, "info")
+        return new_system
+    
+    log_debug("Failed to initialize subsystem: " + system_name, "error")
+    return null
+
+func _prepare_tech_trees() -> void:
+    var tech_tree_manager = get_node_or_null("TechTreeManager")
+    if tech_tree_manager:
+        tech_tree_manager.set_team_tech_tree(0, "human")
+        tech_tree_manager.set_team_tech_tree(1, "orc")
+
+func _configure_network_systems() -> void:
+    # Rename the local variable to avoid shadowing
+    var network_sys = get_node_or_null("NetworkManager")
+    if network_sys:
+        # Explicitly set debug mode and call method
+        network_sys.debug_mode = false # Default value
+        
+        # Replace ternary with explicit method call
+        if network_sys.has_method("initialize_network_settings"):
+            network_sys.initialize_network_settings()
+
+func _validate_system_readiness() -> void:
+    var critical_systems = [
+        grid_system,
+        combat_system,
+        economy_manager,
+        building_manager
+    ]
+    
+    for system in critical_systems:
+        if not system:
+            log_debug("Critical system not initialized!", "error")
 
 func initialize() -> void:
     if not is_initialized:

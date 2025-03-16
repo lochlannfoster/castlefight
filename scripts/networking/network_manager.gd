@@ -1775,10 +1775,40 @@ func _on_scene_changed() -> void:
     # Explicit, safe visibility management
     match current_scene.name.to_lower():
         "mainmenu":
-            set_visible(false)
+            set_ui_visibility(false)
         "lobby", "game":
-            set_visible(true)
+            set_ui_visibility(true)
             # Defer complex UI setup
             call_deferred("_create_ui_elements")
         _:
-            set_visible(false)
+            set_ui_visibility(false)
+
+# Add this method to handle set_visible for compatibility
+func set_visible(is_visible: bool) -> void:
+    # Implement visibility logic directly in the method
+    if is_creating_ui:
+        return
+    
+    var current_scene = get_tree().current_scene
+    if not current_scene:
+        print("WARNING: No current scene found")
+        return
+    
+    match current_scene.name.to_lower():
+        "mainmenu":
+            visible = false
+        "lobby", "game":
+            visible = true
+        _:
+            visible = false
+
+func set_ui_visibility(is_visible: bool) -> void:
+    # Defensive programming to handle different node types
+    if has_method("set_visible"):
+        set_visible(is_visible)
+    elif has_node("CanvasLayer"):
+        # If it's a CanvasLayer-based UI manager
+        get_node("CanvasLayer").visible = is_visible
+    else:
+        # Fallback visibility management
+        visible = is_visible

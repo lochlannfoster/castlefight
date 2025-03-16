@@ -1,4 +1,4 @@
-#extends Node2D
+extends Node2D
 
 # Import required scripts for system initialization
 const GridSystemScript = preload("res://scripts/core/grid_system.gd")
@@ -17,6 +17,8 @@ var economy_manager: Node = null
 var building_manager: Node = null
 var network_manager: Node = null
 var ui_manager: Node = null
+
+export var debug_mode: bool = false
 
 # Logging utility with more robust implementation
 func _log(message: String, level: String = "info") -> void:
@@ -207,11 +209,13 @@ func _prepare_tech_trees() -> void:
         tech_tree_manager.set_team_tech_tree(1, "orc")
 
 func _configure_network_systems() -> void:
-    # Network system configuration
-    var network_manager = get_node_or_null("NetworkManager")
-    if network_manager:
-        network_manager.debug_mode = debug_mode
-        network_manager.initialize_network_settings()
+    var network_sys = get_node_or_null("NetworkManager")
+    if network_sys:
+        network_sys.debug_mode = debug_mode
+        
+        # Replace ternary with explicit method call
+        if network_sys.has_method("initialize_network_settings"):
+            network_sys.initialize_network_settings()
 
 func _validate_system_readiness() -> void:
     # Final system readiness check
