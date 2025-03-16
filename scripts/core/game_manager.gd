@@ -346,13 +346,6 @@ func _create_player_workers() -> void:
 	# Store reference in player data
 	player_data.worker = worker
 
-	print("Making worker visible for team " + str(team))
-	var sprite = worker.get_node_or_null("Sprite")
-	if sprite:
-	  # Make sprite bright green or red depending on team
-	  sprite.modulate = Color(0, 1, 0) if team == 0 else Color(1, 0, 0)
-	  sprite.scale = Vector2(2, 2)  # Make it twice as big
-
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):
 	if has_node(path):
