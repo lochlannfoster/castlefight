@@ -80,32 +80,31 @@ func _load_building_file(building_id: String, file_path: String) -> void:
     else:
         push_error("Error opening building file: " + file_path)
 
-func log_debug(message: String, level: String = "debug", context: String = "") -> void:
-    if Engine.has_singleton("DebugLogger"):
-        var debug_logger = Engine.get_singleton("DebugLogger")
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
         match level.to_lower():
             "error":
-                debug_logger.error(message, context)
+                logger.error(message, context if context else service_name)
             "warning":
-                debug_logger.warning(message, context)
-            "info":
-                debug_logger.info(message, context)
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
             "verbose":
-                debug_logger.verbose(message, context)
-            _: # Default to debug level
-                debug_logger.debug(message, context)
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
     else:
-        # Fallback to print if DebugLogger is not available
-        print(level.to_upper() + " [" + context + "]: " + message)
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 func place_building(building_type: String, position: Vector2, team: int) -> Building:
-    var logger = get_node("/root/UnifiedLogger")
-    
-    logger.debug("Attempting to place building", "BuildingManager", {
-        "building_type": building_type,
-        "position": position,
-        "team": team
-    })
+    log("Attempting to place building: " + building_type + " at position " + str(position) + " for team " + str(team), "debug", "BuildingManager")
     
     # Validate building type
     if not building_data.has(building_type):
@@ -131,7 +130,11 @@ func place_building(building_type: String, position: Vector2, team: int) -> Buil
         return null
 
 # Configure a building instance with data
-func _configure_building(building: Building, building_type: String, data: Dictionary, team: int) -> void:
+func _configure_building(building, building_type: String, data: Dictionary, team: int) -> void:
+    # This function configures a building instance with its data
+    if not is_instance_valid(building):
+        return
+        
     # Set basic properties
     building.building_id = building_type
     building.display_name = data.display_name if data.has("display_name") else building_type
@@ -151,9 +154,6 @@ func _configure_building(building: Building, building_type: String, data: Dictio
     if data.has("size_x") and data.has("size_y"):
         building.size = Vector2(data.size_x, data.size_y)
     
-    if data.has("construction_time"):
-        building.construction_time = data.construction_time
-    
     # Set unit spawning properties if applicable
     if data.has("can_spawn_units"):
         building.can_spawn_units = data.can_spawn_units
@@ -167,19 +167,6 @@ func _configure_building(building: Building, building_type: String, data: Dictio
             
             if data.has("unit_types") and data.unit_types is Array:
                 building.unit_types = data.unit_types
-    
-    # Set textures if specified
-    if data.has("construction_texture"):
-        building.construction_texture = load(data.construction_texture)
-    
-    if data.has("completed_texture"):
-        building.completed_texture = load(data.completed_texture)
-    
-    if data.has("damaged_texture"):
-        building.damaged_texture = load(data.damaged_texture)
-    
-    if data.has("destroyed_texture"):
-        building.destroyed_texture = load(data.destroyed_texture)
 
 # Handle building selection
 func _handle_selection() -> void:
@@ -217,7 +204,7 @@ func _on_building_construction_completed(building: Building) -> void:
 
 # Handle building destruction
 func _on_building_destroyed(building: Building) -> void:
-    log_debug("Building destroyed: " + building.display_name + " (Team " + str(building.team) + ")", "info", "BuildingManager")
+    log("Building destroyed: " + building.display_name + " (Team " + str(building.team) + ")", "info", "BuildingManager")
     
     # Remove from tracking
     var building_id_to_remove = null
@@ -332,17 +319,17 @@ func initialize() -> void:
     if not grid_system:
         grid_system = get_node_or_null("/root/GameManager/GridSystem")
         if not grid_system:
-            log_debug("Error: GridSystem not found", "error", "BuildingManager")
+            log("Error: GridSystem not found", "error", "BuildingManager")
         
     economy_manager = get_node_or_null("/root/EconomyManager")
     if not economy_manager:
         economy_manager = get_node_or_null("/root/GameManager/EconomyManager")
         if not economy_manager:
-            log_debug("Error: EconomyManager not found", "error", "BuildingManager")
+            log("Error: EconomyManager not found", "error", "BuildingManager")
         
     game_manager = get_node_or_null("/root/GameManager")
     if not game_manager:
-        log_debug("Error: GameManager not found", "error", "BuildingManager")
+        log("Error: GameManager not found", "error", "BuildingManager")
     
     # Clear building tracking
     buildings.clear()

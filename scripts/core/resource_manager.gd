@@ -59,6 +59,29 @@ var required_base_scenes: Dictionary = {
     }
 }
 
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
+
 func _init() -> void:
     service_name = "ResourceManager"
     required_services = ["DebugLogger"]

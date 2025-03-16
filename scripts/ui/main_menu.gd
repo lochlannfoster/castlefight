@@ -19,11 +19,21 @@ func _ready() -> void:
 # Navigate to multiplayer lobby
 func _on_multiplayer_button_pressed() -> void:
     print("Multiplayer button pressed, changing to lobby scene")
-    var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+        # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Start a singleplayer game
 func _on_singleplayer_button_pressed() -> void:
-    var _result = get_tree().change_scene("res://scenes/singleplayer/singleplayer_setup.tscn")
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+        # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Open options menu
 func _on_options_button_pressed() -> void:

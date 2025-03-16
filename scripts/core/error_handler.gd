@@ -33,6 +33,27 @@ var _error_history: Array = []
 signal error_occurred(report)
 signal critical_error(report)
 
+func log(message: String, level: String = "info", context: String = "ErrorHandler") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context)
+            "warning":
+                logger.warning(message, context)
+            "debug":
+                logger.debug(message, context)
+            "verbose":
+                logger.verbose(message, context)
+            _:
+                logger.info(message, context)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        print(prefix + " " + message)
+
 func _ready():
     # Ensure crash log directory exists
     var dir = Directory.new()
@@ -134,7 +155,7 @@ func _sort_crash_logs(a: String, b: String) -> bool:
 # Handle critical errors
 func _handle_critical_error(report: ErrorReport):
     # Attempt graceful shutdown or recovery
-    print("Critical Error Detected: " + report.message)
+    log("Critical Error Detected: " + report.message, "error", "ErrorHandler")
     
     # Optional: Show error dialog
     var dialog = AcceptDialog.new()
@@ -185,7 +206,7 @@ func safe_resource_load(path: String, expected_type: String = "") -> Resource:
         return null
     
     # Optional type checking
-    if expected_type and not resource is load(expected_type):
+    if expected_type and not (resource is Object and resource.get_class() == expected_type):
         report_error(
             ErrorType.RESOURCE_LOADING,
             "Resource is not of expected type",

@@ -60,6 +60,29 @@ var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 export var debug_mode: bool = false
 
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
+
 func _ready() -> void:
     var logger = get_node("/root/UnifiedLogger")
     
@@ -181,16 +204,16 @@ func _reset_game() -> void:
 
 # Add a player to the game
 func add_player(player_id, player_name: String, team: int) -> bool:
-    log_debug("Adding player: ID=" + str(player_id) + ", Name=" + player_name + ", Team=" + str(team), "info", "GameManager")
+    log("Adding player: ID=" + str(player_id) + ", Name=" + player_name + ", Team=" + str(team), "info", "GameManager")
     
     # Ensure team is valid (0 or 1)
     if team < 0 or team > 1:
         team = 0 # Default to Team A if invalid
-        log_debug("Invalid team provided, defaulting to Team A (0)", "warning", "GameManager")
+        log("Invalid team provided, defaulting to Team A (0)", "warning", "GameManager")
     
     # Check if teams are full
     if team_players.has(team) and team_players[team].size() >= max_players_per_team:
-        log_debug("Team " + str(team) + " is full, cannot add player", "warning", "GameManager")
+        log("Team " + str(team) + " is full, cannot add player", "warning", "GameManager")
         return false
     
     # Initialize team_players if needed
@@ -216,7 +239,7 @@ func add_player(player_id, player_name: String, team: int) -> bool:
     players[player_id] = player_data
     team_players[team].append(player_id)
     
-    log_debug("Player added successfully. Team " + str(team) + " now has " + str(team_players[team].size()) + " players", "info", "GameManager")
+    log("Player added successfully. Team " + str(team) + " now has " + str(team_players[team].size()) + " players", "info", "GameManager")
     emit_signal("player_joined", player_id, team)
     
     return true
@@ -287,7 +310,7 @@ func ensure_core_systems() -> void:
                 add_child(grid_system)
                 # Initialize grid
                 grid_system.initialize_grid()
-                log_debug("Created and initialized GridSystem", "info", "GameManager")
+                log("Created and initialized GridSystem", "info", "GameManager")
     
     # Check for unit factory
     if not unit_factory:
@@ -298,7 +321,7 @@ func ensure_core_systems() -> void:
                 unit_factory = unit_factory_class.new()
                 unit_factory.name = "UnitFactory"
                 add_child(unit_factory)
-                log_debug("Created UnitFactory", "info", "GameManager")
+                log("Created UnitFactory", "info", "GameManager")
     
     # Check for economy manager
     if not economy_manager:
@@ -309,7 +332,7 @@ func ensure_core_systems() -> void:
                 economy_manager = economy_manager_class.new()
                 economy_manager.name = "EconomyManager"
                 add_child(economy_manager)
-                log_debug("Created EconomyManager", "info", "GameManager")
+                log("Created EconomyManager", "info", "GameManager")
     
     # Check for building manager
     if not building_manager:
@@ -320,7 +343,7 @@ func ensure_core_systems() -> void:
                 building_manager = building_manager_class.new()
                 building_manager.name = "BuildingManager"
                 add_child(building_manager)
-                log_debug("Created BuildingManager", "info", "GameManager")
+                log("Created BuildingManager", "info", "GameManager")
     
     # Check for UI manager
     if not ui_manager:
@@ -331,18 +354,18 @@ func ensure_core_systems() -> void:
                 ui_manager = ui_manager_class.new()
                 ui_manager.name = "UIManager"
                 add_child(ui_manager)
-                log_debug("Created UIManager", "info", "GameManager")
+                log("Created UIManager", "info", "GameManager")
 
 func _create_player_workers() -> void:
-    log_debug("Initiating player worker creation process", "info", "GameManager")
+    log("Initiating player worker creation process", "info", "GameManager")
     
     # Critical: Verify game state and system readiness
     if not is_instance_valid(unit_factory):
-        log_debug("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
+        log("CRITICAL: Unit Factory is not initialized", "error", "GameManager")
         # Initialize unit factory if missing
         unit_factory = get_node_or_null("/root/UnitFactory")
         if not unit_factory:
-            log_debug("Attempting to create UnitFactory", "info", "GameManager")
+            log("Attempting to create UnitFactory", "info", "GameManager")
             unit_factory = load("res://scripts/unit/unit_factory.gd").new()
             add_child(unit_factory)
         
@@ -351,17 +374,17 @@ func _create_player_workers() -> void:
     var worker_scene = load(worker_scene_path)
     
     if not worker_scene:
-        log_debug("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
+        log("CRITICAL ERROR: Failed to load worker scene", "error", "GameManager")
         return
     
     # Iterate through all players and spawn workers
-    log_debug("Total players to process: " + str(players.size()), "info", "GameManager")
+    log("Total players to process: " + str(players.size()), "info", "GameManager")
     for player_id in players.keys():
         var player_data = players[player_id]
         var team = player_data.get("team", 0) # Default to Team A if no team assigned
         
         # Detailed logging for each player's worker creation
-        log_debug(
+        log(
             "Creating worker for Player ID: " + str(player_id) +
             " | Team: " + str(team),
             "info",
@@ -383,7 +406,7 @@ func _create_player_workers() -> void:
             var map_position = map_manager.get_team_start_position(team)
             if map_position:
                 start_position = map_position
-                log_debug(
+                log(
                     "Using map manager position: " + str(start_position),
                     "info",
                     "GameManager"
@@ -402,13 +425,13 @@ func _create_player_workers() -> void:
         var current_scene = get_tree().current_scene
         if current_scene:
             current_scene.add_child(worker)
-            log_debug(
+            log(
                 "Worker added to scene at position: " + str(worker.position),
                 "info",
                 "GameManager"
             )
         else:
-            log_debug(
+            log(
                 "CRITICAL: No current scene found to add worker",
                 "error",
                 "GameManager"
@@ -417,17 +440,17 @@ func _create_player_workers() -> void:
             var game_world = get_node_or_null("/root/game/GameWorld")
             if game_world:
                 game_world.add_child(worker)
-                log_debug("Added worker to GameWorld node instead", "info", "GameManager")
+                log("Added worker to GameWorld node instead", "info", "GameManager")
             else:
                 add_child(worker)
-                log_debug("Added worker to GameManager as fallback", "info", "GameManager")
+                log("Added worker to GameManager as fallback", "info", "GameManager")
         
         # Store worker reference in player data
         player_data["worker"] = worker
         
-        log_debug("Worker creation completed for player " + str(player_id), "info", "GameManager")
+        log("Worker creation completed for player " + str(player_id), "info", "GameManager")
     
-    log_debug("Player worker creation process completed", "info", "GameManager")
+    log("Player worker creation process completed", "info", "GameManager")
 
 # Safe method to get a node without crashing if it doesn't exist
 func safe_get_node(path):
@@ -436,11 +459,11 @@ func safe_get_node(path):
     return null
 
 func _create_starting_buildings() -> void:
-    log_debug("Creating starting buildings...", "info", "GameManager")
+    log("Creating starting buildings...", "info", "GameManager")
     
     # Get or create building manager if needed
     if not building_manager:
-        log_debug("Building manager not found, attempting to create", "warning", "GameManager")
+        log("Building manager not found, attempting to create", "warning", "GameManager")
         building_manager = get_node_or_null("/root/BuildingManager")
         if not building_manager:
             var building_manager_class = load("res://scripts/building/building_manager.gd")
@@ -448,9 +471,9 @@ func _create_starting_buildings() -> void:
                 building_manager = building_manager_class.new()
                 building_manager.name = "BuildingManager"
                 add_child(building_manager)
-                log_debug("Created BuildingManager", "info", "GameManager")
+                log("Created BuildingManager", "info", "GameManager")
             else:
-                log_debug("CRITICAL ERROR: Could not load BuildingManager script!", "error", "GameManager")
+                log("CRITICAL ERROR: Could not load BuildingManager script!", "error", "GameManager")
                 return
     
     # Force creation of headquarters for debugging
@@ -467,15 +490,15 @@ func _create_starting_buildings() -> void:
         hq_position_team_a = local_grid_system.grid_to_world(grid_pos_a)
         hq_position_team_b = local_grid_system.grid_to_world(grid_pos_b)
     
-    log_debug("Placing Team A headquarters at " + str(hq_position_team_a), "info", "GameManager")
+    log("Placing Team A headquarters at " + str(hq_position_team_a), "info", "GameManager")
     
     # Create Team A HQ
     var hq_a = building_manager.place_building("headquarters", hq_position_team_a, 0)
     if hq_a:
         register_headquarters(hq_a, 0)
-        log_debug("Team A headquarters placed successfully", "info", "GameManager")
+        log("Team A headquarters placed successfully", "info", "GameManager")
     else:
-        log_debug("Failed to place Team A headquarters - trying alternative method", "warning", "GameManager")
+        log("Failed to place Team A headquarters - trying alternative method", "warning", "GameManager")
         # Try alternative method - directly create and add HQ
         var hq_scene = load("res://scenes/buildings/hq_building.tscn")
         if hq_scene:
@@ -487,20 +510,20 @@ func _create_starting_buildings() -> void:
             if current_scene:
                 current_scene.add_child(hq_instance)
                 register_headquarters(hq_instance, 0)
-                log_debug("Team A headquarters placed using alternative method", "info", "GameManager")
+                log("Team A headquarters placed using alternative method", "info", "GameManager")
             else:
-                log_debug("Failed to place Team A headquarters - no current scene", "error", "GameManager")
+                log("Failed to place Team A headquarters - no current scene", "error", "GameManager")
         else:
-            log_debug("Failed to load headquarters scene", "error", "GameManager")
+            log("Failed to load headquarters scene", "error", "GameManager")
     
     # Create Team B HQ with similar approach
-    log_debug("Placing Team B headquarters at " + str(hq_position_team_b), "info", "GameManager")
+    log("Placing Team B headquarters at " + str(hq_position_team_b), "info", "GameManager")
     var hq_b = building_manager.place_building("headquarters", hq_position_team_b, 1)
     if hq_b:
         register_headquarters(hq_b, 1)
-        log_debug("Team B headquarters placed successfully", "info", "GameManager")
+        log("Team B headquarters placed successfully", "info", "GameManager")
     else:
-        log_debug("Failed to place Team B headquarters - trying alternative method", "warning", "GameManager")
+        log("Failed to place Team B headquarters - trying alternative method", "warning", "GameManager")
         # Try alternative method - directly create and add HQ
         var hq_scene = load("res://scenes/buildings/hq_building.tscn")
         if hq_scene:
@@ -512,11 +535,11 @@ func _create_starting_buildings() -> void:
             if current_scene:
                 current_scene.add_child(hq_instance)
                 register_headquarters(hq_instance, 1)
-                log_debug("Team B headquarters placed using alternative method", "info", "GameManager")
+                log("Team B headquarters placed using alternative method", "info", "GameManager")
             else:
-                log_debug("Failed to place Team B headquarters - no current scene", "error", "GameManager")
+                log("Failed to place Team B headquarters - no current scene", "error", "GameManager")
         else:
-            log_debug("Failed to load headquarters scene", "error", "GameManager")
+            log("Failed to load headquarters scene", "error", "GameManager")
 
 # Register a building as a team's headquarters
 func register_headquarters(building, team: int) -> void:
@@ -789,7 +812,7 @@ func _create_worker_for_player(player_id: int) -> void:
     player_data.worker = worker
     push_warning("Successfully restored worker for player " + str(player_id))
 
-func log_debug(message: String, level: String = "debug", context: String = "") -> void:
+func log(message: String, level: String = "debug", context: String = "") -> void:
     if Engine.has_singleton("DebugLogger"):
         var debug_logger = Engine.get_singleton("DebugLogger")
         match level.to_lower():
@@ -811,10 +834,10 @@ func _sync_player_data_to_game_manager() -> void:
     # Use a different variable name to avoid shadowing the class member
     var nm = get_node_or_null("NetworkManager")
     if not nm or not nm.has_method("get_player_info"):
-        log_debug("ERROR: Cannot sync player data - NetworkManager not found or incompatible", "error", "GameManager")
+        log("ERROR: Cannot sync player data - NetworkManager not found or incompatible", "error", "GameManager")
         return
         
-    log_debug("Syncing player data to GameManager...", "info", "GameManager")
+    log("Syncing player data to GameManager...", "info", "GameManager")
     
     # Get player info from NetworkManager
     var player_data = nm.get_player_info()
@@ -827,10 +850,10 @@ func _sync_player_data_to_game_manager() -> void:
         var p_data = player_data[player_id]
         # Only add players that have a team assigned
         if p_data.has("team") and p_data.team >= 0:
-            log_debug("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(p_data.name) + ", Team=" + str(p_data.team), "info", "GameManager")
+            log("Adding player to GameManager: ID=" + str(player_id) + ", Name=" + str(p_data.name) + ", Team=" + str(p_data.team), "info", "GameManager")
             var _result = add_player(player_id, p_data.name, p_data.team)
     
-    log_debug("Player sync complete. GameManager now has " + str(players.size()) + " players", "info", "GameManager")
+    log("Player sync complete. GameManager now has " + str(players.size()) + " players", "info", "GameManager")
 
 func toggle_grid_visualization() -> void:
     # Get grid system reference
@@ -1093,10 +1116,6 @@ func verify_game_state() -> void:
     
     print("Game state verification complete")
 
-# Clean initialization of all game systems
-# Replace the problematic code that calls individual initialization functions
-# with this comprehensive initialization function
-
 func get_system(system_name: String) -> Node:
     # First check if the system is a direct child
     var system = get_node_or_null(system_name)
@@ -1141,3 +1160,99 @@ func verify_critical_nodes() -> void:
         print("VERIFIED: GameWorld exists")
     else:
         print("MISSING: GameWorld does not exist")
+
+func change_scene(scene_path: String, transition: bool = false) -> bool:
+    log("message", "level", "GameManager")
+    
+    if transition:
+        # Create transition effect
+        var fade_layer = CanvasLayer.new()
+        fade_layer.name = "SceneTransition"
+        fade_layer.layer = 100 # Make sure it's on top
+        get_tree().root.add_child(fade_layer)
+        
+        var fade_rect = ColorRect.new()
+        fade_rect.color = Color(0, 0, 0, 0) # Start transparent
+        fade_rect.rect_size = get_viewport().size
+        fade_rect.mouse_filter = Control.MOUSE_FILTER_STOP # Block input during transition
+        fade_layer.add_child(fade_rect)
+        
+        # Animate fade out
+        var tween = Tween.new()
+        fade_layer.add_child(tween)
+        tween.interpolate_property(fade_rect, "color",
+            Color(0, 0, 0, 0), Color(0, 0, 0, 1),
+            0.5, Tween.TRANS_CUBIC, Tween.EASE_IN)
+        tween.start()
+        
+        # Wait for fade to complete
+        yield (tween, "tween_all_completed")
+    
+    # Verify scene exists before trying to load it
+    var file = File.new()
+    if !file.file_exists(scene_path):
+        log("message", "level", "GameManager")
+        
+        # Try to recover by checking if scene_creator can make it
+        var scene_creator = get_node_or_null("/root/SceneCreator")
+        if scene_creator and scene_creator.has_method("ensure_scene_exists"):
+            log("message", "level", "GameManager")
+            scene_creator.ensure_scene_exists(scene_path)
+        else:
+            # If we can't recover, notify and abort
+            if transition:
+                # Clean up transition
+                fade_layer.queue_free()
+            return false
+    
+    # Change to the scene
+    var game_manager = get_node_or_null("/root/GameManager")
+	if game_manager and game_manager.has_method("change_scene"):
+		game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+	else:
+		# Fallback if not available
+		get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    
+    if error != OK:
+        log("message", "level", "GameManager")
+        
+        if transition:
+            # Clean up transition
+            fade_layer.queue_free()
+        return false
+    
+    if transition:
+        # Wait for scene to load and then fade back in
+        yield (get_tree(), "idle_frame")
+        
+        # Get our transition layer again (it might have been recreated during scene change)
+        fade_layer = get_tree().root.get_node_or_null("SceneTransition")
+        if fade_layer:
+            tween = fade_layer.get_node_or_null("Tween")
+            fade_rect = fade_layer.get_node_or_null("ColorRect")
+            
+            if tween and fade_rect:
+                # Animate fade in
+                tween.interpolate_property(fade_rect, "color",
+                    Color(0, 0, 0, 1), Color(0, 0, 0, 0),
+                    0.5, Tween.TRANS_CUBIC, Tween.EASE_OUT)
+                tween.start()
+                
+                yield (tween, "tween_all_completed")
+            
+            # Remove transition layer
+            fade_layer.queue_free()
+    
+    log("message", "level", "GameManager")
+    return true
+
+# Helper to check if a scene exists
+func does_scene_exist(scene_path: String) -> bool:
+    var file = File.new()
+    return file.file_exists(scene_path)
+
+# Load a scene as a PackedScene resource
+func load_scene_resource(scene_path: String) -> PackedScene:
+    if does_scene_exist(scene_path):
+        return ResourceLoader.load(scene_path, "PackedScene")
+    return null

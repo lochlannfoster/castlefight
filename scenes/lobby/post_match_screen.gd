@@ -35,10 +35,10 @@ func _display_match_results():
     var winner = network_manager.match_winner
     if winner == 0:
         win_message.text = "Team A Wins!"
-        win_message.add_color_override("font_color", Color(0, 0, 1))  # Blue
+        win_message.add_color_override("font_color", Color(0, 0, 1)) # Blue
     elif winner == 1:
         win_message.text = "Team B Wins!"
-        win_message.add_color_override("font_color", Color(1, 0, 0))  # Red
+        win_message.add_color_override("font_color", Color(1, 0, 0)) # Red
     else:
         win_message.text = "Match Ended"
     
@@ -46,8 +46,8 @@ func _display_match_results():
     var duration_mins = int(network_manager.match_duration / 60)
     var duration_secs = int(network_manager.match_duration) % 60
     match_stats.text = "Match Duration: %02d:%02d\nReason: %s" % [
-        duration_mins, 
-        duration_secs, 
+        duration_mins,
+        duration_secs,
         network_manager.match_end_reason
     ]
     
@@ -86,4 +86,9 @@ func _display_match_results():
 # Continue button handler
 func _on_continue_button_pressed():
     # Return to lobby
-    var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+    # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")

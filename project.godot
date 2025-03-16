@@ -29,6 +29,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/core/game_service.gd"
 }, {
+"base": "Reference",
+"class": "GridCell",
+"language": "GDScript",
+"path": "res://scripts/core/grid_cell.gd"
+}, {
 "base": "Building",
 "class": "HQBuilding",
 "language": "GDScript",
@@ -59,6 +64,7 @@ _global_script_class_icons={
 "BuildingManager": "",
 "FogOfWar": "",
 "GameService": "",
+"GridCell": "",
 "HQBuilding": "",
 "Loggable": "",
 "MapManager": "",

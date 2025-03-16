@@ -35,7 +35,7 @@ func log_info(message, category = null):
     else:
         print("[INFO] " + message)
 
-func log_debug(message, category = null):
+func log(message, category = null):
     var logger = _get_logger()
     if logger:
         var actual_category = category if category else _get_default_category()

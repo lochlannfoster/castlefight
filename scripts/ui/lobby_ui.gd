@@ -58,7 +58,7 @@ func _ready() -> void:
         debug_info_label.rect_position = Vector2(20, 410)
         debug_info_label.rect_size = Vector2(480, 40)
         debug_info_label.align = Label.ALIGN_CENTER
-        debug_info_label.add_color_override("font_color", Color(1, 0.5, 0, 1))  # Orange color
+        debug_info_label.add_color_override("font_color", Color(1, 0.5, 0, 1)) # Orange color
         debug_info_label.text = "Debug Mode: In this mode, you can start the game with just one player."
         debug_info_label.visible = false
         get_node("ModeTabContainer/Create Game/CreateGamePanel").add_child(debug_info_label)
@@ -297,7 +297,6 @@ func _update_ui() -> void:
     var _is_host = network_manager.is_server
 
 
-    
     # Update Create Game tab
     create_game_name_edit.editable = !is_connected
     create_player_name_edit.editable = !is_connected
@@ -351,18 +350,18 @@ func _on_connect_button_pressed() -> void:
 
 func _on_team_a_button_pressed() -> void:
     if current_team == 0:
-        current_team = -1  # No team
+        current_team = -1 # No team
     else:
-        current_team = 0  # Team A
+        current_team = 0 # Team A
     
     network_manager.change_team(current_team)
     _update_ui()
 
 func _on_team_b_button_pressed() -> void:
     if current_team == 1:
-        current_team = -1  # No team
+        current_team = -1 # No team
     else:
-        current_team = 1  # Team B
+        current_team = 1 # Team B
     
     network_manager.change_team(current_team)
     _update_ui()
@@ -383,7 +382,12 @@ func _on_back_button_pressed() -> void:
         network_manager.disconnect_from_network()
     
     # Return to main menu
-    var _err = get_tree().change_scene("res://scenes/main_menu/main_menu.tscn")
+    var game_manager = get_node_or_null("/root/GameManager")
+    if game_manager and game_manager.has_method("change_scene"):
+        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    else:
+        # Fallback if not available
+        get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 
 func _on_connection_cancel_pressed() -> void:

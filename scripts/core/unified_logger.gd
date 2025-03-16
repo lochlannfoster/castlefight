@@ -128,21 +128,97 @@ class UnifiedLogger:
         ]
         print(formatted_message) # Godot's print handles colored console output
     
+# File logging implementation
     func _log_to_file(entry: LogEntry) -> void:
-        # File logging implementation
-        # Similar to console, but writes to file
-        # Add implementation for file logging
-    # Utility methods for log level handling
-    func _get_level_name(level: int) -> String:
-        match level:
-            LogLevel.VERBOSE: return "VERBOSE"
-            LogLevel.DEBUG: return "DEBUG"
-            LogLevel.INFO: return "INFO"
-            LogLevel.WARNING: return "WARN"
-            LogLevel.ERROR: return "ERROR"
-            LogLevel.CRITICAL: return "CRITICAL"
-            _: return "UNKNOWN"
-    
+        # Check if file handle is valid
+        if _file_handle == null or not _file_handle.is_open():
+            _open_log_file()
+            
+        if _file_handle and _file_handle.is_open():
+            # Format timestamp
+            var datetime = OS.get_datetime_from_unix_time(entry.timestamp)
+            var time_str = "%04d-%02d-%02d %02d:%02d:%02d" % [
+                datetime.year, datetime.month, datetime.day,
+                datetime.hour, datetime.minute, datetime.second
+            ]
+            
+            # Format log message
+            var log_line = "[%s] [%s] [%s] %s\n" % [
+                time_str,
+                _get_level_name(entry.level),
+                entry.category,
+                entry.message
+            ]
+            
+            # Write to file
+            _file_handle.store_string(log_line)
+        
+        # Check file size and rotate if needed
+        if _file_handle and _file_handle.get_len() > _config.max_file_size_mb * 1024 * 1024:
+            _rotate_log_files()
+
+    # Implement the missing _open_log_file method
+    func _open_log_file() -> void:
+        # Close existing file handle if open
+        if _file_handle != null and _file_handle.is_open():
+            _file_handle.close()
+        
+        # Create new file handle
+        _file_handle = File.new()
+        var err = _file_handle.open(_config.log_file_path, File.WRITE)
+        
+        if err != OK:
+            print("ERROR: Failed to open log file: " + _config.log_file_path)
+            _file_handle = null
+
+    # Implement the missing _rotate_log_files method
+    func _rotate_log_files() -> void:
+        # Close current log file
+        if _file_handle != null and _file_handle.is_open():
+            _file_handle.close()
+        
+        # Get list of existing log files
+        var dir = Directory.new()
+        var log_dir = _config.log_file_path.get_base_dir()
+        
+        if not dir.dir_exists(log_dir):
+            dir.make_dir_recursive(log_dir)
+            
+        var log_files = []
+        
+        if dir.open(log_dir) == OK:
+            dir.list_dir_begin(true, true)
+            var file_name = dir.get_next()
+            
+            while file_name != "":
+                if file_name.ends_with(".txt") or file_name.ends_with(".log"):
+                    log_files.append(log_dir + "/" + file_name)
+                file_name = dir.get_next()
+            
+            dir.list_dir_end()
+        
+        # Sort files by modification time (oldest first)
+        log_files.sort_custom(self, "_sort_files_by_time")
+        
+        # Remove oldest files if we have too many
+        while log_files.size() >= _config.max_log_files:
+            var oldest_file = log_files[0]
+            dir.remove(oldest_file)
+            log_files.remove(0)
+        
+        # Rename current log file with timestamp
+        var datetime = OS.get_datetime()
+        var timestamp = "%04d%02d%02d_%02d%02d%02d" % [
+            datetime.year, datetime.month, datetime.day,
+            datetime.hour, datetime.minute, datetime.second
+        ]
+        
+        var new_log_path = _config.log_file_path.get_basename() + "_" + timestamp + ".log"
+        dir.rename(_config.log_file_path, new_log_path)
+        
+        # Open a new log file
+        _open_log_file()
+        
     func _get_level_color(level: int) -> Color:
         match level:
             LogLevel.VERBOSE: return Color(0.5, 0.5, 0.5) # Gray
@@ -152,7 +228,13 @@ class UnifiedLogger:
             LogLevel.ERROR: return Color(1, 0, 0) # Red
             LogLevel.CRITICAL: return Color(1, 0, 0) # Red
             _: return Color(1, 1, 1) # White
-}
+
+func _sort_files_by_time(a: String, b: String) -> bool:
+    var dir = Directory.new()
+    var time_a = dir.get_modified_time(a)
+    var time_b = dir.get_modified_time(b)
+    return time_a < time_b
+
 
 # Global singleton instance
 var logger = UnifiedLogger.new()

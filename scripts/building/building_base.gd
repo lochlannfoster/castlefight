@@ -48,6 +48,12 @@ var is_destroyed: bool = false
 var grid_system
 var unit_factory
 
+var sprite: Sprite
+var animation_player: AnimationPlayer
+var construction_progress_bar: ProgressBar
+var selection_indicator: Node2D
+var spawn_points: Array = []
+
 # Initialize
 func _ready() -> void:
     # Get references

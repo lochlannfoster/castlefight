@@ -96,6 +96,29 @@ func _create_ui_elements() -> void:
     # Create debug overlay
     _create_debug_overlay()
 
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
+
 # Create debug mode indicator
 func _create_debug_indicator() -> void:
     var debug_indicator = Label.new()
@@ -1005,7 +1028,12 @@ func show_end_game_screen(winner: int, reason: String) -> void:
 # End game continue button handler
 func _on_end_game_continue() -> void:
     # Switch back to lobby scene
-    var _err = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+    var game_manager = get_node_or_null("/root/GameManager")
+	if game_manager and game_manager.has_method("change_scene"):
+		game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+	else:
+		# Fallback if not available
+		get_tree().change_scene("res://scenes/lobby/lobby.tscn")
 
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:
@@ -1141,25 +1169,6 @@ func _emit_worker_command(command_type, params: Dictionary = {}) -> void:
         # Call handle_command if it exists
         if selected_worker.has_method("handle_command"):
             selected_worker.handle_command(cmd_type, params)
-
-# Log debug messages
-func log_debug(message: String, level: String = "debug", context: String = "") -> void:
-    if Engine.has_singleton("DebugLogger"):
-        var debug_logger = Engine.get_singleton("DebugLogger")
-        match level.to_lower():
-            "error":
-                debug_logger.error(message, context)
-            "warning":
-                debug_logger.warning(message, context)
-            "info":
-                debug_logger.info(message, context)
-            "verbose":
-                debug_logger.verbose(message, context)
-            _: # Default to debug level
-                debug_logger.debug(message, context)
-    else:
-        # Fallback to print if DebugLogger is not available
-        print(level.to_upper() + " [" + context + "]: " + message)
 
 func _on_scene_changed() -> void:
     # Safety check for valid tree

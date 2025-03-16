@@ -48,11 +48,7 @@ func set_config(category: String, key: String, value):
 func load_config(path: String = "res://config.json") -> bool:
     var file = File.new()
     if not file.file_exists(path):
-        push_warning(f"Configuration file not found: {path}")
-        return false
-    
-    if file.open(path, File.READ) != OK:
-        push_error(f"Could not open configuration file: {path}")
+        push_warning("Configuration file not found: " + path)
         return false
     
     var json_text = file.get_as_text()

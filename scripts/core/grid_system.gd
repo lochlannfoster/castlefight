@@ -18,13 +18,82 @@ var lane_cells: Dictionary = {} # Cells organized by lanes
 # Team constants
 enum Team {TEAM_A, TEAM_B}
 
-func _init() -> void:
-    service_name = "GridSystem"
-    required_services = []
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else service_name)
+            "warning":
+                logger.warning(message, context if context else service_name)
+            "debug":
+                logger.debug(message, context if context else service_name)
+            "verbose":
+                logger.debug(message, context if context else service_name)
+            _:
+                logger.info(message, context if context else service_name)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 func _initialize_impl() -> void:
-    # Override GameService's _initialize_impl
-    initialize_grid()
+    # Initialize grid cells
+    grid_cells.clear()
+    valid_placement_cells.clear()
+    team_a_cells.clear()
+    team_b_cells.clear()
+    lane_cells.clear()
+    
+    # Create all cells
+    for x in range(grid_width):
+        for y in range(grid_height):
+            var grid_pos = Vector2(x, y)
+            var world_pos = grid_to_world(grid_pos)
+            
+            # Create a new cell data structure with territories initialized based on position
+            var cell_data = {
+                "grid_position": grid_pos,
+                "world_position": world_pos,
+                "occupied": false,
+                "building": null,
+                "walkable": true,
+                "team_territory": null,
+                "lane": determine_lane(grid_pos)
+            }
+            
+            # Assign territory based on position
+            if x < float(grid_width) / 3.0:
+                cell_data.team_territory = 0 # Team A
+                team_a_cells.append(grid_pos)
+            elif x >= 2.0 * float(grid_width) / 3.0:
+                cell_data.team_territory = 1 # Team B
+                team_b_cells.append(grid_pos)
+            
+            # Store the cell in our grid
+            grid_cells[grid_pos] = cell_data
+            
+            # Add to lane organization  
+            var lane = cell_data.lane
+            if not lane_cells.has(lane):
+                lane_cells[lane] = []
+            lane_cells[lane].append(grid_pos)
+    
+    # Update valid placement cells
+    for x in range(grid_width):
+        for y in range(grid_height):
+            var grid_pos = Vector2(x, y)
+            if is_valid_placement_cell(grid_pos):
+                valid_placement_cells.append(grid_pos)
+                
+    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
+          str(team_b_cells.size()) + " Team B cells", "info")
+    
+    emit_signal("grid_initialized")
 
 # Initialize the grid with all cells and their properties
 func initialize_grid() -> void:
@@ -74,8 +143,7 @@ func initialize_grid() -> void:
             if is_valid_placement_cell(grid_pos):
                 valid_placement_cells.append(grid_pos)
                 
-    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " +
-          str(team_b_cells.size()) + " Team B cells", "info")
+    log("Grid initialized with " + str(team_a_cells.size()) + " Team A cells and " + str(team_b_cells.size()) + " Team B cells", "info")
     
     emit_signal("grid_initialized")
 
@@ -250,63 +318,3 @@ func _on_debug_draw() -> void:
                 elif cell.team_territory == 1: # Team B
                     debug_draw.draw_rect(Rect2(world_pos - Vector2(cell_size.x / 2, cell_size.y / 2),
                                         cell_size), Color(1, 0, 0, 0.2), true)
-
-func initialize() -> void:
-    print("GridSystem: Initializing...")
-    
-    # Check if grid is already initialized
-    if not grid_cells.empty():
-        print("GridSystem: Already initialized, skipping.")
-        return
-        
-    # Initialize the grid
-    grid_cells.clear()
-    valid_placement_cells.clear()
-    team_a_cells.clear()
-    team_b_cells.clear()
-    lane_cells.clear()
-    
-    # Create all cells
-    for x in range(grid_width):
-        for y in range(grid_height):
-            var grid_pos = Vector2(x, y)
-            var world_pos = grid_to_world(grid_pos)
-            
-            # Create a new cell data structure with territories initialized based on position
-            var cell_data = {
-                "grid_position": grid_pos,
-                "world_position": world_pos,
-                "occupied": false,
-                "building": null,
-                "walkable": true,
-                "team_territory": null, # Will be set below
-                "lane": determine_lane(grid_pos)
-            }
-            
-            if x < float(grid_width) / 3.0:
-                cell_data.team_territory = 0 # Team A
-                team_a_cells.append(grid_pos)
-            elif x >= 2.0 * float(grid_width) / 3.0:
-                cell_data.team_territory = 1 # Team B
-                team_b_cells.append(grid_pos)
-            
-            # Store the cell in our grid
-            grid_cells[grid_pos] = cell_data
-            
-            # Add to lane organization  
-            var lane = cell_data.lane
-            if not lane_cells.has(lane):
-                lane_cells[lane] = []
-            lane_cells[lane].append(grid_pos)
-    
-    # Update valid placement cells
-    for x in range(grid_width):
-        for y in range(grid_height):
-            var grid_pos = Vector2(x, y)
-            if is_valid_placement_cell(grid_pos):
-                valid_placement_cells.append(grid_pos)
-                
-    print("GridSystem: Initialized with " + str(team_a_cells.size()) + " Team A cells and " +
-          str(team_b_cells.size()) + " Team B cells")
-    
-    emit_signal("grid_initialized")

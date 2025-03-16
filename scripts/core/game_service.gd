@@ -48,25 +48,31 @@ func initialize() -> void:
         return
         
     # Log initialization start
-    if verbose_logging:
-        print(service_name + ": Initializing...")
+    log(service_name + ": Initializing...", "info")
     
     # Resolve service dependencies
     if not _resolve_dependencies():
-        push_warning(service_name + ": Initialization deferred - waiting for dependencies")
+        log(service_name + ": Initialization deferred - waiting for dependencies", "warning")
         call_deferred("initialize") # Try again next frame
         return
+    
+    # Call implementation-specific initialization
+    _initialize_impl()
     
     # Mark as initialized
     is_initialized = true
     
     # Log initialization success
-    if verbose_logging:
-        print(service_name + ": Initialization complete")
+    log(service_name + ": Initialization complete", "info")
     
     # Emit signals
     emit_signal("initialization_completed")
     emit_signal("service_ready")
+
+# This is a virtual method to be implemented by derived classes
+func _initialize_impl() -> void:
+    # Override in subclasses
+    pass
 
 # Reset service state - override in derived classes
 func reset() -> void:
@@ -111,30 +117,34 @@ func get_dependency(dependency_name: String) -> Node:
     push_warning(service_name + ": Dependency not found: " + dependency_name)
     return null
 
-# Log with proper context
-func log(message: String, level: String = "info") -> void:
-    # Try to use DebugLogger if available
-    var logger = get_dependency("DebugLogger")
-    
+func log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/Logger")
     if logger:
         match level.to_lower():
             "error":
-                logger.error(message, service_name)
+                logger.error(message, context if context else service_name)
             "warning":
-                logger.warning(message, service_name)
+                logger.warning(message, context if context else service_name)
             "debug":
-                logger.debug(message, service_name)
+                logger.debug(message, context if context else service_name)
             "verbose":
-                logger.verbose(message, service_name)
+                logger.debug(message, context if context else service_name)
             _:
-                logger.info(message, service_name)
+                logger.info(message, context if context else service_name)
     else:
-        # Fallback to print with formatted prefix
-        var prefix = "[" + level.to_upper() + "] [" + service_name + "] "
-        print(prefix + message)
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else if service_name:
+            prefix += "[" + service_name + "]"
+        print(prefix + " " + message)
 
 # Handle scene changes
 func _on_tree_changed() -> void:
     # Check if we need to re-resolve dependencies
     if is_initialized and dependencies.size() < required_services.size():
         call_deferred("_resolve_dependencies")
+
+func get_logger():
+    return get_node_or_null("/root/UnifiedLogger")

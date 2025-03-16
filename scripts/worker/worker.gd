@@ -121,7 +121,7 @@ func _handle_input() -> void:
     if input_direction != Vector2.ZERO:
         is_moving_to_target = false
         velocity = input_direction.normalized() * speed
-        print("Moving worker with velocity: " + str(velocity))
+        log("Moving worker with velocity: " + str(velocity), "debug")
     elif not is_moving_to_target:
         velocity = velocity.move_toward(Vector2.ZERO, friction)
     
@@ -220,7 +220,7 @@ func start_building_placement(building_type: String, size: Vector2) -> void:
 # Try to place a building at the given position
 func _try_place_building(position: Vector2) -> void:
     if not building_manager or not grid_system:
-        print("Cannot place building: Missing manager references")
+        log("Cannot place building: Missing manager references", "warning")
         return
     
     var grid_pos = grid_system.world_to_grid(position)
@@ -236,12 +236,12 @@ func _try_place_building(position: Vector2) -> void:
     
     # Check if placement is valid
     if not _can_place_at_position(grid_pos):
-        print("Cannot place building: Invalid position")
+        log("Cannot place building: Invalid position", "warning")
         return
     
     # Check if we can afford it
     if not economy_manager.can_afford_building(team, current_building_type):
-        print("Cannot place building: Cannot afford")
+        log("Cannot place building: Cannot afford", "warning")
         return
     
     # Place the building
@@ -256,7 +256,7 @@ func _try_place_building(position: Vector2) -> void:
         current_building_type = ""
         current_building_size = Vector2.ONE
     else:
-        print("Failed to place building")
+        log("Failed to place building", "warning")
 
 # Cancel building placement
 func cancel_building_placement() -> void:
@@ -279,7 +279,7 @@ func toggle_auto_repair() -> void:
     auto_repair = !auto_repair
     emit_signal("auto_repair_toggled", auto_repair)
     
-    print("Auto-repair ", "enabled" if auto_repair else "disabled")
+    log("Auto-repair " + ("enabled" if auto_repair else "disabled"), "info")
 
 # Handle auto-repair of nearby buildings
 func _handle_auto_repair(delta: float) -> void:
@@ -307,43 +307,35 @@ func _handle_auto_repair(delta: float) -> void:
         if closest_damaged:
             closest_damaged.repair(repair_amount)
 
-# Move to a target position
-func move_to(pos: Vector2) -> void:
-  print("Worker moving to " + str(pos))
-  target_position = pos
-  is_moving_to_target = true
-  current_target_building = false
+func move_to(pos: Vector2, options: Dictionary = {}) -> void:
+    log("Worker moving to " + str(pos), "debug")
+    target_position = pos
+    is_moving_to_target = true
+    current_target_building = options.get("is_building_target", false)
+    
+    # Cancel any current action if requested
+    if options.get("cancel_current_action", true):
+        if is_placing_building:
+            cancel_building_placement()
 
 func select() -> void:
-    print("DEBUG: Worker select() called. Current team: " + str(team))
+    log("Worker select() called. Current team: " + str(team), "debug")
     is_selected = true
     
     # Create or update selection indicator
     var selection_indicator = get_node_or_null("SelectionIndicator")
     if not selection_indicator:
-        selection_indicator = Node2D.new()
-        selection_indicator.name = "SelectionIndicator"
-        
-        # Create a simple selection visual
-        var selection_rect = ColorRect.new()
-        selection_rect.rect_size = Vector2(32, 32)
-        selection_rect.rect_position = Vector2(-16, -16)
-        selection_rect.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
-        selection_indicator.add_child(selection_rect)
-        
-        # Hide by default
-        selection_indicator.visible = true
-        add_child(selection_indicator)
-    else:
-        selection_indicator.visible = true
+        # ... rest of code ...
+        else:
+            selection_indicator.visible = true
     
     # More verbose logging for UI manager interaction
     var worker_ui_manager = get_node_or_null("/root/GameManager/UIManager")
     if worker_ui_manager:
-        print("DEBUG: Attempting to select worker with UI Manager. Team: " + str(team))
+        log("Attempting to select worker with UI Manager. Team: " + str(team), "debug")
         worker_ui_manager.select_worker(self)
     else:
-        print("WARNING: No UI Manager found during worker selection")
+        log("No UI Manager found during worker selection", "warning")
 
 # Deselect this worker
 func deselect() -> void:
@@ -357,7 +349,7 @@ func get_team() -> int:
     return team
 
 func _ready() -> void:
-    print("Worker initialized. Team: " + str(team))
+    log("Worker initialized. Team: " + str(team), "info")
     
     # Replace entire existing method with these calls
     _initialize_systems()
@@ -367,12 +359,12 @@ func _ready() -> void:
 
 # Add or modify this function in your worker.gd script
 func _setup_visuals() -> void:
-    print("Setting up worker visuals for team " + str(team))
+    log("Setting up worker visuals for team " + str(team), "debug")
     
     # Create or get sprite
     var sprite = get_node_or_null("Sprite")
     if not sprite:
-        print("Creating new Sprite node")
+        log("Creating new Sprite node", "debug")
         sprite = Sprite.new()
         sprite.name = "Sprite"
         add_child(sprite)
@@ -383,28 +375,15 @@ func _setup_visuals() -> void:
     
     # If loading fails, try fallback method
     if not texture:
-        print("Failed to load worker texture, trying fallback")
+        log("Failed to load worker texture, trying fallback", "warning")
         
         # Create a placeholder texture
-        var img = Image.new()
-        img.create(32, 32, false, Image.FORMAT_RGBA8)
-        
-        # Fill with team color
-        var color = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
-        img.fill(color)
-        
-        # Draw a simple worker figure
-        for x in range(12, 20):
-            for y in range(16, 24):
-                img.set_pixel(x, y, Color.white)
-        
-        for y in range(16, 28):
-            img.set_pixel(16, y, Color.white)
+        # ... rest of code ...
         
         # Create texture
         texture = ImageTexture.new()
         texture.create_from_image(img)
-        print("Created fallback worker texture")
+        log("Created fallback worker texture", "debug")
     
     # Set the texture
     sprite.texture = texture
@@ -415,7 +394,7 @@ func _setup_visuals() -> void:
     else:
         sprite.modulate = Color(1, 0, 0) # Red for Team B
     
-    print("Worker visuals setup complete")
+    log("Worker visuals setup complete", "debug")
 
 func _execute_move_command(params: Dictionary) -> void:
     var target_position = params.get("position", Vector2.ZERO)
@@ -441,3 +420,24 @@ func _stop_current_action() -> void:
     
     if is_placing_building:
         cancel_building_placement()
+
+func log(message: String, level: String = "info", context: String = "Worker") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context)
+            "warning":
+                logger.warning(message, context)
+            "debug":
+                logger.debug(message, context)
+            "verbose":
+                logger.verbose(message, context)
+            _:
+                logger.info(message, context)
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        print(prefix + " " + message)
