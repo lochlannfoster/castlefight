@@ -101,10 +101,13 @@ func initialize() -> void:
     # Emit completion signal
     emit_signal("initialization_completed")
 
-# This is a virtual method to be implemented by derived classes
 func _initialize_impl() -> void:
-    # Override in subclasses
-    pass
+    # Generic initialization logic
+    # Signal that the service is fully initialized and ready
+    if verbose_logging:
+        print(service_name + ": Service fully initialized")
+    
+    emit_signal("service_ready")
 
 # Reset service state - override in derived classes
 func reset() -> void:

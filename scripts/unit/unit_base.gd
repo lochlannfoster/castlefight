@@ -72,6 +72,7 @@ func _ready() -> void:
     _initialize_core_systems()
     _setup_core_components()
     _configure_default_behavior()
+    call_deferred("_on_unit_added_to_scene")
 
 func _initialize_core_systems() -> void:
     # Get references to managers
@@ -256,27 +257,66 @@ func find_best_target(targeting_strategy: String = "closest") -> Object:
             return _find_closest_target()
 
 func _find_closest_target() -> Object:
-    # Existing closest target logic
-    var closest_distance = INF
     var closest_target = null
+    var _closest_distance = INF
     
-    # Your existing target finding logic here
+    # Get all units in the scene
+    var all_units = get_tree().get_nodes_in_group("units")
+    
+    for unit in all_units:
+        # Skip self, units on same team, or dead units
+        if unit == self or unit.team == team or unit.current_state == UnitState.DEAD:
+            continue
+        
+        # Calculate distance
+        var distance = global_position.distance_to(unit.global_position)
+        
+        # Update closest target if this is closer
+        if distance < _closest_distance:
+            closest_target = unit
+            _closest_distance = distance
+    
     return closest_target
 
 func _find_lowest_health_target() -> Object:
-    # New method to find target with lowest health
     var lowest_health_target = null
-    var lowest_health = INF
+    var _lowest_health = INF
     
-    # Implement logic to find lowest health target
+    # Get all units in the scene
+    var all_units = get_tree().get_nodes_in_group("units")
+    
+    for unit in all_units:
+        # Skip self, units on same team, or dead units
+        if unit == self or unit.team == team or unit.current_state == UnitState.DEAD:
+            continue
+        
+        # Update lowest health target
+        if unit.health < _lowest_health:
+            lowest_health_target = unit
+            _lowest_health = unit.health
+    
     return lowest_health_target
 
 func _find_highest_threat_target() -> Object:
-    # New method to find most threatening target
     var highest_threat_target = null
-    var highest_threat_value = - INF
+    var _highest_threat_value = - INF
     
-    # Implement logic to find highest threat target
+    # Get all units in the scene
+    var all_units = get_tree().get_nodes_in_group("units")
+    
+    for unit in all_units:
+        # Skip self, units on same team, or dead units
+        if unit == self or unit.team == team or unit.current_state == UnitState.DEAD:
+            continue
+        
+        # Calculate threat based on health, damage, and attack range
+        var threat_value = (unit.health / max_health) * attack_damage * unit.attack_range
+        
+        # Update highest threat target
+        if threat_value > _highest_threat_value:
+            highest_threat_target = unit
+            _highest_threat_value = threat_value
+    
     return highest_threat_target
 
 # Set a target position to move to
@@ -627,3 +667,11 @@ func find_target() -> Object:
     # This is a simple implementation that calls the more specific find_best_target method
     # with a default targeting strategy
     return find_best_target("closest")
+
+func _on_unit_added_to_scene() -> void:
+    # Add to units group if not already in it
+    if not is_in_group("units"):
+        add_to_group("units")
+    
+    # Emit unit spawned signal
+    emit_signal("unit_spawned")

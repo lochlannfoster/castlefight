@@ -3,15 +3,23 @@
 extends Control
 
 func _ready():
-    # Connect button signals
-    $VBoxContainer/MultiplayerButton.connect("pressed", self, "_on_multiplayer_button_pressed")
-    $VBoxContainer/OptionsButton.connect("pressed", self, "_on_options_button_pressed")
-    $VBoxContainer/QuitButton.connect("pressed", self, "_on_quit_button_pressed")
+    # Connect button signals with error handling
+    var _mp_connect_result = $VBoxContainer/MultiplayerButton.connect("pressed", self, "_on_multiplayer_button_pressed")
+    if _mp_connect_result != OK:
+        push_warning("Failed to connect multiplayer button signal")
+    
+    var _options_connect_result = $VBoxContainer/OptionsButton.connect("pressed", self, "_on_options_button_pressed")
+    if _options_connect_result != OK:
+        push_warning("Failed to connect options button signal")
+    
+    var _quit_connect_result = $VBoxContainer/QuitButton.connect("pressed", self, "_on_quit_button_pressed")
+    if _quit_connect_result != OK:
+        push_warning("Failed to connect quit button signal")
     
     # Set version text
     $VersionLabel.text = "Version 0.1.0"
     
-    print("Main menu buttons connected successfully!")
+    print("Main menu buttons connection handling complete!")
 
 # Navigate to multiplayer lobby
 func _on_multiplayer_button_pressed():

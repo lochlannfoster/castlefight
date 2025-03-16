@@ -523,35 +523,51 @@ func _create_debug_overlay() -> void:
 func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
-        # Check if not already connected before connecting
-        if not economy_manager.is_connected("resources_changed", self, "_on_resources_changed"):
-            economy_manager.connect("resources_changed", self, "_on_resources_changed")
-        if not economy_manager.is_connected("income_changed", self, "_on_income_changed"):
-            economy_manager.connect("income_changed", self, "_on_income_changed")
-        if not economy_manager.is_connected("income_tick", self, "_on_income_tick"):
-            economy_manager.connect("income_tick", self, "_on_income_tick")
-        if not economy_manager.is_connected("bounty_earned", self, "_on_bounty_earned"):
-            economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+        # Add error handling for signal connections
+        var resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
+        if resources_connect_result != OK:
+            debug_log("Failed to connect resources_changed signal", "warning")
+        
+        var income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
+        if income_connect_result != OK:
+            debug_log("Failed to connect income_changed signal", "warning")
+        
+        var income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
+        if income_tick_result != OK:
+            debug_log("Failed to connect income_tick signal", "warning")
+        
+        var bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+        if bounty_result != OK:
+            debug_log("Failed to connect bounty_earned signal", "warning")
     
     # Connect to Building Manager
     if building_manager:
-        if not building_manager.is_connected("building_selected", self, "_on_building_selected"):
-            building_manager.connect("building_selected", self, "_on_building_selected")
-        if not building_manager.is_connected("building_deselected", self, "_on_building_deselected"):
-            building_manager.connect("building_deselected", self, "_on_building_deselected")
+        var building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
+        if building_selected_result != OK:
+            debug_log("Failed to connect building_selected signal", "warning")
+        
+        var building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
+        if building_deselected_result != OK:
+            debug_log("Failed to connect building_deselected signal", "warning")
     
     # Connect to Game Manager
     if game_manager:
-        if not game_manager.is_connected("game_started", self, "_on_game_started"):
-            game_manager.connect("game_started", self, "_on_game_started")
-        if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
-            game_manager.connect("game_ended", self, "_on_game_ended")
-        if not game_manager.is_connected("match_countdown_updated", self, "_on_match_countdown_updated"):
-            game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+        var game_started_result = game_manager.connect("game_started", self, "_on_game_started")
+        if game_started_result != OK:
+            debug_log("Failed to connect game_started signal", "warning")
+        
+        var game_ended_result = game_manager.connect("game_ended", self, "_on_game_ended")
+        if game_ended_result != OK:
+            debug_log("Failed to connect game_ended signal", "warning")
+        
+        var countdown_result = game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+        if countdown_result != OK:
+            debug_log("Failed to connect match_countdown_updated signal", "warning")
     
-    # Connect our own worker_command_issued signal to _emit_worker_command
-    if not self.is_connected("worker_command_issued", self, "_emit_worker_command"):
-        var _connect_result = connect("worker_command_issued", self, "_emit_worker_command")
+    # Connect our own worker_command_issued signal
+    var worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
+    if worker_command_result != OK:
+        debug_log("Failed to connect worker_command_issued signal", "warning")
 
 func _input(event) -> void:
     # Ensure tooltip exists before accessing

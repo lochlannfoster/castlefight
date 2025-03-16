@@ -274,46 +274,47 @@ func _draw_grid_deferred(grid_sys) -> void:
     else:
         debug_log("Grid system invalid or missing draw method", "error")
 
+# Connect signals with proper error handling
 func _connect_signals() -> void:
-    # Connect signals between game systems
-    if grid_system and grid_system.has_method("connect"):
-        if not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
-            grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+    # Connect grid system signals
+    if grid_system:
+        var grid_connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+        if grid_connect_result != OK:
+            debug_log("Failed to connect grid_initialized signal", "warning")
     
-    if combat_system and combat_system.has_method("connect"):
-        if not combat_system.is_connected("combat_event", self, "_on_combat_event"):
-            combat_system.connect("combat_event", self, "_on_combat_event")
+    # Connect combat system signals
+    if combat_system:
+        var combat_connect_result = combat_system.connect("combat_event", self, "_on_combat_event")
+        if combat_connect_result != OK:
+            debug_log("Failed to connect combat_event signal", "warning")
     
-    if building_manager and building_manager.has_method("connect"):
-        if not building_manager.is_connected("building_placed", self, "_on_building_placed"):
-            building_manager.connect("building_placed", self, "_on_building_placed")
-        if not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
-            building_manager.connect("building_destroyed", self, "_on_building_destroyed")
-    
-    # Connect to signal handlers if they exist
-    var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("connect"):
-        if not game_manager.is_connected("game_started", self, "_on_game_started"):
-            game_manager.connect("game_started", self, "_on_game_started")
-        if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
-            game_manager.connect("game_ended", self, "_on_game_ended")
+    # Connect building manager signals
+    if building_manager:
+        var placed_connect_result = building_manager.connect("building_placed", self, "_on_building_placed")
+        if placed_connect_result != OK:
+            debug_log("Failed to connect building_placed signal", "warning")
+        
+        var destroyed_connect_result = building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+        if destroyed_connect_result != OK:
+            debug_log("Failed to connect building_destroyed signal", "warning")
+
+# Updated signal handlers with parameter prefixes
+func _on_combat_event(_attacker, _target, _damage, _attack_type) -> void:
+    # Placeholder for any game-wide combat event handling
+    pass
+
+func _on_building_placed(_building_type, _position, _team) -> void:
+    # Placeholder for any game-wide building placement tracking
+    pass
+
+func _on_building_destroyed(_building) -> void:
+    # Placeholder for any game-wide building destruction tracking
+    pass
 
 
 # Add these callback functions if they don't exist:
 func _on_grid_initialized() -> void:
     debug_log("Grid system initialized", "info", "GameScene")
-    
-func _on_combat_event(attacker, target, damage, attack_type) -> void:
-    # Handle combat events if needed
-    pass
-    
-func _on_building_placed(building_type, position, team) -> void:
-    # Handle building placement events if needed
-    pass
-    
-func _on_building_destroyed(building) -> void:
-    # Handle building destruction events if needed  
-    pass
     
 func _on_game_started() -> void:
     debug_log("Game started", "info", "GameScene")
