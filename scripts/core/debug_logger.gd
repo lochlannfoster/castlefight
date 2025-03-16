@@ -25,23 +25,12 @@ func _exit_tree():
   if log_file and log_file.is_open():
     log_file.close()
 
-func log(message: String, level: int = LogLevel.INFO, context: String = "") -> void:
-  if level > current_log_level:
-    return
-    
-  var prefix = ""
-  match level:
-    LogLevel.ERROR: prefix = "[ERROR]"
-    LogLevel.WARNING: prefix = "[WARNING]"
-    LogLevel.INFO: prefix = "[INFO]"
-    LogLevel.DEBUG: prefix = "[DEBUG]"
-    LogLevel.VERBOSE: prefix = "[VERBOSE]"
-  
-  var context_str = ""
+# Core logging implementation - no longer calls log()
+func _write_log_entry(message: String, level_prefix: String, context: String = "") -> void:
   if context != "":
-    context_str = "[" + context + "] "
+    message = "[" + context + "] " + message
   
-  var final_message = prefix + " " + context_str + message
+  var final_message = level_prefix + " " + message
   print(final_message)
   
   if log_to_file:
@@ -51,17 +40,23 @@ func log(message: String, level: int = LogLevel.INFO, context: String = "") -> v
       log_file.store_string(final_message + "\n")
       log_file.close()
 
-func error(message, context = ""):
-  log(message, LogLevel.ERROR, context)
+# Helper functions that directly implement logging without calling log()
+func error(message: String, context: String = "") -> void:
+  if current_log_level >= LogLevel.ERROR:
+    _write_log_entry(message, "[ERROR]", context)
 
-func warning(message, context = ""):
-  log(message, LogLevel.WARNING, context)
+func warning(message: String, context: String = "") -> void:
+  if current_log_level >= LogLevel.WARNING:
+    _write_log_entry(message, "[WARNING]", context)
 
-func info(message, context = ""):
-  log(message, LogLevel.INFO, context)
+func info(message: String, context: String = "") -> void:
+  if current_log_level >= LogLevel.INFO:
+    _write_log_entry(message, "[INFO]", context)
 
-func debug(message, context = ""):
-  log(message, LogLevel.DEBUG, context)
+func debug(message: String, context: String = "") -> void:
+  if current_log_level >= LogLevel.DEBUG:
+    _write_log_entry(message, "[DEBUG]", context)
 
-func verbose(message, context = ""):
-  log(message, LogLevel.VERBOSE, context)
+func verbose(message: String, context: String = "") -> void:
+  if current_log_level >= LogLevel.VERBOSE:
+    _write_log_entry(message, "[VERBOSE]", context)
