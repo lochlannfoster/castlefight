@@ -14,11 +14,6 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/building/building_base.gd"
 }, {
-"base": "GameService",
-"class": "BuildingManager",
-"language": "GDScript",
-"path": "res://scripts/building/building_manager.gd"
-}, {
 "base": "Node2D",
 "class": "FogOfWar",
 "language": "GDScript",
@@ -61,7 +56,6 @@ _global_script_classes=[ {
 } ]
 _global_script_class_icons={
 "Building": "",
-"BuildingManager": "",
 "FogOfWar": "",
 "GameService": "",
 "GridCell": "",
@@ -90,6 +84,7 @@ UIManager="*res://scripts/ui/ui_manager.gd"
 CombatSystem="*res://scripts/combat/combat_system.gd"
 ServiceLocator="*res://scripts/core/service_locator.gd"
 UnifiedLogger="*res://scripts/core/unified_logger.gd"
+BuildingManager="*res://scripts/building/building_manager.gd"
 
 [debug]
 

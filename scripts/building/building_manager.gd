@@ -1,4 +1,3 @@
-class_name BuildingManager
 extends GameService
 
 # Building signals
