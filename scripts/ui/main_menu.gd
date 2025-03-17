@@ -21,6 +21,22 @@ func _ready():
     
     print("Main menu buttons connection handling complete!")
 
+    print("Main menu scene loaded")
+    print("Scene tree structure:")
+    _print_scene_tree(self, 0)
+    
+    # Ensure all elements are visible
+    for child in get_children():
+        if child is Control or child is Node2D:
+            child.visible = true
+            print("Setting " + child.name + " to visible")
+    # Create debug scene viewer
+    call_deferred("create_debug_viewer")
+    
+    # Add this to verify assets are loading correctly
+    verify_critical_assets()
+
+
 func _on_multiplayer_button_pressed():
     print("Multiplayer button pressed, changing to lobby scene")
     var game_manager = get_node_or_null("/root/GameManager")
@@ -42,3 +58,40 @@ func _on_options_button_pressed():
 # Quit the game
 func _on_quit_button_pressed():
     get_tree().quit()
+
+func _print_scene_tree(node, indent):
+    var indent_str = ""
+    for i in range(indent):
+        indent_str += "  "
+    
+    print(indent_str + node.name + " (" + node.get_class() + ")" +
+          (" - visible: " + str(node.visible) if "visible" in node else ""))
+    
+    for child in node.get_children():
+        _print_scene_tree(child, indent + 1)
+
+func verify_critical_assets():
+    debug_log("Verifying critical assets...", "info", "GameManager")
+    
+    # Check shaders
+    var shader_path = "res://shaders/fog_of_war.shader"
+    var file = File.new()
+    if file.file_exists(shader_path):
+        debug_log("Fog of War shader exists", "info", "GameManager")
+    else:
+        debug_log("Fog of War shader missing!", "error", "GameManager")
+    
+    # Check critical scenes
+    var critical_scenes = [
+        "res://scenes/main_menu/main_menu.tscn",
+        "res://scenes/game/game.tscn",
+        "res://scenes/lobby/lobby.tscn"
+    ]
+    
+    for scene_path in critical_scenes:
+        if file.file_exists(scene_path):
+            debug_log("Scene exists: " + scene_path, "info", "GameManager")
+        else:
+            debug_log("Critical scene missing: " + scene_path, "error", "GameManager")
+    
+    debug_log("Asset verification complete", "info", "GameManager")

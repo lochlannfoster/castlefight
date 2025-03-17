@@ -60,14 +60,11 @@ func _ready() -> void:
     
     # Log service creation
     if verbose_logging:
-        print(service_name + ": Ready")
+        debug_log(service_name + ": Ready")
     
     # Connect to tree_changed signal to handle service references
-    var _result = get_tree().connect("tree_changed", self, "_on_tree_changed")
-    
-    # Initialize if not already done (deferred to wait for all references)
-    if not is_initialized:
-        call_deferred("initialize")
+    if get_tree():
+        var _result = get_tree().connect("tree_changed", self, "_on_tree_changed")
 
 func initialize() -> void:
     # Prevent double initialization
@@ -94,6 +91,7 @@ func initialize() -> void:
     
     # Mark as initialized and emit signal
     _initialization_state = "completed"
+    is_initialized = true
     
     # Log initialization success
     debug_log(service_name + ": Initialization complete", "info")
@@ -105,7 +103,7 @@ func _initialize_impl() -> void:
     # Generic initialization logic
     # Signal that the service is fully initialized and ready
     if verbose_logging:
-        print(service_name + ": Service fully initialized")
+        debug_log(service_name + ": Service fully initialized")
     
     emit_signal("service_ready")
 
@@ -113,17 +111,18 @@ func _initialize_impl() -> void:
 func reset() -> void:
     # Default implementation just logs the reset
     if verbose_logging:
-        print(service_name + ": Reset")
+        debug_log(service_name + ": Reset")
 
 # Resolve dependencies safely with the ServiceLocator
 func _resolve_dependencies() -> bool:
-    # KEY FIX: Must be in tree to use absolute paths
+    # Must be in tree to use absolute paths
     if not is_inside_tree():
+        call_deferred("initialize")
         return false
     
     var service_locator = get_node_or_null("/root/ServiceLocator")
     if not service_locator:
-        push_error(service_name + ": ServiceLocator not found")
+        debug_log(service_name + ": ServiceLocator not found", "error")
         return false
     
     var all_resolved = true
@@ -136,7 +135,7 @@ func _resolve_dependencies() -> bool:
             dependencies[dependency_name] = service
         else:
             all_resolved = false
-            break
+            debug_log("Dependency not found: " + dependency_name, "warning")
     
     return all_resolved
 
@@ -154,7 +153,7 @@ func get_dependency(dependency_name: String) -> Node:
                 dependencies[dependency_name] = service
                 return service
     
-    push_warning(service_name + ": Dependency not found: " + dependency_name)
+    debug_log(service_name + ": Dependency not found: " + dependency_name, "warning")
     return null
 
 # Handle scene changes

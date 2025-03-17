@@ -131,6 +131,51 @@ func _ready() -> void:
     else:
         debug_log("CRITICAL: One or more critical systems missing. Cannot initialize game.", "error")
 
+        _ensure_rendering_structure()
+    
+    # Debug log the scene hierarchy
+    print("Game scene loaded - printing hierarchy:")
+    _print_scene_tree(self, 0)
+
+func _ensure_rendering_structure():
+    # Make sure we have a world container node
+    var world = get_node_or_null("GameWorld")
+    if not world:
+        world = Node2D.new()
+        world.name = "GameWorld"
+        add_child(world)
+        world.owner = self
+        print("Created missing GameWorld node")
+    
+    # Make sure we have a ground layer for background
+    var ground = world.get_node_or_null("Ground")
+    if not ground:
+        ground = Node2D.new()
+        ground.name = "Ground"
+        world.add_child(ground)
+        ground.owner = self
+        print("Created missing Ground node")
+        
+        # Add a background color to make it visible
+        var background = ColorRect.new()
+        background.name = "Background"
+        background.rect_min_size = Vector2(4000, 3000)
+        background.rect_position = Vector2(-2000, -1500)
+        background.color = Color(0.2, 0.3, 0.2) # Dark green background
+        ground.add_child(background)
+        background.owner = self
+        print("Added background color to Ground")
+    
+    # Make sure Units and Buildings containers exist
+    for container_name in ["Units", "Buildings"]:
+        var container = world.get_node_or_null(container_name)
+        if not container:
+            container = Node2D.new()
+            container.name = container_name
+            world.add_child(container)
+            container.owner = self
+            print("Created missing " + container_name + " node")
+
 # Create a method to create initial game state
 func _create_initial_game_state() -> void:
     debug_log("Creating initial game state...", "info")
@@ -414,3 +459,17 @@ func _on_game_started() -> void:
     
 func _on_game_ended(winning_team) -> void:
     debug_log("Game ended. Winner: Team " + str(winning_team), "info", "GameScene")
+
+func _print_scene_tree(node, indent):
+    var indent_str = ""
+    for i in range(indent):
+        indent_str += "  "
+    
+    var visible_text = ""
+    if "visible" in node:
+        visible_text = " - visible: " + str(node.visible)
+    
+    print(indent_str + node.name + " (" + node.get_class() + ")" + visible_text)
+    
+    for child in node.get_children():
+        _print_scene_tree(child, indent + 1)

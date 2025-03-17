@@ -55,6 +55,7 @@ var tech_tree_manager
 var is_initialized: bool = false
 
 # Script references for instantiation
+var MapManagerScript = load("res://scripts/core/map_manager.gd")
 var GridSystemScript = load("res://scripts/core/grid_system.gd")
 var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
 var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
@@ -128,11 +129,20 @@ func _process(delta: float) -> void:
 
 # Initialize all game subsystems
 func _initialize_systems() -> void:
+    debug_log("Initializing game systems...", "info", "GameManager")
+    
+    # Wait until we're in the scene tree
+    if not is_inside_tree():
+        call_deferred("_initialize_systems")
+        return
+    
+    # Use ServiceLocator to initialize services
     var service_locator = get_node_or_null("/root/ServiceLocator")
     if service_locator:
+        # This will initialize all services in the correct order
         service_locator.initialize_all_services()
         
-        # Get references to services
+        # Get references to all required services
         grid_system = service_locator.get_service("GridSystem")
         combat_system = service_locator.get_service("CombatSystem")
         economy_manager = service_locator.get_service("EconomyManager")
@@ -141,26 +151,39 @@ func _initialize_systems() -> void:
         ui_manager = service_locator.get_service("UIManager")
         fog_of_war_manager = service_locator.get_service("FogOfWarManager")
         network_manager = service_locator.get_service("NetworkManager")
+        tech_tree_manager = service_locator.get_service("TechTreeManager")
         
-        # Handle map manager specifically because it may have dependency issues
+        # Get map manager last since it depends on grid_system
         map_manager = service_locator.get_service("MapManager")
-        if not map_manager:
-            debug_log("MapManager not found through ServiceLocator, creating directly", "info", "GameManager")
-            var map_manager_class = load("res://scripts/core/map_manager.gd")
-            if map_manager_class:
-                map_manager = map_manager_class.new()
-                map_manager.name = "MapManager"
-                add_child(map_manager)
-                
-                # Initialize map if needed
-                if map_manager.has_method("initialize"):
-                    map_manager.initialize()
-                elif map_manager.has_method("load_map_config"):
-                    map_manager.load_map_config()
-                
-                debug_log("MapManager created and initialized directly", "info", "GameManager")
+        
+        if map_manager and grid_system:
+            debug_log("Map manager and grid system properly initialized", "info", "GameManager")
+        else:
+            debug_log("Failed to initialize map manager or grid system", "error", "GameManager")
+            
+            # If map manager failed to initialize, create it directly
+            if not map_manager:
+                debug_log("Creating map manager directly", "info", "GameManager")
+                var map_manager_class = load("res://scripts/core/map_manager.gd")
+                if map_manager_class:
+                    map_manager = map_manager_class.new()
+                    map_manager.name = "MapManager"
+                    add_child(map_manager)
+                    
+                    # Initialize map manager
+                    if map_manager.has_method("initialize"):
+                        map_manager.initialize()
+                    
+                    # Register with service locator
+                    service_locator.register_service("MapManager", map_manager)
+        
+        # Connect signals between systems
+        _connect_signals()
     else:
         debug_log("ServiceLocator not found, cannot initialize systems", "error", "GameManager")
+        
+        # Fallback: create systems directly
+        ensure_core_systems()
 
 # Connect signals between systems
 func _connect_signals() -> void:
@@ -1049,82 +1072,42 @@ func verify_critical_nodes() -> void:
         print("MISSING: GameWorld does not exist")
 
 func change_scene(scene_path: String, transition: bool = false) -> bool:
-    # Declare fade_layer in the method scope
-    var fade_layer: CanvasLayer = null
-    
-    if transition:
-        # Create transition effect
-        fade_layer = CanvasLayer.new()
-        fade_layer.name = "SceneTransition"
-        fade_layer.layer = 100 # Make sure it's on top
-        get_tree().root.add_child(fade_layer)
-        
-        var fade_rect = ColorRect.new()
-        fade_rect.color = Color(0, 0, 0, 0) # Start transparent
-        fade_rect.rect_size = get_viewport().size
-        fade_rect.mouse_filter = Control.MOUSE_FILTER_STOP # Block input during transition
-        fade_layer.add_child(fade_rect)
-        
-        # Animate fade out
-        var tween = Tween.new()
-        fade_layer.add_child(tween)
-        tween.interpolate_property(fade_rect, "color",
-            Color(0, 0, 0, 0), Color(0, 0, 0, 1),
-            0.5, Tween.TRANS_CUBIC, Tween.EASE_IN)
-        tween.start()
-        
-        # Wait for fade to complete
-        yield (tween, "tween_all_completed")
+    # Debug output to track scene changes
+    debug_log("Attempting to change scene to: " + scene_path, "info", "GameManager")
     
     # Verify scene exists before trying to load it
     var file = File.new()
     if !file.file_exists(scene_path):
         debug_log("Scene file does not exist: " + scene_path, "error", "GameManager")
         
-        # Try to recover by checking if scene_creator can make it
-        var scene_creator = get_node_or_null("/root/SceneCreator")
-        if scene_creator and scene_creator.has_method("ensure_scene_exists"):
-            debug_log("Attempting to create missing scene", "warning", "GameManager")
-            scene_creator.ensure_scene_exists(scene_path)
+        # Try to load a default scene instead
+        var default_scene_path = ""
+        
+        if "main_menu" in scene_path:
+            default_scene_path = "res://scenes/main_menu/main_menu.tscn"
+        elif "lobby" in scene_path:
+            default_scene_path = "res://scenes/lobby/lobby.tscn"
+        elif "game" in scene_path:
+            default_scene_path = "res://scenes/game/game.tscn"
+        
+        if default_scene_path != "" and file.file_exists(default_scene_path):
+            debug_log("Using default scene: " + default_scene_path, "info", "GameManager")
+            scene_path = default_scene_path
         else:
-            # If we can't recover, notify and abort
-            if transition:
-                # Clean up transition
-                fade_layer.queue_free()
+            # If no default found, abort
+            debug_log("No valid scene found, aborting scene change", "error", "GameManager")
             return false
     
     # Change to the scene
+    debug_log("Changing to scene: " + scene_path, "info", "GameManager")
     var error = get_tree().change_scene(scene_path)
     
     if error != OK:
         debug_log("Failed to change scene with error code: " + str(error), "error", "GameManager")
-        
-        if transition:
-            # Clean up transition
-            fade_layer.queue_free()
         return false
     
-    if transition:
-        # Wait for scene to load and then fade back in
-        yield (get_tree(), "idle_frame")
-        
-        # Get our transition layer again (it might have been recreated during scene change)
-        fade_layer = get_tree().root.get_node_or_null("SceneTransition")
-        if fade_layer:
-            var tween = fade_layer.get_node_or_null("Tween")
-            var fade_rect = fade_layer.get_node_or_null("ColorRect")
-            
-            if tween and fade_rect:
-                # Animate fade in
-                tween.interpolate_property(fade_rect, "color",
-                    Color(0, 0, 0, 1), Color(0, 0, 0, 0),
-                    0.5, Tween.TRANS_CUBIC, Tween.EASE_OUT)
-                tween.start()
-                
-                yield (tween, "tween_all_completed")
-            
-            # Remove transition layer
-            fade_layer.queue_free()
+    # Wait for the scene to load and ensure critical nodes are added
+    call_deferred("_check_scene_structure")
     
     debug_log("Scene changed successfully to: " + scene_path, "info", "GameManager")
     return true
@@ -1162,3 +1145,38 @@ func register_headquarters(hq_building, team: int) -> void:
     
     # Emit signal if needed
     emit_signal("headquarters_registered", team, hq_building)
+
+func _check_scene_structure():
+    var current_scene = get_tree().current_scene
+    if current_scene:
+        debug_log("Current scene: " + current_scene.name, "info", "GameManager")
+        
+        # If this is the game scene, make sure we have critical rendering nodes
+        if "game" in current_scene.name.to_lower():
+            var world_node = current_scene.get_node_or_null("GameWorld")
+            if not world_node:
+                debug_log("GameWorld node missing, creating it", "warning", "GameManager")
+                world_node = Node2D.new()
+                world_node.name = "GameWorld"
+                current_scene.add_child(world_node)
+                
+                # Add basic structure
+                var ground = Node2D.new()
+                ground.name = "Ground"
+                world_node.add_child(ground)
+                
+                var units = Node2D.new()
+                units.name = "Units"
+                world_node.add_child(units)
+                
+                var buildings = Node2D.new()
+                buildings.name = "Buildings"
+                world_node.add_child(buildings)
+                
+                # Add a background
+                var background = ColorRect.new()
+                background.name = "Background"
+                background.rect_min_size = Vector2(4000, 3000)
+                background.rect_position = Vector2(-2000, -1500)
+                background.color = Color(0.2, 0.3, 0.2)
+                ground.add_child(background)

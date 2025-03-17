@@ -1,4 +1,3 @@
-class_name MapManager
 extends GameService
 
 # Map signals

@@ -14,7 +14,7 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://scripts/building/building_base.gd"
 }, {
-"base": "Node2D",
+"base": "GameService",
 "class": "FogOfWar",
 "language": "GDScript",
 "path": "res://scripts/core/fog_of_war.gd"
@@ -40,11 +40,6 @@ _global_script_classes=[ {
 "path": "res://scripts/core/loggable.gd"
 }, {
 "base": "GameService",
-"class": "MapManager",
-"language": "GDScript",
-"path": "res://scripts/core/map_manager.gd"
-}, {
-"base": "GameService",
 "class": "ResourceManager",
 "language": "GDScript",
 "path": "res://scripts/core/resource_manager.gd"
@@ -61,7 +56,6 @@ _global_script_class_icons={
 "GridCell": "",
 "HQBuilding": "",
 "Loggable": "",
-"MapManager": "",
 "ResourceManager": "",
 "Unit": ""
 }
@@ -75,6 +69,7 @@ config/icon="res://icon.png"
 [autoload]
 
 GameManager="*res://scripts/core/game_manager.gd"
+MapManager="*res://scripts/core/map_manager.gd"
 GridSystem="*res://scripts/core/grid_system.gd"
 EconomyManager="*res://scripts/economy/economy_manager.gd"
 UnitFactory="*res://scripts/unit/unit_factory.gd"
