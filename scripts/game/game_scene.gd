@@ -6,6 +6,7 @@ var GridSystemScript = load("res://scripts/core/grid_system.gd")
 var CombatSystemScript = load("res://scripts/combat/combat_system.gd")
 var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
 var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
+var MapManagerScript = load("res://scripts/core/map_manager.gd")
 
 # Declare initialization tracking variable
 var is_initialized: bool = false
@@ -13,11 +14,14 @@ var is_initialized: bool = false
 # Declare references to potential game systems with explicit types
 var game_manager_ref: Node = null
 var grid_system: Node = null
-var combat_system: Node = null # Add this line to declare combat_system
+var combat_system: Node = null
 var economy_manager: Node = null
 var building_manager: Node = null
 var network_manager: Node = null
 var ui_manager: Node = null
+var map_manager: Node = null
+var fog_of_war_manager: Node = null
+var tech_tree_manager: Node = null
 
 export var debug_mode: bool = false
 
@@ -78,29 +82,112 @@ func initialize_game_systems() -> void:
 # Primary initialization entry point
 # Then call this from _ready or initialize:
 func _ready() -> void:
-    debug_log("Game scene ready, checking map initialization", "debug")
+    debug_log("Game scene initialization STARTED", "info")
     
-    if map_manager:
-        debug_log("Map Manager exists, attempting to generate map", "debug")
-        map_manager.generate_map() # Ensure this method is called
+    # Attempt to get ServiceLocator
+    var service_locator = get_node_or_null("/root/ServiceLocator")
+    if not service_locator:
+        debug_log("CRITICAL: ServiceLocator not found! Check Project Settings.", "error")
+        return
+    
+    # Initialize services
+    service_locator.initialize_all_services()
+    
+    # Retrieve services with precise logging
+    var services_to_retrieve = {
+        "grid_system": "GridSystem",
+        "combat_system": "CombatSystem",
+        "economy_manager": "EconomyManager",
+        "building_manager": "BuildingManager",
+        "network_manager": "NetworkManager",
+        "ui_manager": "UIManager",
+        "map_manager": "MapManager",
+        "fog_of_war_manager": "FogOfWarManager",
+        "tech_tree_manager": "TechTreeManager"
+    }
+    
+    for local_var_name in services_to_retrieve:
+        var current_service_name = services_to_retrieve[local_var_name]
+        var service = service_locator.get_service(current_service_name)
+        
+        if service:
+            set(local_var_name, service)
+            debug_log("Successfully retrieved " + current_service_name, "info")
+        else:
+            debug_log("FAILED to retrieve " + current_service_name + ". Verify ServiceLocator configuration.", "error")
+    
+    # Proceed only if critical systems are available
+    if map_manager and grid_system and economy_manager and building_manager:
+        # Map generation
+        map_manager.generate_map()
+        
+        # Camera setup
+        _setup_safe_camera()
+        
+        # Prepare game state
+        _create_initial_game_state()
+        
+        debug_log("Game scene initialization COMPLETE", "info")
     else:
-        debug_log("WARNING: Map Manager is null!", "error")
+        debug_log("CRITICAL: One or more critical systems missing. Cannot initialize game.", "error")
 
-# Safely set up game camera with deferred addition
+# Create a method to create initial game state
+func _create_initial_game_state() -> void:
+    debug_log("Creating initial game state...", "info")
+    
+    # Ensure we have a reference to the game manager
+    var game_manager = get_node_or_null("/root/GameManager")
+    if not game_manager:
+        debug_log("Game Manager not found!", "error")
+        return
+    
+    # Create player workers
+    debug_log("Creating player workers...", "debug")
+    if game_manager.has_method("_create_player_workers"):
+        game_manager._create_player_workers()
+    else:
+        debug_log("Game Manager lacks _create_player_workers method!", "error")
+    
+    # Create starting buildings
+    debug_log("Creating starting buildings...", "debug")
+    if game_manager.has_method("_create_starting_buildings"):
+        game_manager._create_starting_buildings()
+    else:
+        debug_log("Game Manager lacks _create_starting_buildings method!", "error")
+    
+    # Optional: Configure network systems
+    _configure_network_systems()
+
 func _setup_safe_camera() -> void:
     debug_log("Setting up game camera...")
+    
     var camera = Camera2D.new()
     camera.name = "GameCamera"
-    camera.position = Vector2(400, 300)
+    
+    # Use a more dynamic positioning strategy
+    if map_manager:
+        # If map manager exists, center camera on map
+        var map_center = Vector2(
+            map_manager.map_width * map_manager.grid_system.cell_size.x / 2,
+            map_manager.map_height * map_manager.grid_system.cell_size.y / 2
+        )
+        camera.position = map_center
+    else:
+        # Fallback to a default position
+        camera.position = Vector2(400, 300)
+    
     camera.current = true
     
     var camera_script = load("res://scripts/core/camera_controller.gd")
     if camera_script:
         camera.set_script(camera_script)
+        debug_log("Camera controller script successfully loaded", "debug")
     else:
-        debug_log("Camera controller script not found!", "warning")
+        debug_log("Camera controller script not found! Check path.", "error")
     
+    # Use call_deferred to ensure proper scene tree integration
     call_deferred("add_child", camera)
+    debug_log("Camera added to scene", "debug")
 
 # Safely load game map
 func _load_map_safely() -> void:
@@ -152,7 +239,6 @@ func _input(event: InputEvent) -> void:
 
 func _prepare_tech_trees() -> void:
     # Prepare default tech trees for teams
-    var tech_tree_manager = get_node_or_null("TechTreeManager")
     if tech_tree_manager:
         tech_tree_manager.set_team_tech_tree(0, "human")
         tech_tree_manager.set_team_tech_tree(1, "orc")
