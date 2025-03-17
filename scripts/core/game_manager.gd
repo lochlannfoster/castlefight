@@ -10,6 +10,7 @@ signal player_joined(player_id, team)
 signal player_left(player_id)
 signal team_eliminated(team)
 signal match_countdown_updated(time_remaining)
+signal headquarters_registered(team, hq_building)
 
 # Game settings
 export var match_duration: float = 1800.0 # 30 minutes maximum match time
@@ -1122,3 +1123,22 @@ func load_scene_resource(scene_path: String) -> PackedScene:
             push_error("Loaded resource is not a PackedScene")
             return null
     return null
+
+# Register a headquarters for a specific team
+func register_headquarters(hq_building, team: int) -> void:
+    debug_log("Registering headquarters for Team " + str(team), "info", "GameManager")
+    
+    # Validate input
+    if team < 0 or team > 1:
+        push_error("Invalid team for headquarters registration: " + str(team))
+        return
+    
+    # Store the headquarters reference
+    headquarters[team] = hq_building
+    
+    # Additional optional setup
+    if hq_building and hq_building.has_method("complete_construction"):
+        hq_building.complete_construction()
+    
+    # Emit signal if needed
+    emit_signal("headquarters_registered", team, hq_building)
