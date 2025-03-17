@@ -1,6 +1,91 @@
-# scripts/core/service_locator.gd
-extends Node
-var service_name: String = "ServiceLocator"
+func _on_service_initialized(current_service_name: String) -> void:
+    debug_log("Service initialized: " + current_service_name, "info")
+    
+    # Conditionally remove and explicitly handle return
+    if current_service_name in _pending_initializations:
+        _ = _pending_initializations.erase(current_service_name)
+    
+    # Check if all services are initialized
+    if _pending_initializations.empty():
+        debug_log("All services initialized successfully", "info")
+        _initializing = false
+        
+func _on_service_initialization_failed(error_message: String, current_service_name: String) -> void:
+    debug_log("Service initialization failed: " + current_service_name + " - " + error_message, "error")
+    
+    # Conditionally remove and explicitly handle return
+    if current_service_name in _pending_initializations:
+        _ = _pending_initializations.erase(current_service_name)
+    
+    # Even if a service fails, we continue with others
+    if _pending_initializations.empty():
+        debug_log("All service initializations completed, but some failed", "warning")
+        _initializing = falsefunc_create_service(service_identifier: String) -> Node:
+    if not _service_classes.has(service_identifier):
+        push_error("ServiceLocator: No class defined for service: " + service_identifier)
+        return null
+    
+    # Prevent circular dependencies
+    _services_in_initialization[service_identifier] = true
+    
+    var script_path = _service_classes[service_identifier]
+    var script = load(script_path)
+    
+    if not script:
+        push_error("ServiceLocator: Failed to load script for service: " + service_identifier)
+        var removed_initialization = _services_in_initialization.has(service_identifier)
+        if removed_initialization:
+            _services_in_initialization.erase(service_identifier)
+        return null
+    
+    var service = script.new()
+    service.name = service_identifier
+    
+    # Add to the root node
+    get_tree().root.add_child(service)
+    
+    # Register the service
+    register_service(service_identifier, service)
+    
+    # Don't initialize here - the _ready function will handle that
+    # The node will initialize itself when it's ready and in the tree
+    
+    if verbose:
+        print("ServiceLocator: Created service: " + service_identifier)
+    
+    # Remove from initialization list after completing
+    var removed_initialization = _services_in_initialization.has(service_identifier)
+    if removed_initialization:
+        _services_in_initialization.erase(service_identifier)
+    
+    return service
+
+func _on_service_initialized(current_service_name: String) -> void:
+    debug_log("Service initialized: " + current_service_name, "info")
+    
+    # Explicitly handle the return value
+    var removed = _pending_initializations.has(current_service_name)
+    if removed:
+        _pending_initializations.erase(current_service_name)
+    
+    # Check if all services are initialized
+    if _pending_initializations.empty():
+        debug_log("All services initialized successfully", "info")
+        _initializing = false
+        
+func _on_service_initialization_failed(error_message: String, current_service_name: String) -> void:
+    debug_log("Service initialization failed: " + current_service_name + " - " + error_message, "error")
+    
+    # Explicitly handle the return value
+    var removed = _pending_initializations.has(current_service_name)
+    if removed:
+        _pending_initializations.erase(current_service_name)
+    
+    # Even if a service fails, we continue with others
+    if _pending_initializations.empty():
+        debug_log("All service initializations completed, but some failed", "warning")
+        _initializing = falseextendsNode
+var service_locator_name: String = "ServiceLocator"
 
 # Dictionary of all registered services
 var _services: Dictionary = {}
@@ -53,92 +138,92 @@ func _delayed_init():
         initialize_services()
 
 # Register a service with the service locator
-func register_service(service_name: String, service_instance: Node) -> void:
-    if _services.has(service_name):
+func register_service(service_identifier: String, service_instance: Node) -> void:
+    if _services.has(service_identifier):
         # Only log at verbose level to reduce spam
         if verbose:
-            print("ServiceLocator: Service already registered: " + service_name)
+            print("ServiceLocator: Service already registered: " + service_identifier)
         return
     
-    _services[service_name] = service_instance
+    _services[service_identifier] = service_instance
     
     if verbose:
-        print("ServiceLocator: Registered service: " + service_name)
+        print("ServiceLocator: Registered service: " + service_identifier)
 
 # Get a service by name
-func get_service(service_name: String) -> Node:
+func get_service(service_identifier: String) -> Node:
     # Check if service is currently initializing to prevent dependency loops
-    if _services_in_initialization.has(service_name):
-        print("WARNING: Circular dependency detected for " + service_name)
+    if _services_in_initialization.has(service_identifier):
+        print("WARNING: Circular dependency detected for " + service_identifier)
         return null
         
     # Check if service exists in registry
-    if _services.has(service_name):
-        return _services[service_name]
+    if _services.has(service_identifier):
+        return _services[service_identifier]
     
     # If not, try to find it in the scene tree
-    var service = get_node_or_null("/root/" + service_name)
+    var service = get_node_or_null("/root/" + service_identifier)
     
     if service:
         # Register if found
-        register_service(service_name, service)
+        register_service(service_identifier, service)
         return service
     
     # Try to find in GameManager if it exists
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        service = game_manager.get_node_or_null(service_name)
+        service = game_manager.get_node_or_null(service_identifier)
         
         if service:
-            register_service(service_name, service)
+            register_service(service_identifier, service)
             return service
     
     # If still not found and auto-creation is enabled, create it
-    if _service_classes.has(service_name):
-        return _create_service(service_name)
+    if _service_classes.has(service_identifier):
+        return _create_service(service_identifier)
     
     # Return null if service cannot be found or created
     if verbose:
-        push_warning("ServiceLocator: Service not found: " + service_name)
+        push_warning("ServiceLocator: Service not found: " + service_identifier)
     return null
 
-func _create_service(service_name: String) -> Node:
-    if not _service_classes.has(service_name):
-        push_error("ServiceLocator: No class defined for service: " + service_name)
+func _create_service(service_identifier: String) -> Node:
+    if not _service_classes.has(service_identifier):
+        push_error("ServiceLocator: No class defined for service: " + service_identifier)
         return null
     
     # Prevent circular dependencies
-    _services_in_initialization[service_name] = true
+    _services_in_initialization[service_identifier] = true
     
-    var script_path = _service_classes[service_name]
+    var script_path = _service_classes[service_identifier]
     var script = load(script_path)
     
     if not script:
-        push_error("ServiceLocator: Failed to load script for service: " + service_name)
-        _services_in_initialization.erase(service_name)
+        push_error("ServiceLocator: Failed to load script for service: " + service_identifier)
+        _services_in_initialization.erase(service_identifier)
         return null
     
     var service = script.new()
-    service.name = service_name
+    service.name = service_identifier
     
     # Add to the root node
     get_tree().root.add_child(service)
     
     # Register the service
-    register_service(service_name, service)
+    register_service(service_identifier, service)
     
     # Don't initialize here - the _ready function will handle that
     # The node will initialize itself when it's ready and in the tree
     
     if verbose:
-        print("ServiceLocator: Created service: " + service_name)
+        print("ServiceLocator: Created service: " + service_identifier)
     
     # Remove from initialization list after completing
-    _services_in_initialization.erase(service_name)
+    _services_in_initialization.erase(service_identifier)
     
     return service
 
-# In scripts/core/service_locator.gd
+# Initialize all services
 func initialize_all_services() -> void:
     if _initializing:
         return
@@ -152,9 +237,9 @@ func initialize_all_services() -> void:
     _scan_for_services()
     
     # Then initialize in the correct order
-    for service_name in _initialization_order:
+    for current_service_name in _initialization_order:
         # Get or create the service
-        var service = get_service(service_name)
+        var service = get_service(current_service_name)
         
         if service and service.has_method("initialize"):
             # Check if this is a GameService that has these signals
@@ -163,22 +248,22 @@ func initialize_all_services() -> void:
             if has_initialization_signals:
                 # Connect to the initialization completed signal
                 if not service.is_connected("initialization_completed", self, "_on_service_initialized"):
-                    service.connect("initialization_completed", self, "_on_service_initialized", [service_name])
+                    service.connect("initialization_completed", self, "_on_service_initialized", [current_service_name])
                     
                 # Connect to the initialization failed signal
                 if not service.is_connected("initialization_failed", self, "_on_service_initialization_failed"):
-                    service.connect("initialization_failed", self, "_on_service_initialization_failed", [service_name])
+                    service.connect("initialization_failed", self, "_on_service_initialization_failed", [current_service_name])
                     
                 # Add to pending initializations
-                _pending_initializations.append(service_name)
+                _pending_initializations.append(current_service_name)
             
             # Start initialization
-            print("ServiceLocator: Starting initialization of " + service_name)
+            print("ServiceLocator: Starting initialization of " + current_service_name)
             service.initialize()
             
             # If it doesn't have the signals, consider it initialized immediately
             if not has_initialization_signals:
-                print("ServiceLocator: Service " + service_name + " initialized (no signals)")
+                print("ServiceLocator: Service " + current_service_name + " initialized (no signals)")
     
     # Check if any services need to be waited on
     if _pending_initializations.empty():
@@ -189,25 +274,25 @@ func initialize_all_services() -> void:
 
 func _scan_for_services() -> void:
     # Check for services at the root level (autoloads)
-    for service_name in _service_classes.keys():
-        var service = get_node_or_null("/root/" + service_name)
+    for current_service_name in _service_classes.keys():
+        var service = get_node_or_null("/root/" + current_service_name)
         
         if service:
-            register_service(service_name, service)
+            register_service(current_service_name, service)
     
     # Check for services under GameManager if it exists
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        for service_name in _service_classes.keys():
-            var service = game_manager.get_node_or_null(service_name)
+        for current_service_name in _service_classes.keys():
+            var service = game_manager.get_node_or_null(current_service_name)
             
             if service:
-                register_service(service_name, service)
+                register_service(current_service_name, service)
 
 # Reset all services (useful for scene transitions)
 func reset_services() -> void:
-    for service_name in _services.keys():
-        var service = _services[service_name]
+    for current_service_name in _services.keys():
+        var service = _services[current_service_name]
         
         if service.has_method("reset"):
             service.reset()
@@ -216,9 +301,9 @@ func reset_services() -> void:
 func validate_services() -> bool:
     var all_valid = true
     
-    for service_name in _service_classes.keys():
-        if not _services.has(service_name):
-            push_warning("ServiceLocator: Service not initialized: " + service_name)
+    for current_service_name in _service_classes.keys():
+        if not _services.has(current_service_name):
+            push_warning("ServiceLocator: Service not initialized: " + current_service_name)
             all_valid = false
     
     return all_valid
@@ -229,22 +314,22 @@ func initialize_services():
         _initialized = true
         initialize_all_services()
 
-func _on_service_initialized(service_name: String) -> void:
-    debug_log("Service initialized: " + service_name, "info")
+func _on_service_initialized(current_service_name: String) -> void:
+    debug_log("Service initialized: " + current_service_name, "info")
     
-    # Explicitly ignore return value
-    var _result = _pending_initializations.erase(service_name)
+    # Explicitly discard the return value
+    var _tmp = _pending_initializations.erase(current_service_name)
     
     # Check if all services are initialized
     if _pending_initializations.empty():
         debug_log("All services initialized successfully", "info")
         _initializing = false
         
-func _on_service_initialization_failed(error_message: String, service_name: String) -> void:
-    debug_log("Service initialization failed: " + service_name + " - " + error_message, "error")
+func _on_service_initialization_failed(error_message: String, current_service_name: String) -> void:
+    debug_log("Service initialization failed: " + current_service_name + " - " + error_message, "error")
     
-    # Explicitly ignore return value
-    var _erased = _pending_initializations.erase(service_name)
+    # Explicitly discard the return value
+    var _tmp = _pending_initializations.erase(current_service_name)
     
     # Even if a service fails, we continue with others
     if _pending_initializations.empty():
@@ -256,20 +341,20 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
     if logger:
         match level.to_lower():
             "error":
-                logger.error(message, context if context else service_name)
+                logger.error(message, context if context else service_locator_name)
             "warning":
-                logger.warning(message, context if context else service_name)
+                logger.warning(message, context if context else service_locator_name)
             "debug":
-                logger.debug(message, context if context else service_name)
+                logger.debug(message, context if context else service_locator_name)
             "verbose":
-                logger.verbose(message, context if context else service_name)
+                logger.verbose(message, context if context else service_locator_name)
             _:
-                logger.info(message, context if context else service_name)
+                logger.info(message, context if context else service_locator_name)
     else:
         # Fallback to print
         var prefix = "[" + level.to_upper() + "]"
         if context:
             prefix += "[" + context + "]"
-        elif service_name:
-            prefix += "[" + service_name + "]"
+        elif service_locator_name:
+            prefix += "[" + service_locator_name + "]"
         print(prefix + " " + message)
