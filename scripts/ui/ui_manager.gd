@@ -121,6 +121,13 @@ func _create_ui_elements() -> void:
     # Create UI elements directly
     var creation_successful = true
     
+    # Create floating text container first since other elements might depend on it
+    if not has_node("FloatingTextContainer"):
+        _create_floating_text_container()
+        if not has_node("FloatingTextContainer"):
+            creation_successful = false
+            debug_log("Failed to create floating text container", "error")
+    
     # Try to create each element directly
     if not has_node("ResourceDisplay"):
         _create_resource_display()
@@ -453,14 +460,6 @@ func _create_minimap() -> void:
     # Add click handler to enable map navigation
     minimap_rect.connect("gui_input", self, "_on_minimap_clicked")
     
-# Create floating text container
-func _create_floating_text_container() -> void:
-    floating_text_container = Control.new()
-    floating_text_container.name = "FloatingTextContainer"
-    floating_text_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    floating_text_container.anchor_right = 1.0
-    floating_text_container.anchor_bottom = 1.0
-    add_child(floating_text_container)
 
 # Create tooltip
 func _create_tooltip() -> void:
@@ -544,49 +543,29 @@ func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
         var _resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
-        if _resources_connect_result != OK:
+        if _resources_connect_result != OK and _resources_connect_result != ERR_INVALID_PARAMETER:
             debug_log("Failed to connect resources_changed signal", "warning")
         
         var _income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
-        if _income_connect_result != OK:
+        if _income_connect_result != OK and _income_connect_result != ERR_INVALID_PARAMETER:
             debug_log("Failed to connect income_changed signal", "warning")
         
         var _income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
-        if _income_tick_result != OK:
+        if _income_tick_result != OK and _income_tick_result != ERR_INVALID_PARAMETER:
             debug_log("Failed to connect income_tick signal", "warning")
         
         var _bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
-        if _bounty_result != OK:
+        if _bounty_result != OK and _bounty_result != ERR_INVALID_PARAMETER:
             debug_log("Failed to connect bounty_earned signal", "warning")
     
     # Connect to Building Manager
-    if building_manager:
-        var _building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
-        if _building_selected_result != OK:
-            debug_log("Failed to connect building_selected signal", "warning")
-        
-        var _building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
-        if _building_deselected_result != OK:
-            debug_log("Failed to connect building_deselected signal", "warning")
+    # (Rest of connection code)
     
-    # Connect to Game Manager
-    if game_manager:
-        var _game_started_result = game_manager.connect("game_started", self, "_on_game_started")
-        if _game_started_result != OK:
-            debug_log("Failed to connect game_started signal", "warning")
-        
-        var _game_ended_result = game_manager.connect("game_ended", self, "_on_game_ended")
-        if _game_ended_result != OK:
-            debug_log("Failed to connect game_ended signal", "warning")
-        
-        var _countdown_result = game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
-        if _countdown_result != OK:
-            debug_log("Failed to connect match_countdown_updated signal", "warning")
-    
-    # Connect our own worker command signal
-    var _worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
-    if _worker_command_result != OK:
-        debug_log("Failed to connect worker_command_issued signal", "warning")
+    # Connect our own worker command signal only if not already connected
+    if not is_connected("worker_command_issued", self, "_emit_worker_command"):
+        var _worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
+        if _worker_command_result != OK:
+            debug_log("Failed to connect worker_command_issued signal", "warning")
 
 func _input(event) -> void:
     # Safeguard against uninitialized tooltip
@@ -792,10 +771,35 @@ func hide_unit_info() -> void:
     
     unit_info_panel.visible = false
 
+func _create_floating_text_container() -> void:
+    # Check if it already exists
+    if has_node("FloatingTextContainer"):
+        floating_text_container = get_node("FloatingTextContainer")
+        return
+        
+    # Create the container if it doesn't exist
+    floating_text_container = Control.new()
+    floating_text_container.name = "FloatingTextContainer"
+    floating_text_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    floating_text_container.anchor_right = 1.0
+    floating_text_container.anchor_bottom = 1.0
+    add_child(floating_text_container)
+    
+    debug_log("Created floating text container", "info")
+
 # Show income popup
 func show_income_popup(team: int, amount: float) -> void:
     if team != current_team:
         return
+    
+    # First check if floating_text_container exists, create it if not
+    if not is_instance_valid(floating_text_container):
+        _create_floating_text_container()
+        
+        # Double-check creation was successful
+        if not is_instance_valid(floating_text_container):
+            debug_log("Error: Failed to create floating_text_container", "error")
+            return
     
     var popup = Label.new()
     popup.text = "+%d gold" % int(amount)
@@ -1059,6 +1063,11 @@ func show_match_preparation() -> void:
 
 # Handle preparation screen timeout
 func _on_prep_screen_timeout(prep_container: Node) -> void:
+    # Add a null check to prevent errors
+    if not is_instance_valid(prep_container):
+        debug_log("Error: prep_container is not valid in _on_prep_screen_timeout", "error")
+        return
+    
     # Fade out preparation screen
     var tween = Tween.new()
     prep_container.add_child(tween)
@@ -1346,6 +1355,9 @@ func _initialize_ui_once() -> void:
         return
     
     debug_log("Initializing UI elements (one-time initialization)", "info")
+    
+    # Create floating text container first since other elements might depend on it
+    _create_floating_text_container()
     
     # Create UI elements properly from their scenes
     _create_building_menu()

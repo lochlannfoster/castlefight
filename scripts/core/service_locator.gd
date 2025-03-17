@@ -115,7 +115,7 @@ func _create_service(service_identifier: String) -> Node:
     
     if not script:
         push_error("ServiceLocator: Failed to load script for service: " + service_identifier)
-        _services_in_initialization.erase(service_identifier)
+        var _removed = _services_in_initialization.erase(service_identifier)
         return null
     
     var service = script.new()
@@ -134,7 +134,7 @@ func _create_service(service_identifier: String) -> Node:
         print("ServiceLocator: Created service: " + service_identifier)
     
     # Remove from initialization list after completing
-    _services_in_initialization.erase(service_identifier)
+    var _was_pending = _pending_initializations.erase(service_identifier)
     
     return service
 

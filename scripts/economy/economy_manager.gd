@@ -79,8 +79,17 @@ func _init() -> void:
 
 func _initialize_impl() -> void:
     # Override GameService's _initialize_impl
+    # Make sure we have the get_dependency method
+    if not has_method("get_dependency"):
+        debug_log("Error: get_dependency method not found in GameService base class", "error")
+        return
+    
     # Try to get reference to UI manager for displaying income ticks
     ui_manager = get_dependency("UIManager")
+    
+    # Ensure ui_manager is valid before use
+    if not ui_manager:
+        debug_log("Warning: UIManager dependency not found. Some features may not work.", "warning", "EconomyManager")
     
     # Load cost data
     _load_cost_data()
@@ -192,7 +201,6 @@ func _load_item_cost_file(item_id: String, file_path: String) -> void:
     else:
         push_error("Error opening item file: " + file_path)
 
-# Distribute income to all teams
 func _distribute_income() -> void:
     for team in team_income.keys():
         var income_amount = team_income[team]
@@ -200,9 +208,13 @@ func _distribute_income() -> void:
         # Add gold to team resources
         add_resource(team, ResourceType.GOLD, income_amount)
         
-        # Show income popup if UI manager exists
-        if ui_manager:
-            ui_manager.show_income_popup(team, income_amount)
+        # Show income popup if UI manager exists and is properly set up
+        if ui_manager != null:
+            # Verify the UI manager has the required method
+            if ui_manager.has_method("show_income_popup"):
+                ui_manager.show_income_popup(team, income_amount)
+            else:
+                debug_log("Warning: UIManager found but missing show_income_popup method", "warning")
         
         emit_signal("income_tick", team, income_amount)
 
@@ -515,12 +527,17 @@ func get_total_resources_collected(team: int, resource_type: int) -> float:
 func initialize() -> void:
     print("EconomyManager: Initializing...")
     
-    # Try to get reference to UI manager for displaying income ticks
+    # Try to get reference to UI manager for displaying income ticks - SAFELY
+    ui_manager = null
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
         ui_manager = game_manager.get_node_or_null("UIManager")
         if not ui_manager:
             ui_manager = get_node_or_null("/root/UIManager")
+    
+    # Safety check - log warning if UI manager not found
+    if not ui_manager:
+        print("EconomyManager: Warning - UIManager not found. Some features will be disabled.")
     
     # Reset team resources to default values
     reset_team_resources()
