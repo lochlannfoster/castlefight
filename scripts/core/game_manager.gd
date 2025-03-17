@@ -49,7 +49,7 @@ onready var unit_factory = get_node_or_null("/root/UnitFactory")
 var ui_manager
 var fog_of_war_manager
 var network_manager
-var map_manager
+var map_manager: Node = null
 var tech_tree_manager
 
 var is_initialized: bool = false
@@ -96,6 +96,7 @@ func _ready() -> void:
     ensure_data_directories_exist()
     
     logger.debug("GameManager initialization complete", "GameManager")
+    call_deferred("_initialize_map_manager")
 
 # Create required scenes if they don't exist yet
 func _create_required_scenes() -> void:

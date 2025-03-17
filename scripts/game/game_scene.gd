@@ -21,6 +21,7 @@ var ui_manager: Node = null
 
 export var debug_mode: bool = false
 
+
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
     if logger:
@@ -45,16 +46,6 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
         print(prefix + " " + message)
 
 
-# Primary initialization entry point
-# Then call this from _ready or initialize:
-func _ready() -> void:
-    # Use call_deferred to ensure safe, non-blocking initialization
-    call_deferred("initialize_game_systems")
-    _verify_system_availability()
-    
-    # Add explicit grid drawing
-    call_deferred("_explicitly_draw_grid")
-
 func initialize_game_systems() -> void:
     debug_log("Initializing all game systems...", "info", "GameManager")
     
@@ -70,7 +61,12 @@ func initialize_game_systems() -> void:
     building_manager = service_locator.get_service("BuildingManager")
     network_manager = service_locator.get_service("NetworkManager")
     ui_manager = service_locator.get_service("UIManager")
-    
+    map_manager = service_locator.get_service("MapManager")
+    fog_of_war_manager = service_locator.get_service("FogOfWarManager")
+    tech_tree_manager = service_locator.get_service("TechTreeManager")
+
+    if map_manager:
+            map_manager.generate_map()
     # Wait a frame for all systems to finish initializing
     yield (get_tree(), "idle_frame")
     
@@ -78,6 +74,17 @@ func initialize_game_systems() -> void:
     _connect_signals()
     
     debug_log("All game systems initialized successfully", "info", "GameManager")
+
+# Primary initialization entry point
+# Then call this from _ready or initialize:
+func _ready() -> void:
+    debug_log("Game scene ready, checking map initialization", "debug")
+    
+    if map_manager:
+        debug_log("Map Manager exists, attempting to generate map", "debug")
+        map_manager.generate_map() # Ensure this method is called
+    else:
+        debug_log("WARNING: Map Manager is null!", "error")
 
 # Safely set up game camera with deferred addition
 func _setup_safe_camera() -> void:

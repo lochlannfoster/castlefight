@@ -78,6 +78,7 @@ func _initialize_impl() -> void:
 
 # Generate a new map
 func generate_map() -> void:
+    debug_log("Generating map with dimensions: " + str(map_width) + "x" + str(map_height), "info")
     # Clear existing map data
     map_data.clear()
     lanes.clear()
@@ -113,6 +114,13 @@ func generate_map() -> void:
             }
             
             map_data[_position_to_key(pos)] = cell_data
+    
+    var map_scene = get_tree().current_scene
+    if map_scene:
+        map_scene.add_child(map_node)
+        debug_log("Map display node added to scene", "info")
+    else:
+        debug_log("Could not add map display - no current scene", "error")
     
     emit_signal("map_generated")
     _update_map_display()
