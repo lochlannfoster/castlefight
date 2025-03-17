@@ -61,7 +61,7 @@ func _on_quit_button_pressed():
 
 func _print_scene_tree(node, indent):
     var indent_str = ""
-    for i in range(indent):
+    for _i in range(indent):
         indent_str += "  "
     
     print(indent_str + node.name + " (" + node.get_class() + ")" +
@@ -95,3 +95,26 @@ func verify_critical_assets():
             debug_log("Critical scene missing: " + scene_path, "error", "GameManager")
     
     debug_log("Asset verification complete", "info", "GameManager")
+
+func debug_log(message: String, level: String = "info", context: String = "") -> void:
+    var logger = get_node_or_null("/root/UnifiedLogger")
+    if logger:
+        match level.to_lower():
+            "error":
+                logger.error(message, context if context else "MainMenu")
+            "warning":
+                logger.warning(message, context if context else "MainMenu")
+            "debug":
+                logger.debug(message, context if context else "MainMenu")
+            "verbose":
+                logger.verbose(message, context if context else "MainMenu")
+            _:
+                logger.info(message, context if context else "MainMenu")
+    else:
+        # Fallback to print
+        var prefix = "[" + level.to_upper() + "]"
+        if context:
+            prefix += "[" + context + "]"
+        else:
+            prefix += "[MainMenu]"
+        print(prefix + " " + message)

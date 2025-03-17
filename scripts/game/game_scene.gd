@@ -462,7 +462,7 @@ func _on_game_ended(winning_team) -> void:
 
 func _print_scene_tree(node, indent):
     var indent_str = ""
-    for i in range(indent):
+    for _i in range(indent):
         indent_str += "  "
     
     var visible_text = ""

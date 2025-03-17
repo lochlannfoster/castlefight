@@ -1071,7 +1071,7 @@ func verify_critical_nodes() -> void:
     else:
         print("MISSING: GameWorld does not exist")
 
-func change_scene(scene_path: String, transition: bool = false) -> bool:
+func change_scene(scene_path: String, _transition: bool = false) -> bool:
     # Debug output to track scene changes
     debug_log("Attempting to change scene to: " + scene_path, "info", "GameManager")
     
