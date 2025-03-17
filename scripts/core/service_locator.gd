@@ -7,13 +7,13 @@ var _services: Dictionary = {}
 
 # Dictionary of service class paths for auto-creation
 var _service_classes: Dictionary = {
+    "MapManager": "res://scripts/core/map_manager.gd",
     "GridSystem": "res://scripts/core/grid_system.gd",
     "BuildingManager": "res://scripts/building/building_manager.gd",
     "EconomyManager": "res://scripts/economy/economy_manager.gd",
     "CombatSystem": "res://scripts/combat/combat_system.gd",
     "UnitFactory": "res://scripts/unit/unit_factory.gd",
     "UIManager": "res://scripts/ui/ui_manager.gd",
-    "MapManager": "res://scripts/core/map_manager.gd",
     "FogOfWarManager": "res://scripts/core/fog_of_war.gd",
     "TechTreeManager": "res://scripts/core/tech_tree_manager.gd",
     "NetworkManager": "res://scripts/networking/network_manager.gd",
@@ -21,11 +21,11 @@ var _service_classes: Dictionary = {
 
 # Initialization order to resolve dependencies correctly
 var _initialization_order = [
+    "MapManager",
     "GridSystem",
     "EconomyManager",
     "CombatSystem",
     "BuildingManager",
-    "MapManager",
     "FogOfWarManager",
     "TechTreeManager",
     "UIManager",
@@ -139,6 +139,7 @@ func _create_service(service_identifier: String) -> Node:
     return service
 
 # Initialize all services
+# Update this in service_locator.gd
 func initialize_all_services() -> void:
     if _initializing:
         return
@@ -179,6 +180,9 @@ func initialize_all_services() -> void:
             # If it doesn't have the signals, consider it initialized immediately
             if not has_initialization_signals:
                 print("ServiceLocator: Service " + current_service_name + " initialized (no signals)")
+    
+    # Resolve any circular dependencies
+    call_deferred("resolve_circular_dependencies")
     
     # Check if any services need to be waited on
     if _pending_initializations.empty():
@@ -273,3 +277,30 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
         elif service_locator_name:
             prefix += "[" + service_locator_name + "]"
         print(prefix + " " + message)
+
+# Add this method to your service_locator.gd
+func resolve_circular_dependencies() -> void:
+    debug_log("Resolving circular dependencies...", "info")
+    
+    # Get all services with pending initializations
+    var services_with_dependencies = []
+    
+    for service_name in _services.keys():
+        var service = _services[service_name]
+        
+        # Check if this is a GameService with unresolved dependencies
+        if service.has_method("get_unresolved_dependencies") and service.get_unresolved_dependencies().size() > 0:
+            services_with_dependencies.append(service)
+    
+    # Try to resolve dependencies for each service
+    for service in services_with_dependencies:
+        var unresolved = service.get_unresolved_dependencies()
+        
+        for dependency_name in unresolved:
+            var dependency = get_service(dependency_name)
+            
+            if dependency:
+                service.resolve_dependency(dependency_name, dependency)
+                debug_log("Resolved dependency: " + dependency_name + " for " + service.service_name, "info")
+    
+    debug_log("Circular dependency resolution complete", "info")

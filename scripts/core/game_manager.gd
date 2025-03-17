@@ -42,6 +42,7 @@ var headquarters: Dictionary = {
 
 # System references (will be initialized in _ready)
 var grid_system
+var map_manager: Node = null
 var building_manager
 var combat_system
 var economy_manager
@@ -49,7 +50,6 @@ onready var unit_factory = get_node_or_null("/root/UnitFactory")
 var ui_manager
 var fog_of_war_manager
 var network_manager
-var map_manager: Node = null
 var tech_tree_manager
 
 var is_initialized: bool = false
@@ -61,6 +61,19 @@ var EconomyManagerScript = load("res://scripts/economy/economy_manager.gd")
 var BuildingManagerScript = load("res://scripts/building/building_manager.gd")
 
 export var debug_mode: bool = false
+
+func _ready() -> void:
+    var logger = get_node("/root/UnifiedLogger")
+    
+    # Initialize match ID with detailed logging
+    match_id = "match_" + str(OS.get_unix_time())
+    logger.info("Match ID generated: " + match_id, "GameManager")
+    
+    # Ensure required data directories exist
+    ensure_data_directories_exist()
+    
+    logger.debug("GameManager initialization complete", "GameManager")
+    call_deferred("_initialize_systems")
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/Logger")
@@ -84,19 +97,6 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
         elif service_name:
             prefix += "[" + service_name + "]"
         print(prefix + " " + message)
-
-func _ready() -> void:
-    var logger = get_node("/root/UnifiedLogger")
-    
-    # Initialize match ID with detailed logging
-    match_id = "match_" + str(OS.get_unix_time())
-    logger.info("Match ID generated: " + match_id, "GameManager")
-    
-    # Ensure required data directories exist
-    ensure_data_directories_exist()
-    
-    logger.debug("GameManager initialization complete", "GameManager")
-    call_deferred("_initialize_map_manager")
 
 # Create required scenes if they don't exist yet
 func _create_required_scenes() -> void:
@@ -141,7 +141,26 @@ func _initialize_systems() -> void:
         ui_manager = service_locator.get_service("UIManager")
         fog_of_war_manager = service_locator.get_service("FogOfWarManager")
         network_manager = service_locator.get_service("NetworkManager")
+        
+        # Handle map manager specifically because it may have dependency issues
         map_manager = service_locator.get_service("MapManager")
+        if not map_manager:
+            debug_log("MapManager not found through ServiceLocator, creating directly", "info", "GameManager")
+            var map_manager_class = load("res://scripts/core/map_manager.gd")
+            if map_manager_class:
+                map_manager = map_manager_class.new()
+                map_manager.name = "MapManager"
+                add_child(map_manager)
+                
+                # Initialize map if needed
+                if map_manager.has_method("initialize"):
+                    map_manager.initialize()
+                elif map_manager.has_method("load_map_config"):
+                    map_manager.load_map_config()
+                
+                debug_log("MapManager created and initialized directly", "info", "GameManager")
+    else:
+        debug_log("ServiceLocator not found, cannot initialize systems", "error", "GameManager")
 
 # Connect signals between systems
 func _connect_signals() -> void:

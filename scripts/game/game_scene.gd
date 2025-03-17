@@ -13,13 +13,13 @@ var is_initialized: bool = false
 
 # Declare references to potential game systems with explicit types
 var game_manager_ref: Node = null
+var map_manager: Node = null
 var grid_system: Node = null
 var combat_system: Node = null
 var economy_manager: Node = null
 var building_manager: Node = null
 var network_manager: Node = null
 var ui_manager: Node = null
-var map_manager: Node = null
 var fog_of_war_manager: Node = null
 var tech_tree_manager: Node = null
 

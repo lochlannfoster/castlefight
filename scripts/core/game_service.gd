@@ -168,3 +168,15 @@ func get_logger():
     if is_inside_tree():
         return get_node_or_null("/root/UnifiedLogger")
     return null
+
+func get_unresolved_dependencies() -> Array:
+    var unresolved = []
+    
+    for dependency_name in required_services:
+        if not dependencies.has(dependency_name) or dependencies[dependency_name] == null:
+            unresolved.append(dependency_name)
+    
+    return unresolved
+
+func resolve_dependency(dependency_name: String, dependency_instance) -> void:
+    dependencies[dependency_name] = dependency_instance
