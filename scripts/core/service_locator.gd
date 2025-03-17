@@ -1,5 +1,6 @@
 # scripts/core/service_locator.gd
 extends Node
+var service_name: String = "ServiceLocator"
 
 # Dictionary of all registered services
 var _services: Dictionary = {}
@@ -232,7 +233,7 @@ func _on_service_initialized(service_name: String) -> void:
     debug_log("Service initialized: " + service_name, "info")
     
     # Explicitly ignore return value
-    var _erased = _pending_initializations.erase(service_name)
+    var _result = _pending_initializations.erase(service_name)
     
     # Check if all services are initialized
     if _pending_initializations.empty():
