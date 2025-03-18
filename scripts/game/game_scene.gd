@@ -23,6 +23,11 @@ var ui_manager: Node = null
 var fog_of_war_manager: Node = null
 var tech_tree_manager: Node = null
 
+var selection_start = null
+var selection_rectangle = RectangleShape2D.new()
+var is_selecting = false
+var draw_selection = false
+
 export var debug_mode: bool = false
 
 
@@ -82,6 +87,14 @@ func initialize_game_systems() -> void:
 # Primary initialization entry point
 # Then call this from _ready or initialize:
 func _ready() -> void:
+    # Ensure the "select" action is mapped to left mouse button
+    if not InputMap.has_action("select"):
+        InputMap.add_action("select")
+        var event = InputEventMouseButton.new()
+        event.button_index = BUTTON_LEFT
+        event.pressed = true
+        InputMap.action_add_event("select", event)
+        
     debug_log("Game scene initialization STARTED", "info")
     
     # Attempt to get ServiceLocator
@@ -473,3 +486,122 @@ func _print_scene_tree(node, indent):
     
     for child in node.get_children():
         _print_scene_tree(child, indent + 1)
+
+func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> void:
+    # Get all selectable units (workers)
+    var selectables = get_tree().get_nodes_in_group("selectable")
+    
+    # Find units within the rectangle
+    var closest_unit = null
+    var closest_distance = INF
+    var selected_units = []
+    
+    for unit in selectables:
+        if rect.has_point(unit.global_position):
+            selected_units.append(unit)
+            
+            # Calculate distance to rect origin
+            var distance = rect.position.distance_to(unit.global_position)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_unit = unit
+    
+    # Deselect any previously selected units
+    for unit in selectables:
+        if unit.has_method("is_selected") and unit.is_selected:
+            unit.deselect()
+    
+    # If we found units, select the closest one
+    if selected_units.size() > 0:
+        # For debug mode, we can select any team's worker
+        var nm = get_node_or_null("/root/NetworkManager")
+        var is_debug = debug_mode # Use class-level debug_mode
+        if nm:
+            is_debug = nm.debug_mode
+        
+        # In debug mode, select closest
+        if is_debug or use_debug_mode:
+            if closest_unit:
+                closest_unit.select()
+        else:
+            # In normal mode, only select team's own workers
+            var um = get_node_or_null("/root/UIManager")
+            var current_team = 0
+            if um:
+                current_team = um.current_team
+                
+            for unit in selected_units:
+                if unit.team == current_team:
+                    unit.select()
+                    break
+
+# Add this to handle direct clicks on units
+func _select_unit_at_position(position: Vector2, use_debug_mode: bool = false) -> void:
+    # Use a small selection area for direct clicks
+    var small_rect = Rect2(position - Vector2(10, 10), Vector2(20, 20))
+    _select_units_in_rectangle(small_rect, use_debug_mode)
+
+func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventMouseButton:
+        if event.button_index == BUTTON_LEFT:
+            if event.pressed:
+                # Start selection
+                selection_start = event.position
+                is_selecting = true
+                draw_selection = false
+            else:
+                # End selection
+                if is_selecting:
+                    # Calculate selection rectangle in screen space
+                    var end_pos = event.position
+                    var rect = Rect2(
+                        min(selection_start.x, end_pos.x),
+                        min(selection_start.y, end_pos.y),
+                        abs(end_pos.x - selection_start.x),
+                        abs(end_pos.y - selection_start.y)
+                    )
+                    
+                    # Only do selection if we've moved the mouse enough
+                    if rect.size.length() > 5:
+                        # Convert the screen rect to world coordinates
+                        var camera = get_node_or_null("Camera2D")
+                        if camera:
+                            var canvas_transform = get_canvas_transform()
+                            var top_left = canvas_transform.affine_inverse().xform(rect.position)
+                            var bottom_right = canvas_transform.affine_inverse().xform(rect.position + rect.size)
+                            
+                            var world_rect = Rect2(top_left, bottom_right - top_left)
+                            # Select units in the world rectangle
+                            _select_units_in_rectangle(world_rect, false)
+                        else:
+                            # No camera, try direct conversion
+                            _select_units_in_rectangle(rect, false)
+                    else:
+                        # Just a click, select unit directly at world position
+                        var world_pos = get_global_mouse_position()
+                        _select_unit_at_position(world_pos, false)
+                
+                is_selecting = false
+                draw_selection = false
+                update() # Redraw to clear selection box
+
+    elif event is InputEventMouseMotion and is_selecting:
+        # If mouse has moved enough, start drawing the selection box
+        if selection_start.distance_to(event.position) > 5:
+            draw_selection = true
+            update() # Request redraw to show selection box
+
+# Add this function to draw selection rectangle
+func _draw() -> void:
+    if draw_selection and selection_start != null:
+        var current_mouse_pos = get_viewport().get_mouse_position()
+        var rect = Rect2(
+            min(selection_start.x, current_mouse_pos.x),
+            min(selection_start.y, current_mouse_pos.y),
+            abs(current_mouse_pos.x - selection_start.x),
+            abs(current_mouse_pos.y - selection_start.y)
+        )
+        
+        # Draw selection rectangle with green outline
+        draw_rect(rect, Color(0, 1, 0, 0.2), true) # Fill
+        draw_rect(rect, Color(0, 1, 0, 0.8), false) # Border

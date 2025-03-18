@@ -13,6 +13,7 @@ export var speed: float = 200.0
 export var team: int = 0 # 0 = Team A, 1 = Team B
 export var acceleration: float = 800.0
 export var friction: float = 600.0
+export var collision_radius: float = 16.0 # Add this line
 
 # Building placement properties
 var is_placing_building: bool = false
@@ -21,6 +22,7 @@ var current_building_size: Vector2 = Vector2.ONE
 var building_ghost: Node2D
 var can_place: bool = false
 var placement_range: float = 100.0 # How far the worker can place a building from itself
+
 
 enum CommandType {
     MOVE,
@@ -81,8 +83,25 @@ func _ready() -> void:
     # Get references to manager nodes
     _get_manager_references()
     
+    # Connect to input events
+    set_process_input(true)
+    set_process_unhandled_input(true)
+    
     # Setup worker visuals
     _setup_visuals()
+    
+    # Make sure we have collision shape properly set up
+    var collision = get_node_or_null("CollisionShape2D")
+    if not collision:
+        var new_collision = CollisionShape2D.new()
+        var shape = CircleShape2D.new()
+        # Use a default radius if collision_radius isn't defined
+        var radius = 16.0
+        if "collision_radius" in self:
+            radius = collision_radius
+        shape.radius = radius
+        new_collision.shape = shape
+        add_child(new_collision)
     
     # Setup building ghost for placement preview
     _setup_building_ghost()
@@ -90,6 +109,18 @@ func _ready() -> void:
     # Add the worker to the units group
     if not is_in_group("units"):
         add_to_group("units")
+    
+    # Add to clickable group
+    if not is_in_group("selectable"):
+        add_to_group("selectable")
+    
+    # If using input action "select" for mouse selection, ensure it exists
+    if not InputMap.has_action("select"):
+        InputMap.add_action("select")
+        var event = InputEventMouseButton.new()
+        event.button_index = BUTTON_LEFT
+        event.pressed = true
+        InputMap.action_add_event("select", event)
     
     # Setup debug logging
     debug_log("Worker initialized for team " + str(team), "info", "Worker")
