@@ -56,6 +56,12 @@ var is_moving_to_target: bool = false
 var current_target_building = null
 var is_selected: bool = false
 
+var selection_start: Vector2 = Vector2.ZERO
+var is_selecting: bool = false
+var draw_selection: bool = false
+
+export var debug_mode: bool = false
+
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
     if logger:
@@ -125,10 +131,6 @@ func _ready() -> void:
     debug_log("Worker initialized for team " + str(team), "info", "Worker")
 
 func _physics_process(delta: float) -> void:
-    # If selected, handle player input
-    if is_selected:
-        _handle_input()
-    
     # Handle movement
     _handle_movement(delta)
     
@@ -151,9 +153,6 @@ func _physics_process(delta: float) -> void:
         elif !is_moving_to_target:
             # We're not in range and not moving, start moving to target
             move_to(command_target.global_position)
-
-# Get references to manager nodes
-# In scripts/worker/worker.gd
 
 # Modify the _get_manager_references function to better locate the UI Manager
 func _get_manager_references() -> void:
@@ -217,6 +216,11 @@ func _input(event: InputEvent) -> void:
                 var game_manager = get_node_or_null("/root/GameManager")
                 if game_manager and game_manager.has_method("toggle_grid_visualization"):
                     game_manager.toggle_grid_visualization()
+            
+            KEY_R: # Toggle auto-repair
+                if is_selected and has_method("toggle_auto_repair"):
+                    toggle_auto_repair()
+            
             KEY_ESCAPE:
                 # Handle escape key, e.g., to cancel building placement
                 var current_ui_manager = get_node_or_null("/root/UIManager")
@@ -274,53 +278,19 @@ func _input(event: InputEvent) -> void:
                 draw_selection = false
                 update() # Redraw to clear selection box
         
-        # Right-click handling for movement
+        # Right-click handling for context-sensitive action
         elif event.button_index == BUTTON_RIGHT and event.pressed:
-            # Debug that we detected right-click
-            print("Right-click detected at position: " + str(get_global_mouse_position()))
-            
-            # Get UI Manager for current selection
+            # Only process if this worker is selected
             var current_ui_manager = get_node_or_null("/root/UIManager")
-            var selected_worker = null
-            
-            # Try different ways to get the selected worker
-            if current_ui_manager:
-                selected_worker = current_ui_manager.selected_worker
-                
-                # If UI Manager has a getter function, use that
-                if not selected_worker and current_ui_manager.has_method("get_selected_worker"):
-                    selected_worker = current_ui_manager.get_selected_worker()
-            
-            # If no selected worker but in debug mode, try to find one
-            if not selected_worker and debug_mode:
-                # In debug mode, we might try to find any worker
-                var workers = get_tree().get_nodes_in_group("units")
-                for unit in workers:
-                    if unit.has_method("move_to"):
-                        selected_worker = unit
-                        print("Debug mode: found a worker to move")
-                        break
-            
-            if selected_worker and selected_worker.has_method("move_to"):
-                # Get the target position in world space
-                var target_pos = get_global_mouse_position()
-                print("Moving worker to: " + str(target_pos))
-                
-                # Try direct movement command first
-                if selected_worker.has_method("direct_move_to_position"):
-                    selected_worker.direct_move_to_position(target_pos)
-                else:
-                    # Fall back to regular move_to if direct method not available
-                    selected_worker.move_to(target_pos)
-                
-                # If we have worker_command_issued signal, emit it
-                if current_ui_manager and current_ui_manager.has_signal("worker_command_issued"):
-                    current_ui_manager.emit_signal("worker_command_issued", "move", {
-                        "position": target_pos,
-                        "options": {}
-                    })
-            else:
-                print("No selected worker found or worker cannot move")
+            if current_ui_manager and current_ui_manager.selected_worker == self:
+                # Perform context-sensitive right-click action
+                _handle_context_sensitive_action()
+
+    # Mouse motion for selection box
+    elif event is InputEventMouseMotion and is_selecting:
+        if selection_start.distance_to(event.position) > 5:
+            draw_selection = true
+            update() # Request redraw to show selection box
 
     # Mouse motion handling for selection
     elif event is InputEventMouseMotion and is_selecting:
@@ -377,7 +347,7 @@ func handle_command(command_type, params: Dictionary = {}) -> void:
         CommandType.STOP:
             _stop_current_action()
 
-func _handle_movement(delta: float) -> void:
+func _handle_movement(_delta: float) -> void:
     # If actively moving to a target
     if is_moving_to_target:
         # Calculate direction to target
@@ -410,7 +380,7 @@ func _handle_movement(delta: float) -> void:
     if is_moving_to_target and previous_position.distance_to(global_position) < 0.1 and velocity.length() > 0:
         debug_log("Worker seems stuck, attempting to unstick", "debug")
         # Try slight variations in direction
-        var perturbed_direction = global_position.direction_to(target_position).rotated(randf_range(-0.5, 0.5))
+        var perturbed_direction = global_position.direction_to(target_position).rotated(rand_range(-0.5, 0.5))
         velocity = perturbed_direction * speed
         # Try the new direction
         velocity = move_and_slide(velocity)
@@ -694,3 +664,85 @@ func direct_move_to_position(pos: Vector2) -> void:
     # Cancel any active building placement
     if is_placing_building:
         cancel_building_placement()
+
+func _handle_context_sensitive_action() -> void:
+    # Use raycasting to detect what's under the mouse
+    var mouse_pos = get_global_mouse_position()
+    
+    var space_state = get_world_2d().direct_space_state
+    var query = Physics2DShapeQueryParameters.new()
+    var shape = CircleShape2D.new()
+    shape.radius = 50 # Detection radius
+    query.set_shape(shape)
+    query.transform = Transform2D(0, mouse_pos)
+    query.collision_layer = 2 # Adjust to match your game's collision layers
+    
+    var results = space_state.intersect_shape(query)
+    
+    for result in results:
+        var collider = result.collider
+        
+        # Prioritize repairing damaged buildings on the same team
+        if collider.has_method("repair") and collider.team == team:
+            if collider.health < collider.max_health:
+                current_command = CommandType.REPAIR
+                command_target = collider
+                move_to(collider.global_position, {
+                    "is_building_target": true,
+                    "cancel_current_action": true
+                })
+                return
+
+func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> void:
+    # Get all selectable units
+    var selectables = get_tree().get_nodes_in_group("selectable")
+    
+    # Find units within the rectangle
+    var closest_unit = null
+    var closest_distance = INF
+    var selected_units = []
+    
+    for unit in selectables:
+        # Use global_position for accurate world position
+        if rect.has_point(unit.global_position):
+            selected_units.append(unit)
+            
+            # Calculate distance to rect origin
+            var distance = rect.position.distance_to(unit.global_position)
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_unit = unit
+    
+    # Deselect any previously selected units
+    for unit in selectables:
+        if unit.has_method("deselect"):
+            unit.deselect()
+    
+    # If we found units, select the closest one
+    if selected_units.size() > 0:
+        # For debug mode, we can select any team's worker
+        var nm = get_node_or_null("/root/NetworkManager")
+        var is_debug = debug_mode # Use class-level debug_mode
+        if nm:
+            is_debug = nm.debug_mode
+        
+        # In debug mode, select closest
+        if is_debug or use_debug_mode:
+            if closest_unit and closest_unit.has_method("select"):
+                closest_unit.select()
+        else:
+            # In normal mode, only select team's own workers
+            var um = get_node_or_null("/root/UIManager")
+            var current_team = 0
+            if um:
+                current_team = um.current_team
+                
+            for unit in selected_units:
+                if unit.team == current_team and unit.has_method("select"):
+                    unit.select()
+                    break
+
+func _select_unit_at_position(position: Vector2, use_debug_mode: bool = false) -> void:
+    # Use a small selection area for direct clicks
+    var small_rect = Rect2(position - Vector2(10, 10), Vector2(20, 20))
+    _select_units_in_rectangle(small_rect, use_debug_mode)
