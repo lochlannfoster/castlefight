@@ -1427,3 +1427,6 @@ func _initialize_ui_once() -> void:
     # Mark as initialized
     _ui_initialized = true
     debug_log("UI initialization complete", "info")
+
+func get_selected_worker():
+    return selected_worker

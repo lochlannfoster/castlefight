@@ -85,7 +85,6 @@ func _ready() -> void:
     
     # Connect to input events
     set_process_input(true)
-    set_process_unhandled_input(true)
     
     # Setup worker visuals
     _setup_visuals()
@@ -154,8 +153,11 @@ func _physics_process(delta: float) -> void:
             move_to(command_target.global_position)
 
 # Get references to manager nodes
+# In scripts/worker/worker.gd
+
+# Modify the _get_manager_references function to better locate the UI Manager
 func _get_manager_references() -> void:
-    # Try to get references from game manager first
+    # Try to get references from multiple possible locations
     var game_manager = get_node_or_null("/root/GameManager")
     var service_locator = get_node_or_null("/root/ServiceLocator")
     
@@ -166,31 +168,21 @@ func _get_manager_references() -> void:
         economy_manager = service_locator.get_service("EconomyManager")
         ui_manager = service_locator.get_service("UIManager")
     
-    # Fallback to direct node lookup
-    if not grid_system:
-        grid_system = get_node_or_null("/root/GridSystem")
-    
-    if not building_manager:
-        building_manager = get_node_or_null("/root/BuildingManager")
-    
-    if not economy_manager:
-        economy_manager = get_node_or_null("/root/EconomyManager")
-    
+    # Check if UI Manager is already directly in the scene tree
     if not ui_manager:
         ui_manager = get_node_or_null("/root/UIManager")
     
-    # If game manager exists, try getting references from there
-    if game_manager:
-        if not grid_system:
-            grid_system = game_manager.get_node_or_null("GridSystem")
-        if not building_manager:
-            building_manager = game_manager.get_node_or_null("BuildingManager")
-        if not economy_manager:
-            economy_manager = game_manager.get_node_or_null("EconomyManager")
-        if not ui_manager:
-            ui_manager = game_manager.get_node_or_null("UIManager")
+    # If not, try to find it via GameManager
+    if not ui_manager and game_manager:
+        ui_manager = game_manager.get_node_or_null("UIManager")
     
-    # Log any missing references
+    # If all fails, try looking up in the current scene
+    if not ui_manager:
+        var current_scene = get_tree().get_current_scene()
+        if current_scene:
+            ui_manager = current_scene.get_node_or_null("UIManager")
+    
+    # Log the results for debugging
     debug_log("Manager references initialized", "debug")
     
     if not grid_system:
@@ -200,7 +192,7 @@ func _get_manager_references() -> void:
     if not economy_manager:
         debug_log("Warning: EconomyManager not found", "warning")
     if not ui_manager:
-        debug_log("Warning: UIManager not found", "warning")
+        debug_log("Warning: UIManager not found, worker movement may not function", "warning")
 
 # Set up building ghost for placement preview
 func _setup_building_ghost() -> void:
@@ -218,53 +210,124 @@ func _setup_building_ghost() -> void:
     # Hide by default
     building_ghost.visible = false
 
-# Handle input for the worker
-func _handle_input() -> void:
-    # Get input direction
-    var input_direction = Vector2.ZERO
-    
-    # Check for arrow key input
-    if Input.is_action_pressed("ui_right"):
-        input_direction.x += 1
-    if Input.is_action_pressed("ui_left"):
-        input_direction.x -= 1
-    if Input.is_action_pressed("ui_down"):
-        input_direction.y += 1
-    if Input.is_action_pressed("ui_up"):
-        input_direction.y -= 1
-    
-    # Apply input to velocity
-    if input_direction != Vector2.ZERO:
-        is_moving_to_target = false
-        velocity = input_direction.normalized() * speed
-        debug_log("Moving worker with velocity: " + str(velocity), "debug")
-    elif not is_moving_to_target:
-        velocity = velocity.move_toward(Vector2.ZERO, friction)
-    
-    # Building placement - left click to place
-    if is_placing_building and Input.is_action_just_pressed("select"):
-        var mouse_pos = get_global_mouse_position()
-        _try_place_building(mouse_pos)
-    
-    # Cancel building placement - right click or ESC
-    if is_placing_building and (Input.is_action_just_pressed("ui_cancel") or Input.is_mouse_button_pressed(BUTTON_RIGHT)):
-        cancel_building_placement()
-    
-    # Apply input to velocity
-    if input_direction != Vector2.ZERO:
-        is_moving_to_target = false
-        velocity = input_direction.normalized() * speed
-    elif not is_moving_to_target:
-        velocity = velocity.move_toward(Vector2.ZERO, friction)
-    
-    # Building placement - left click to place
-    if is_placing_building and Input.is_action_just_pressed("select"):
-        var mouse_pos = get_global_mouse_position()
-        _try_place_building(mouse_pos)
-    
-    # Cancel building placement - right click
-    if is_placing_building and Input.is_action_just_pressed("ui_cancel"):
-        cancel_building_placement()
+func _input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed:
+        match event.scancode:
+            KEY_G: # Toggle grid visualization
+                var game_manager = get_node_or_null("/root/GameManager")
+                if game_manager and game_manager.has_method("toggle_grid_visualization"):
+                    game_manager.toggle_grid_visualization()
+            KEY_ESCAPE:
+                # Handle escape key, e.g., to cancel building placement
+                var current_ui_manager = get_node_or_null("/root/UIManager")
+                if current_ui_manager and current_ui_manager.selected_worker:
+                    var worker = current_ui_manager.selected_worker
+                    if worker.has_method("cancel_building_placement") and worker.is_placing_building:
+                        worker.cancel_building_placement()
+
+    # Mouse button handling
+    if event is InputEventMouseButton:
+        if event.button_index == BUTTON_LEFT:
+            if event.pressed:
+                # Start selection
+                selection_start = event.position
+                is_selecting = true
+                draw_selection = false
+            else:
+                # End selection
+                if is_selecting:
+                    # Calculate selection rectangle in screen space
+                    var end_pos = event.position
+                    var rect = Rect2(
+                        min(selection_start.x, end_pos.x),
+                        min(selection_start.y, end_pos.y),
+                        abs(end_pos.x - selection_start.x),
+                        abs(end_pos.y - selection_start.y)
+                    )
+                    
+                    # Only do selection if we've moved the mouse enough
+                    if rect.size.length() > 5:
+                        # In Godot 3.5.3, we need to handle world-to-screen conversion ourselves
+                        # Get our camera instance
+                        var camera = get_node_or_null("Camera2D")
+                        if not camera:
+                            camera = get_node_or_null("GameCamera")
+                        
+                        if camera and camera is Camera2D:
+                            # Convert screen space to world space
+                            var transform = get_viewport().get_canvas_transform()
+                            var world_top_left = transform.affine_inverse().xform(rect.position)
+                            var world_bottom_right = transform.affine_inverse().xform(rect.position + rect.size)
+                            var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
+                            
+                            # Select units in this world rectangle
+                            _select_units_in_rectangle(world_rect, false)
+                        else:
+                            # Fallback if no camera is found
+                            _select_units_in_rectangle(rect, false)
+                    else:
+                        # Just a click, select unit directly at position
+                        var world_pos = get_global_mouse_position()
+                        _select_unit_at_position(world_pos, false)
+                
+                is_selecting = false
+                draw_selection = false
+                update() # Redraw to clear selection box
+        
+        # Right-click handling for movement
+        elif event.button_index == BUTTON_RIGHT and event.pressed:
+            # Debug that we detected right-click
+            print("Right-click detected at position: " + str(get_global_mouse_position()))
+            
+            # Get UI Manager for current selection
+            var current_ui_manager = get_node_or_null("/root/UIManager")
+            var selected_worker = null
+            
+            # Try different ways to get the selected worker
+            if current_ui_manager:
+                selected_worker = current_ui_manager.selected_worker
+                
+                # If UI Manager has a getter function, use that
+                if not selected_worker and current_ui_manager.has_method("get_selected_worker"):
+                    selected_worker = current_ui_manager.get_selected_worker()
+            
+            # If no selected worker but in debug mode, try to find one
+            if not selected_worker and debug_mode:
+                # In debug mode, we might try to find any worker
+                var workers = get_tree().get_nodes_in_group("units")
+                for unit in workers:
+                    if unit.has_method("move_to"):
+                        selected_worker = unit
+                        print("Debug mode: found a worker to move")
+                        break
+            
+            if selected_worker and selected_worker.has_method("move_to"):
+                # Get the target position in world space
+                var target_pos = get_global_mouse_position()
+                print("Moving worker to: " + str(target_pos))
+                
+                # Try direct movement command first
+                if selected_worker.has_method("direct_move_to_position"):
+                    selected_worker.direct_move_to_position(target_pos)
+                else:
+                    # Fall back to regular move_to if direct method not available
+                    selected_worker.move_to(target_pos)
+                
+                # If we have worker_command_issued signal, emit it
+                if current_ui_manager and current_ui_manager.has_signal("worker_command_issued"):
+                    current_ui_manager.emit_signal("worker_command_issued", "move", {
+                        "position": target_pos,
+                        "options": {}
+                    })
+            else:
+                print("No selected worker found or worker cannot move")
+
+    # Mouse motion handling for selection
+    elif event is InputEventMouseMotion and is_selecting:
+        # If mouse has moved enough, start drawing the selection box
+        if selection_start.distance_to(event.position) > 5:
+            draw_selection = true
+            update() # Request redraw to show selection box
 
 func _execute_repair_command(params: Dictionary) -> void:
     # Find the target building to repair
@@ -314,26 +377,43 @@ func handle_command(command_type, params: Dictionary = {}) -> void:
         CommandType.STOP:
             _stop_current_action()
 
-# Handle movement
-func _handle_movement(_delta: float) -> void:
+func _handle_movement(delta: float) -> void:
+    # If actively moving to a target
     if is_moving_to_target:
-        # Move towards target position
+        # Calculate direction to target
         var direction = global_position.direction_to(target_position)
         var distance = global_position.distance_to(target_position)
         
+        # Debug the movement
+        if velocity != Vector2.ZERO:
+            debug_log("Moving with velocity: " + str(velocity) + ", distance: " + str(distance), "verbose")
+        
+        # Stop when close enough
         if distance < 10:
             # Reached target
             is_moving_to_target = false
             velocity = Vector2.ZERO
+            debug_log("Reached target position", "debug")
             
             # If moving to place a building, try placing it
             if is_placing_building and current_target_building:
                 _try_place_building(target_position)
         else:
+            # Update velocity based on direction to keep moving toward target
             velocity = direction * speed
     
     # Apply movement
+    var previous_position = global_position
     velocity = move_and_slide(velocity)
+    
+    # If we didn't move but should have, we might be stuck - try to unstick
+    if is_moving_to_target and previous_position.distance_to(global_position) < 0.1 and velocity.length() > 0:
+        debug_log("Worker seems stuck, attempting to unstick", "debug")
+        # Try slight variations in direction
+        var perturbed_direction = global_position.direction_to(target_position).rotated(randf_range(-0.5, 0.5))
+        velocity = perturbed_direction * speed
+        # Try the new direction
+        velocity = move_and_slide(velocity)
 
 # Update building preview during placement
 func _update_building_preview() -> void:
@@ -462,9 +542,17 @@ func _handle_auto_repair(delta: float) -> void:
 
 func move_to(pos: Vector2, options: Dictionary = {}) -> void:
     debug_log("Worker moving to " + str(pos), "debug")
+    # Store the target position
     target_position = pos
+    # Mark as moving
     is_moving_to_target = true
     current_target_building = options.get("is_building_target", false)
+    
+    # Calculate initial move direction
+    var direction = global_position.direction_to(target_position)
+    
+    # Set an initial velocity based on direction
+    velocity = direction.normalized() * speed
     
     # Cancel any current action if requested
     if options.get("cancel_current_action", true):
@@ -493,11 +581,32 @@ func select() -> void:
     # Make selection indicator visible
     selection_indicator.visible = true
     
-    # More verbose logging for UI manager interaction
-    var worker_ui_manager = get_node_or_null("/root/GameManager/UIManager")
+    # First try UIManager using multiple paths
+    var worker_ui_manager = null
+    
+    # Try direct reference first
+    if ui_manager:
+        worker_ui_manager = ui_manager
+    else:
+        # Try root level
+        worker_ui_manager = get_node_or_null("/root/UIManager")
+        
+        # Try under GameManager
+        if not worker_ui_manager:
+            var game_manager = get_node_or_null("/root/GameManager")
+            if game_manager:
+                worker_ui_manager = game_manager.get_node_or_null("UIManager")
+                
+        # Try service locator
+        if not worker_ui_manager:
+            var service_locator = get_node_or_null("/root/ServiceLocator")
+            if service_locator:
+                worker_ui_manager = service_locator.get_service("UIManager")
+    
     if worker_ui_manager:
-        debug_log("Attempting to select worker with UI Manager. Team: " + str(team), "debug")
-        worker_ui_manager.select_worker(self)
+        debug_log("Successfully located UI Manager. Selecting worker.", "debug")
+        if worker_ui_manager.has_method("select_worker"):
+            worker_ui_manager.select_worker(self)
     else:
         debug_log("No UI Manager found during worker selection", "warning")
 
@@ -570,5 +679,18 @@ func _stop_current_action() -> void:
     command_target = null
     command_params = {}
     
+    if is_placing_building:
+        cancel_building_placement()
+
+# Add this function for more direct worker movement
+func direct_move_to_position(pos: Vector2) -> void:
+    debug_log("Direct movement command to: " + str(pos), "debug")
+    
+    # Set target position and movement flags
+    target_position = pos
+    is_moving_to_target = true
+    velocity = global_position.direction_to(target_position) * speed
+    
+    # Cancel any active building placement
     if is_placing_building:
         cancel_building_placement()
