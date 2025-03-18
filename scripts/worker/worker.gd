@@ -77,6 +77,23 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
             prefix += "[Worker]"
         print(prefix + " " + message)
 
+func _ready() -> void:
+    # Get references to manager nodes
+    _get_manager_references()
+    
+    # Setup worker visuals
+    _setup_visuals()
+    
+    # Setup building ghost for placement preview
+    _setup_building_ghost()
+    
+    # Add the worker to the units group
+    if not is_in_group("units"):
+        add_to_group("units")
+    
+    # Setup debug logging
+    debug_log("Worker initialized for team " + str(team), "info", "Worker")
+
 func _physics_process(delta: float) -> void:
     # If selected, handle player input
     if is_selected:

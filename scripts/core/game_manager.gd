@@ -404,32 +404,67 @@ func ensure_core_systems() -> void:
 func _create_player_workers() -> void:
     debug_log("Initiating player worker creation process", "info", "GameManager")
     
-    # First get or create the Units container
-    var units_container = get_tree().current_scene.get_node_or_null("Units")
-    if not units_container:
-        debug_log("Creating Units container node", "info", "GameManager")
-        units_container = Node2D.new()
-        units_container.name = "Units"
-        get_tree().current_scene.add_child(units_container)
+    # First get or create the Units container - find it at different possible paths
+    var units_container = null
+    
+    # Try to find units container in current scene
+    var current_scene = get_tree().current_scene
+    if current_scene:
+        units_container = current_scene.get_node_or_null("Units")
+        if not units_container:
+            units_container = current_scene.get_node_or_null("GameWorld/Units")
+        
+        # If still not found, try to create at top level
+        if not units_container:
+            debug_log("Creating Units container node at top level", "info", "GameManager")
+            units_container = Node2D.new()
+            units_container.name = "Units"
+            current_scene.add_child(units_container)
+            units_container.owner = current_scene
+    else:
+        debug_log("No current scene found!", "error", "GameManager")
+        return
+    
+    # Ensure the worker scene exists
+    var worker_scene_path = "res://scenes/units/worker.tscn"
+    var file = File.new()
+    if not file.file_exists(worker_scene_path):
+        debug_log("Worker scene doesn't exist at: " + worker_scene_path, "error", "GameManager")
+        return
     
     # Direct worker creation method
-    var worker_scene = load("res://scenes/units/worker.tscn")
+    var worker_scene = load(worker_scene_path)
     if worker_scene:
-        # Create worker for Team A at fixed position
-        var spawn_position = Vector2(250, 300)
-        var worker = worker_scene.instance()
+        # Create worker for each team
+        var team_positions = [
+            Vector2(250, 300), # Team A position
+            Vector2(600, 300) # Team B position
+        ]
         
-        # Set worker properties
-        worker.team = 0
-        worker.position = spawn_position
-        
-        # Add to scene
-        units_container.add_child(worker)
-        debug_log("Worker created directly at position: " + str(spawn_position), "info", "GameManager")
-        
-        # If we're in debug mode, store this worker
-        if debug_mode and players.has(1):
-            players[1]["worker"] = worker
+        for team_idx in range(2):
+            var spawn_position = team_positions[team_idx]
+            var worker = worker_scene.instance()
+            
+            # Set worker properties
+            worker.team = team_idx
+            worker.position = spawn_position
+            
+            # Add to scene
+            units_container.add_child(worker)
+            worker.owner = current_scene
+            
+            debug_log("Worker created for team " + str(team_idx) + " at position: " + str(spawn_position), "info", "GameManager")
+            
+            # Make worker visible
+            worker.visible = true
+            
+            # Add to proper group
+            if not worker.is_in_group("units"):
+                worker.add_to_group("units")
+            
+            # If we're in debug mode, store this worker for the corresponding player
+            if debug_mode and players.has(team_idx + 1):
+                players[team_idx + 1]["worker"] = worker
     else:
         debug_log("Failed to load worker scene", "error", "GameManager")
 
@@ -1075,6 +1110,11 @@ func change_scene(scene_path: String, _transition: bool = false) -> bool:
     # Debug output to track scene changes
     debug_log("Attempting to change scene to: " + scene_path, "info", "GameManager")
     
+    # Deactivate fog of war when leaving the game scene
+    var fog_of_war = get_node_or_null("/root/FogOfWarManager")
+    if fog_of_war and fog_of_war.has_method("set_fog_active"):
+        fog_of_war.set_fog_active(false)
+    
     # Verify scene exists before trying to load it
     var file = File.new()
     if !file.file_exists(scene_path):
@@ -1105,6 +1145,15 @@ func change_scene(scene_path: String, _transition: bool = false) -> bool:
     if error != OK:
         debug_log("Failed to change scene with error code: " + str(error), "error", "GameManager")
         return false
+    
+    # Activate fog of war when entering game scene
+    if "game" in scene_path.to_lower():
+        # Wait a frame for the scene to fully load
+        yield (get_tree(), "idle_frame")
+        
+        # Now activate fog of war
+        if fog_of_war and fog_of_war.has_method("set_fog_active"):
+            fog_of_war.set_fog_active(true)
     
     # Wait for the scene to load and ensure critical nodes are added
     call_deferred("_check_scene_structure")

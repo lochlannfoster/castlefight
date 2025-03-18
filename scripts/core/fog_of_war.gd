@@ -61,7 +61,6 @@ func _ready() -> void:
     
     debug_log("Fog of War system initializing", "info")
 
-# Override the GameService _initialize_impl method
 func _initialize_impl() -> void:
     # Get grid system reference through service locator
     grid_system = get_dependency("GridSystem")
@@ -84,6 +83,9 @@ func _initialize_impl() -> void:
     
     # Setup fog rendering
     setup_fog_rendering()
+    
+    # IMPORTANT: Initialize fog as inactive
+    set_fog_active(false)
     
     debug_log("Fog of War system initialized", "info")
 
@@ -400,3 +402,26 @@ func initialize() -> void:
     # Call parent initialize which will ultimately call our _initialize_impl
     if _initialization_state != "completed":
         .initialize()
+
+# Add this function to scripts/core/fog_of_war.gd
+func set_fog_active(active: bool) -> void:
+    if fog_material:
+        # Check if the shader has the parameter first to avoid errors
+        if fog_material.shader:
+            if fog_material.shader.has_param("active"):
+                fog_material.set_shader_param("active", active)
+            else:
+                # If the parameter doesn't exist yet, the shader may need updating
+                debug_log("Shader doesn't have 'active' parameter - shader update needed", "warning")
+    
+    # Also control visibility of the sprites
+    var team_a_sprite = get_node_or_null("FogDisplay/TeamAFog")
+    var team_b_sprite = get_node_or_null("FogDisplay/TeamBFog")
+    
+    if team_a_sprite:
+        team_a_sprite.visible = active
+    
+    if team_b_sprite:
+        team_b_sprite.visible = active
+        
+    debug_log("Fog visibility set to: " + str(active), "debug")
