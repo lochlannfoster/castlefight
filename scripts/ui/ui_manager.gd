@@ -542,24 +542,83 @@ func _create_debug_overlay() -> void:
 func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
-        var _resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
-        if _resources_connect_result != OK and _resources_connect_result != ERR_INVALID_PARAMETER:
-            debug_log("Failed to connect resources_changed signal", "warning")
+        if not economy_manager.is_connected("resources_changed", self, "_on_resources_changed"):
+            var _resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
+            if _resources_connect_result != OK and _resources_connect_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect resources_changed signal", "warning")
         
-        var _income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
-        if _income_connect_result != OK and _income_connect_result != ERR_INVALID_PARAMETER:
-            debug_log("Failed to connect income_changed signal", "warning")
+        if not economy_manager.is_connected("income_changed", self, "_on_income_changed"):
+            var _income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
+            if _income_connect_result != OK and _income_connect_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect income_changed signal", "warning")
         
-        var _income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
-        if _income_tick_result != OK and _income_tick_result != ERR_INVALID_PARAMETER:
-            debug_log("Failed to connect income_tick signal", "warning")
+        if not economy_manager.is_connected("income_tick", self, "_on_income_tick"):
+            var _income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
+            if _income_tick_result != OK and _income_tick_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect income_tick signal", "warning")
         
-        var _bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
-        if _bounty_result != OK and _bounty_result != ERR_INVALID_PARAMETER:
-            debug_log("Failed to connect bounty_earned signal", "warning")
+        if not economy_manager.is_connected("bounty_earned", self, "_on_bounty_earned"):
+            var _bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+            if _bounty_result != OK and _bounty_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect bounty_earned signal", "warning")
     
     # Connect to Building Manager
-    # (Rest of connection code)
+    if building_manager:
+        if not building_manager.is_connected("building_placed", self, "_on_building_placed"):
+            var _building_placed_result = building_manager.connect("building_placed", self, "_on_building_placed")
+            if _building_placed_result != OK and _building_placed_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect building_placed signal", "warning")
+        
+        if not building_manager.is_connected("building_constructed", self, "_on_building_constructed"):
+            var _building_constructed_result = building_manager.connect("building_constructed", self, "_on_building_constructed")
+            if _building_constructed_result != OK and _building_constructed_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect building_constructed signal", "warning")
+        
+        if not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
+            var _building_destroyed_result = building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+            if _building_destroyed_result != OK and _building_destroyed_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect building_destroyed signal", "warning")
+        
+        if not building_manager.is_connected("building_selected", self, "_on_building_selected"):
+            var _building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
+            if _building_selected_result != OK and _building_selected_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect building_selected signal", "warning")
+        
+        if not building_manager.is_connected("building_deselected", self, "_on_building_deselected"):
+            var _building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
+            if _building_deselected_result != OK and _building_deselected_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect building_deselected signal", "warning")
+    
+    # Connect Game Manager signals
+    var current_game_manager = get_node_or_null("/root/GameManager")
+    if current_game_manager:
+        if not current_game_manager.is_connected("game_started", self, "_on_game_started"):
+            var _game_started_result = current_game_manager.connect("game_started", self, "_on_game_started")
+            if _game_started_result != OK and _game_started_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect game_started signal", "warning")
+        
+        if not current_game_manager.is_connected("game_ended", self, "_on_game_ended"):
+            var _game_ended_result = current_game_manager.connect("game_ended", self, "_on_game_ended")
+            if _game_ended_result != OK and _game_ended_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect game_ended signal", "warning")
+        
+        if not current_game_manager.is_connected("match_countdown_updated", self, "_on_match_countdown_updated"):
+            var _countdown_result = current_game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+            if _countdown_result != OK and _countdown_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect match_countdown_updated signal", "warning")
+    
+    # Connect Network Manager signals
+    var network_manager = get_node_or_null("/root/NetworkManager")
+    if network_manager:
+        if not network_manager.is_connected("client_connected", self, "_on_client_connected"):
+            var _client_connect_result = network_manager.connect("client_connected", self, "_on_client_connected")
+            if _client_connect_result != OK and _client_connect_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect client_connected signal", "warning")
+        
+        if not network_manager.is_connected("client_disconnected", self, "_on_client_disconnected"):
+            var _client_disconnect_result = network_manager.connect("client_disconnected", self, "_on_client_disconnected")
+            if _client_disconnect_result != OK and _client_disconnect_result != ERR_INVALID_PARAMETER:
+                debug_log("Failed to connect client_disconnected signal", "warning")
     
     # Connect our own worker command signal only if not already connected
     if not is_connected("worker_command_issued", self, "_emit_worker_command"):

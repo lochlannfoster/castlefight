@@ -79,12 +79,28 @@ func take_damage(amount: float, attacker = null) -> void:
         # Notify of attack
         _notify_under_attack()
 
-# Apply income bonus to the team
 func _apply_income_bonus() -> void:
-    var economy_manager = get_node("/root/GameManager/EconomyManager")
+    # Try multiple paths to find EconomyManager
+    var economy_manager = get_node_or_null("/root/EconomyManager")
+    
+    if not economy_manager:
+        # Try alternate paths
+        var game_manager = get_node_or_null("/root/GameManager")
+        if game_manager:
+            economy_manager = game_manager.get_node_or_null("EconomyManager")
+    
+    if not economy_manager:
+        # One more attempt via the service locator
+        var service_locator = get_node_or_null("/root/ServiceLocator")
+        if service_locator and service_locator.has_method("get_service"):
+            economy_manager = service_locator.get_service("EconomyManager")
+    
     if economy_manager:
         economy_manager.add_income(team, current_income_bonus)
         emit_signal("income_bonus_changed", current_income_bonus)
+    else:
+        # Failed to find EconomyManager, log warning
+        print("Warning: Could not find EconomyManager to apply income bonus")
 
 # Upgrade income generation
 func upgrade_income() -> bool:

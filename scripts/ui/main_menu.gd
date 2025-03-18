@@ -118,3 +118,11 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
         else:
             prefix += "[MainMenu]"
         print(prefix + " " + message)
+
+func create_debug_viewer():
+    # For debugging purposes - shows scene hierarchy
+    var debug_label = Label.new()
+    debug_label.name = "DebugViewer"
+    debug_label.text = "Scene structure debug view"
+    debug_label.visible = false # Hidden by default
+    add_child(debug_label)

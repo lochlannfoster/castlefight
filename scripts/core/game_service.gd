@@ -63,7 +63,7 @@ func _ready() -> void:
         debug_log(service_name + ": Ready")
     
     # Connect to tree_changed signal to handle service references
-    if get_tree():
+    if get_tree() and not get_tree().is_connected("tree_changed", self, "_on_tree_changed"):
         var _result = get_tree().connect("tree_changed", self, "_on_tree_changed")
 
 func initialize() -> void:

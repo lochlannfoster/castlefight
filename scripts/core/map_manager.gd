@@ -61,10 +61,19 @@ func _initialize_impl() -> void:
     # Get grid system reference
     grid_system = get_dependency("GridSystem")
     
-    # Create map display node
-    map_node = Node2D.new()
-    map_node.name = "MapDisplay"
-    add_child(map_node)
+    # Create map display node if needed
+    if is_instance_valid(map_node) and map_node.get_parent() != null:
+        # If map_node already has a parent, create a new one
+        map_node = Node2D.new()
+        map_node.name = "MapDisplay"
+    
+    if not is_instance_valid(map_node):
+        map_node = Node2D.new()
+        map_node.name = "MapDisplay"
+        
+    # Only add child if not already added to tree
+    if not map_node.is_inside_tree():
+        add_child(map_node)
     
     # Connect grid signals
     if grid_system:
@@ -401,68 +410,13 @@ func _is_position_buildable(pos: Vector2) -> bool:
 func _position_to_key(pos: Vector2) -> String:
     return str(int(pos.x)) + "_" + str(int(pos.y))
 
-# Update map visual display
-func _update_map_display() -> void:
-    # Clear existing display
-    for child in map_node.get_children():
-        child.queue_free()
-    
-    # Only show debug display in editor
-    if not Engine.editor_hint:
-        return
-    
-    # Create a visual representation of the map
-    for key in map_data.keys():
-        var cell_data = map_data[key]
-        var pos = cell_data.position
-        
-        var cell_rect = ColorRect.new()
-        cell_rect.rect_size = Vector2(16, 16)
-        cell_rect.rect_position = pos * 16
-        
-        match cell_data.terrain_type:
-            "team_a_base":
-                cell_rect.color = team_a_color
-            "team_b_base":
-                cell_rect.color = team_b_color
-            "neutral":
-                cell_rect.color = neutral_color
-        
-        map_node.add_child(cell_rect)
-    
-    # Draw lane markers
-    for lane in lanes:
-        for waypoint in lane.waypoints:
-            var marker = ColorRect.new()
-            marker.rect_size = Vector2(8, 8)
-            marker.rect_position = waypoint * 16 - Vector2(4, 4)
-            marker.color = Color(1, 1, 0) # Yellow
-            map_node.add_child(marker)
-    
-    # Draw start and HQ positions
-    var team_a_start_marker = ColorRect.new()
-    team_a_start_marker.rect_size = Vector2(10, 10)
-    team_a_start_marker.rect_position = team_a_start_pos * 16 - Vector2(5, 5)
-    team_a_start_marker.color = Color(0, 1, 0) # Green
-    map_node.add_child(team_a_start_marker)
-    
-    var team_b_start_marker = ColorRect.new()
-    team_b_start_marker.rect_size = Vector2(10, 10)
-    team_b_start_marker.rect_position = team_b_start_pos * 16 - Vector2(5, 5)
-    team_b_start_marker.color = Color(0, 1, 0) # Green
-    map_node.add_child(team_b_start_marker)
-    
-    var team_a_hq_marker = ColorRect.new()
-    team_a_hq_marker.rect_size = Vector2(12, 12)
-    team_a_hq_marker.rect_position = team_a_hq_pos * 16 - Vector2(6, 6)
-    team_a_hq_marker.color = Color(1, 1, 1) # White
-    map_node.add_child(team_a_hq_marker)
-    
-    var team_b_hq_marker = ColorRect.new()
-    team_b_hq_marker.rect_size = Vector2(12, 12)
-    team_b_hq_marker.rect_position = team_b_hq_pos * 16 - Vector2(6, 6)
-    team_b_hq_marker.color = Color(1, 1, 1) # White
-    map_node.add_child(team_b_hq_marker)
+func create_debug_viewer():
+    # For debugging purposes - shows scene hierarchy
+    var debug_label = Label.new()
+    debug_label.name = "DebugViewer"
+    debug_label.text = "Scene structure debug view"
+    debug_label.visible = false # Hidden by default
+    add_child(debug_label)
 
 # Signal handlers
 func _on_grid_initialized() -> void:
@@ -620,3 +574,66 @@ func initialize() -> void:
     var _map_config_result = load_map_config()
     
     print("MapManager: Initialization complete")
+
+# Add this function to scripts/core/map_manager.gd
+func _update_map_display() -> void:
+    # Clear existing display
+    for child in map_node.get_children():
+        child.queue_free()
+    
+    # Only show debug display in editor
+    if not Engine.editor_hint:
+        return
+    
+    # Create a visual representation of the map
+    for key in map_data.keys():
+        var cell_data = map_data[key]
+        var pos = cell_data.position
+        
+        var cell_rect = ColorRect.new()
+        cell_rect.rect_size = Vector2(16, 16)
+        cell_rect.rect_position = pos * 16
+        
+        match cell_data.terrain_type:
+            "team_a_base":
+                cell_rect.color = team_a_color
+            "team_b_base":
+                cell_rect.color = team_b_color
+            "neutral":
+                cell_rect.color = neutral_color
+        
+        map_node.add_child(cell_rect)
+    
+    # Draw lane markers
+    for lane in lanes:
+        for waypoint in lane.waypoints:
+            var marker = ColorRect.new()
+            marker.rect_size = Vector2(8, 8)
+            marker.rect_position = Vector2(waypoint.x, waypoint.y) * 16 - Vector2(4, 4)
+            marker.color = Color(1, 1, 0) # Yellow
+            map_node.add_child(marker)
+    
+    # Draw start and HQ positions
+    var team_a_start_marker = ColorRect.new()
+    team_a_start_marker.rect_size = Vector2(10, 10)
+    team_a_start_marker.rect_position = team_a_start_pos * 16 - Vector2(5, 5)
+    team_a_start_marker.color = Color(0, 1, 0) # Green
+    map_node.add_child(team_a_start_marker)
+    
+    var team_b_start_marker = ColorRect.new()
+    team_b_start_marker.rect_size = Vector2(10, 10)
+    team_b_start_marker.rect_position = team_b_start_pos * 16 - Vector2(5, 5)
+    team_b_start_marker.color = Color(0, 1, 0) # Green
+    map_node.add_child(team_b_start_marker)
+    
+    var team_a_hq_marker = ColorRect.new()
+    team_a_hq_marker.rect_size = Vector2(12, 12)
+    team_a_hq_marker.rect_position = team_a_hq_pos * 16 - Vector2(6, 6)
+    team_a_hq_marker.color = Color(1, 1, 1) # White
+    map_node.add_child(team_a_hq_marker)
+    
+    var team_b_hq_marker = ColorRect.new()
+    team_b_hq_marker.rect_size = Vector2(12, 12)
+    team_b_hq_marker.rect_position = team_b_hq_pos * 16 - Vector2(6, 6)
+    team_b_hq_marker.color = Color(1, 1, 1) # White
+    map_node.add_child(team_b_hq_marker)

@@ -497,6 +497,7 @@ func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> vo
     var selected_units = []
     
     for unit in selectables:
+        # Use global_position for accurate world position
         if rect.has_point(unit.global_position):
             selected_units.append(unit)
             
@@ -508,7 +509,7 @@ func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> vo
     
     # Deselect any previously selected units
     for unit in selectables:
-        if unit.has_method("is_selected") and unit.is_selected:
+        if unit.has_method("deselect"):
             unit.deselect()
     
     # If we found units, select the closest one
@@ -521,7 +522,7 @@ func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> vo
         
         # In debug mode, select closest
         if is_debug or use_debug_mode:
-            if closest_unit:
+            if closest_unit and closest_unit.has_method("select"):
                 closest_unit.select()
         else:
             # In normal mode, only select team's own workers
@@ -531,7 +532,7 @@ func _select_units_in_rectangle(rect: Rect2, use_debug_mode: bool = false) -> vo
                 current_team = um.current_team
                 
             for unit in selected_units:
-                if unit.team == current_team:
+                if unit.team == current_team and unit.has_method("select"):
                     unit.select()
                     break
 
@@ -563,21 +564,26 @@ func _unhandled_input(event: InputEvent) -> void:
                     
                     # Only do selection if we've moved the mouse enough
                     if rect.size.length() > 5:
-                        # Convert the screen rect to world coordinates
+                        # In Godot 3.5.3, we need to handle world-to-screen conversion ourselves
+                        # First, we need to get our camera instance
                         var camera = get_node_or_null("Camera2D")
-                        if camera:
-                            var canvas_transform = get_canvas_transform()
-                            var top_left = canvas_transform.affine_inverse().xform(rect.position)
-                            var bottom_right = canvas_transform.affine_inverse().xform(rect.position + rect.size)
+                        if not camera:
+                            camera = get_node_or_null("GameCamera")
+                        
+                        if camera and camera is Camera2D:
+                            # Convert screen space to world space
+                            var transform = get_viewport().get_canvas_transform()
+                            var world_top_left = transform.affine_inverse().xform(rect.position)
+                            var world_bottom_right = transform.affine_inverse().xform(rect.position + rect.size)
+                            var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
                             
-                            var world_rect = Rect2(top_left, bottom_right - top_left)
-                            # Select units in the world rectangle
+                            # Select units in this world rectangle
                             _select_units_in_rectangle(world_rect, false)
                         else:
-                            # No camera, try direct conversion
+                            # Fallback if no camera is found
                             _select_units_in_rectangle(rect, false)
                     else:
-                        # Just a click, select unit directly at world position
+                        # Just a click, select unit directly at position
                         var world_pos = get_global_mouse_position()
                         _select_unit_at_position(world_pos, false)
                 
@@ -591,7 +597,6 @@ func _unhandled_input(event: InputEvent) -> void:
             draw_selection = true
             update() # Request redraw to show selection box
 
-# Add this function to draw selection rectangle
 func _draw() -> void:
     if draw_selection and selection_start != null:
         var current_mouse_pos = get_viewport().get_mouse_position()
@@ -603,5 +608,6 @@ func _draw() -> void:
         )
         
         # Draw selection rectangle with green outline
+        # Note that these coordinates are in canvas space, not world space
         draw_rect(rect, Color(0, 1, 0, 0.2), true) # Fill
         draw_rect(rect, Color(0, 1, 0, 0.8), false) # Border
