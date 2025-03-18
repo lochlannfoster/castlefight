@@ -1110,6 +1110,17 @@ func change_scene(scene_path: String, _transition: bool = false) -> bool:
     # Debug output to track scene changes
     debug_log("Attempting to change scene to: " + scene_path, "info", "GameManager")
     
+    # Make sure scene_path is properly formatted (no duplicate res:/ prefixes)
+    if scene_path.begins_with("res:/res:"):
+        scene_path = scene_path.replace("res:/res:", "res:")
+    
+    # Normalize the path to ensure it's correctly formatted
+    if not scene_path.begins_with("res://"):
+        if scene_path.begins_with("res:/"):
+            scene_path = "res://" + scene_path.substr(5)
+        else:
+            scene_path = "res://" + scene_path
+    
     # Deactivate fog of war when leaving the game scene
     var fog_of_war = get_node_or_null("/root/FogOfWarManager")
     if fog_of_war and fog_of_war.has_method("set_fog_active"):
@@ -1229,3 +1240,49 @@ func _check_scene_structure():
                 background.rect_position = Vector2(-2000, -1500)
                 background.color = Color(0.2, 0.3, 0.2)
                 ground.add_child(background)
+
+func verify_script_references() -> void:
+    debug_log("Verifying script references in scenes...", "info", "GameManager")
+    
+    # List of critical scenes to check
+    var scenes_to_check = [
+        "res://scenes/game/game.tscn",
+        "res://scenes/main_menu/main_menu.tscn",
+        "res://scenes/lobby/lobby.tscn"
+    ]
+    
+    for scene_path in scenes_to_check:
+        var file = File.new()
+        if file.file_exists(scene_path):
+            # Load the scene
+            var scene = load(scene_path)
+            if scene:
+                var instance = scene.instance()
+                
+                # Check if it has a script reference
+                if instance.get_script() == null:
+                    debug_log("Scene missing script reference: " + scene_path, "warning", "GameManager")
+                    
+                    # Try to find and assign the proper script
+                    var script_path = ""
+                    if "game.tscn" in scene_path:
+                        script_path = "res://scripts/game/game_scene.gd"
+                    elif "main_menu.tscn" in scene_path:
+                        script_path = "res://scripts/ui/main_menu.gd"
+                    elif "lobby.tscn" in scene_path:
+                        script_path = "res://scripts/ui/lobby_ui.gd"
+                    
+                    if script_path != "":
+                        var script = load(script_path)
+                        if script:
+                            # We can't modify the scene here directly,
+                            # but we can log which scenes need fixing
+                            debug_log("Fix required: Scene " + scene_path +
+                                      " should use script " + script_path,
+                                      "warning", "GameManager")
+                    
+                instance.free()
+        else:
+            debug_log("Scene not found: " + scene_path, "warning", "GameManager")
+    
+    debug_log("Script reference verification complete", "info", "GameManager")
