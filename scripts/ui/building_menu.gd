@@ -20,6 +20,9 @@ var economy_manager
 var building_manager
 var tech_tree_manager
 
+# Debug mode flags
+var ui_debug_mode: bool = false
+
 # Ready function
 func _ready() -> void:
     # Get node references
@@ -34,15 +37,15 @@ func _ready() -> void:
         if not panel:
             panel = Panel.new()
             panel.name = "Panel"
-            panel.rect_position = Vector2(10, 10)
-            panel.rect_size = Vector2(400, 300)
+            panel.rect_size = Vector2(200, 250)
+            panel.rect_position = Vector2(10, get_viewport_rect().size.y - 260) # Bottom left
             add_child(panel)
         
         building_grid = GridContainer.new()
         building_grid.name = "BuildingGrid"
         building_grid.columns = 3
         building_grid.rect_position = Vector2(10, 50)
-        building_grid.rect_size = Vector2(380, 230)
+        building_grid.rect_size = Vector2(180, 180)
         panel.add_child(building_grid)
     
     if not close_button:
@@ -51,7 +54,7 @@ func _ready() -> void:
         close_button = Button.new()
         close_button.name = "CloseButton"
         close_button.text = "X"
-        close_button.rect_position = Vector2(370, 10)
+        close_button.rect_position = Vector2(180, 10)
         close_button.rect_size = Vector2(20, 20)
         panel.add_child(close_button)
     
@@ -61,7 +64,7 @@ func _ready() -> void:
         title_label = Label.new()
         title_label.name = "TitleLabel"
         title_label.rect_position = Vector2(10, 10)
-        title_label.rect_size = Vector2(380, 30)
+        title_label.rect_size = Vector2(170, 30)
         title_label.text = "Available Buildings"
         title_label.align = Label.ALIGN_CENTER
         panel.add_child(title_label)
@@ -78,41 +81,28 @@ func _ready() -> void:
         building_manager = game_manager.building_manager
         tech_tree_manager = game_manager.get_node_or_null("TechTreeManager")
     
+    # Check for debug mode
+    var network_manager = get_node_or_null("/root/GameManager/NetworkManager")
+    if network_manager:
+        ui_debug_mode = network_manager.debug_mode
+    
     # Hide the menu initially
     visible = false
+
+# Show the menu
+func show_menu(team: int) -> void:
+    populate_buildings(team)
+    visible = true
+    title_label.text = "Available Buildings"
+
+# Hide the menu
+func hide_menu() -> void:
+    visible = false
+    emit_signal("menu_closed")
 
 # Populate the menu with available buildings
 func populate_buildings(team: int) -> void:
     current_team = team
-    
-    # Make sure the building grid exists
-    if not building_grid:
-        print("Building grid not found, creating it")
-        var panel = get_node_or_null("Panel")
-        if not panel:
-            panel = Panel.new()
-            panel.name = "Panel"
-            panel.rect_position = Vector2(10, 10)
-            panel.rect_size = Vector2(400, 300)
-            add_child(panel)
-        
-        building_grid = GridContainer.new()
-        building_grid.name = "BuildingGrid"
-        building_grid.columns = 3
-        building_grid.rect_position = Vector2(10, 50)
-        building_grid.rect_size = Vector2(380, 230)
-        panel.add_child(building_grid)
-    
-    # Make sure title label exists
-    if not title_label:
-        var panel = get_node_or_null("Panel")
-        title_label = Label.new()
-        title_label.name = "TitleLabel"
-        title_label.rect_position = Vector2(10, 10)
-        title_label.rect_size = Vector2(380, 30)
-        title_label.text = "Available Buildings"
-        title_label.align = Label.ALIGN_CENTER
-        panel.add_child(title_label)
     
     # Clear existing buttons
     for child in building_grid.get_children():
@@ -120,43 +110,8 @@ func populate_buildings(team: int) -> void:
     
     visible_buildings.clear()
     
-    # Get available buildings
-    var available_buildings = []
-    
-    if building_manager:
-        available_buildings = building_manager.get_available_buildings(team)
-    else:
-        # Fallback - provide some test buildings if building manager isn't available
-        available_buildings = [
-            {
-                "id": "barracks",
-                "name": "Barracks",
-                "cost": 100,
-                "size": Vector2(2, 2),
-                "description": "Trains basic infantry units"
-            },
-            {
-                "id": "lumber_mill",
-                "name": "Lumber Mill",
-                "cost": 80,
-                "size": Vector2(2, 2),
-                "description": "Increases wood income"
-            },
-            {
-                "id": "farm",
-                "name": "Farm",
-                "cost": 50,
-                "size": Vector2(1, 1),
-                "description": "Increases supply limit"
-            },
-            {
-                "id": "hq",
-                "name": "Headquarters",
-                "cost": 0,
-                "size": Vector2(3, 3),
-                "description": "Main base structure"
-            }
-        ]
+    # Get available buildings from building manager
+    var available_buildings = building_manager.get_available_buildings(team)
     
     # Create buttons for each building
     for i in range(available_buildings.size()):
@@ -177,27 +132,56 @@ func populate_buildings(team: int) -> void:
         
         button.hint_tooltip = tooltip
         
-        # Add cost indicator if economy manager is available
-        if economy_manager:
-            var can_afford = economy_manager.can_afford_building(team, building_data.id)
-            if not can_afford:
-                button.modulate = Color(1, 0.5, 0.5)  # Red tint if can't afford
+        # Add cost indicator
+        var can_afford = economy_manager.can_afford_building(team, building_data.id)
+        if not can_afford:
+            button.modulate = Color(1, 0.5, 0.5) # Red tint if can't afford
+        
+        # Debug mode handling
+        if ui_debug_mode:
+            button.modulate = Color(1, 1, 1) # Full color in debug mode
         
         # Connect button press
         button.connect("pressed", self, "_on_building_button_pressed", [i])
         
         building_grid.add_child(button)
 
-# Show the menu
-func show_menu(team: int) -> void:
-    populate_buildings(team)
-    visible = true
-    title_label.text = "Available Buildings"
-
-# Hide the menu
-func hide_menu() -> void:
-    visible = false
-    emit_signal("menu_closed")
+# Populate building menu with available upgrades
+func populate_upgrades(team: int) -> void:
+    current_team = team
+    
+    # Clear existing buttons
+    for child in building_grid.get_children():
+        child.queue_free()
+    
+    visible_buildings.clear()
+    
+    # Get available upgrades
+    var available_upgrades = tech_tree_manager.get_available_upgrades(team)
+    
+    # Create buttons for each upgrade
+    for i in range(available_upgrades.size()):
+        var upgrade_data = available_upgrades[i]
+        visible_buildings.append(upgrade_data)
+        
+        var button = Button.new()
+        button.text = upgrade_data.name
+        
+        # Format tooltip
+        var tooltip = upgrade_data.description if upgrade_data.has("description") else ""
+        tooltip += "\nBuilding: " + upgrade_data.building
+        
+        button.hint_tooltip = tooltip
+        
+        # Add indicator for research status
+        var is_researchable = tech_tree_manager.can_research_upgrade(team, upgrade_data.id)
+        if not is_researchable:
+            button.modulate = Color(0.5, 0.5, 0.5) # Gray out if not researchable
+        
+        # Connect button press
+        button.connect("pressed", self, "_on_upgrade_button_pressed", [i])
+        
+        building_grid.add_child(button)
 
 # Button press handlers
 func _on_building_button_pressed(index: int) -> void:
@@ -205,6 +189,14 @@ func _on_building_button_pressed(index: int) -> void:
         var building_data = visible_buildings[index]
         emit_signal("building_selected", building_data.id)
         hide_menu()
+
+func _on_upgrade_button_pressed(index: int) -> void:
+    if index >= 0 and index < visible_buildings.size():
+        var upgrade_data = visible_buildings[index]
+        # Attempt to research the upgrade
+        var success = tech_tree_manager.research_upgrade(current_team, upgrade_data.id)
+        if success:
+            hide_menu()
 
 func _on_close_button_pressed() -> void:
     hide_menu()
@@ -214,3 +206,21 @@ func _input(event: InputEvent) -> void:
     if visible and event is InputEventKey:
         if event.pressed and event.scancode == KEY_ESCAPE:
             hide_menu()
+
+# Additional input handlers
+func _unhandled_input(event: InputEvent) -> void:
+    # Right-click to close menu
+    if visible and event is InputEventMouseButton:
+        if event.button_index == BUTTON_RIGHT and event.pressed:
+            hide_menu()
+
+# Debugging and error handling
+func _get_configuration_warning() -> String:
+    if not building_manager:
+        return "No BuildingManager found. Menu may not function correctly."
+    return ""
+
+# Custom debug logging
+func _print_debug(message: String) -> void:
+    if ui_debug_mode:
+        print("[BuildingMenu Debug] ", message)
