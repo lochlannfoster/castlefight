@@ -590,6 +590,33 @@ func _unhandled_input(event: InputEvent) -> void:
                 is_selecting = false
                 draw_selection = false
                 update() # Redraw to clear selection box
+        
+        # Add right-click handling for movement
+        elif event.button_index == BUTTON_RIGHT and event.pressed:
+            # Get selected worker and issue move command
+            var current_ui_manager = get_node_or_null("/root/UIManager")
+            var selected_worker = null
+            
+            if current_ui_manager:
+                selected_worker = current_ui_manager.selected_worker
+            
+            if selected_worker and selected_worker.has_method("move_to"):
+                # Get the target position in world space
+                var target_pos = get_global_mouse_position()
+                selected_worker.move_to(target_pos)
+                
+                # If we have worker_command_issued signal, emit it
+                if current_ui_manager and current_ui_manager.has_signal("worker_command_issued"):
+                    current_ui_manager.emit_signal("worker_command_issued", "move", {
+                        "position": target_pos,
+                        "options": {}
+                    })
+
+    elif event is InputEventMouseMotion and is_selecting:
+        # If mouse has moved enough, start drawing the selection box
+        if selection_start.distance_to(event.position) > 5:
+            draw_selection = true
+            update() # Request redraw to show selection box
 
     elif event is InputEventMouseMotion and is_selecting:
         # If mouse has moved enough, start drawing the selection box
@@ -600,14 +627,19 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw() -> void:
     if draw_selection and selection_start != null:
         var current_mouse_pos = get_viewport().get_mouse_position()
+        
+        # Convert screen coordinates to local coordinates
+        var local_start = get_viewport_transform().affine_inverse().xform(selection_start)
+        var local_current = get_viewport_transform().affine_inverse().xform(current_mouse_pos)
+        
+        # Create rectangle in local coordinates
         var rect = Rect2(
-            min(selection_start.x, current_mouse_pos.x),
-            min(selection_start.y, current_mouse_pos.y),
-            abs(current_mouse_pos.x - selection_start.x),
-            abs(current_mouse_pos.y - selection_start.y)
+            min(local_start.x, local_current.x),
+            min(local_start.y, local_current.y),
+            abs(local_current.x - local_start.x),
+            abs(local_current.y - local_start.y)
         )
         
         # Draw selection rectangle with green outline
-        # Note that these coordinates are in canvas space, not world space
         draw_rect(rect, Color(0, 1, 0, 0.2), true) # Fill
         draw_rect(rect, Color(0, 1, 0, 0.8), false) # Border
