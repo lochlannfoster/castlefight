@@ -210,24 +210,24 @@ func _setup_building_ghost() -> void:
     building_ghost.visible = false
 
 func _input(event: InputEvent) -> void:
-    if event is InputEventKey and event.pressed:
-        match event.scancode:
-            KEY_G: # Toggle grid visualization
-                var game_manager = get_node_or_null("/root/GameManager")
-                if game_manager and game_manager.has_method("toggle_grid_visualization"):
-                    game_manager.toggle_grid_visualization()
+    # Skip if not selected or not placing a building
+    if !is_selected or !is_placing_building:
+        return
+        
+    # Handle mouse buttons for building placement
+    if event is InputEventMouseButton and event.pressed:
+        if event.button_index == BUTTON_LEFT:
+            # Left click - try to place the building
+            var mouse_pos = get_global_mouse_position()
+            _try_place_building(mouse_pos)
+        elif event.button_index == BUTTON_RIGHT:
+            # Right click - cancel building placement
+            cancel_building_placement()
+            emit_signal("building_placement_cancelled")
             
-            KEY_R: # Toggle auto-repair
-                if is_selected and has_method("toggle_auto_repair"):
-                    toggle_auto_repair()
-            
-            KEY_ESCAPE:
-                # Handle escape key, e.g., to cancel building placement
-                var current_ui_manager = get_node_or_null("/root/UIManager")
-                if current_ui_manager and current_ui_manager.selected_worker:
-                    var worker = current_ui_manager.selected_worker
-                    if worker.has_method("cancel_building_placement") and worker.is_placing_building:
-                        worker.cancel_building_placement()
+    # Continue updating building preview during mouse movement
+    if event is InputEventMouseMotion:
+        _update_building_preview()
 
     # Mouse button handling
     if event is InputEventMouseButton:
@@ -385,8 +385,10 @@ func _handle_movement(_delta: float) -> void:
         # Try the new direction
         velocity = move_and_slide(velocity)
 
-# Update building preview during placement
 func _update_building_preview() -> void:
+    if not is_placing_building or not building_ghost:
+        return
+        
     var mouse_pos = get_global_mouse_position()
     
     # Get grid position
@@ -399,8 +401,13 @@ func _update_building_preview() -> void:
     # Check if placement is valid
     can_place = _can_place_at_position(grid_pos)
     
+    # Check if worker is close enough to place
+    var distance_to_place = global_position.distance_to(world_pos)
+    if distance_to_place > placement_range:
+        can_place = false
+    
     # Update ghost color
-    var ghost_visual = building_ghost.get_node("GhostVisual")
+    var ghost_visual = building_ghost.get_node_or_null("GhostVisual")
     if ghost_visual:
         ghost_visual.color = Color(0, 1, 0, 0.5) if can_place else Color(1, 0, 0, 0.5)
 
@@ -431,10 +438,12 @@ func _try_place_building(position: Vector2) -> void:
     # Check if worker is close enough to place
     var distance_to_place = global_position.distance_to(position)
     if distance_to_place > placement_range:
-        # Too far to place, move closer
-        target_position = position
-        is_moving_to_target = true
-        current_target_building = true # Flag that we're moving to place a building
+        debug_log("Moving closer to place building", "info")
+        # Too far to place, move closer first
+        move_to(position, {
+            "is_building_target": true,
+            "cancel_current_action": false # Don't cancel the building placement
+        })
         return
     
     # Check if placement is valid
@@ -443,6 +452,10 @@ func _try_place_building(position: Vector2) -> void:
         return
     
     # Check if we can afford it
+    if not economy_manager or not economy_manager.has_method("can_afford_building"):
+        debug_log("Cannot place building: Economy manager not available", "warning")
+        return
+        
     if not economy_manager.can_afford_building(team, current_building_type):
         debug_log("Cannot place building: Cannot afford", "warning")
         return
@@ -451,6 +464,7 @@ func _try_place_building(position: Vector2) -> void:
     var building = building_manager.place_building(current_building_type, position, team)
     
     if building:
+        debug_log("Successfully placed building: " + current_building_type, "info")
         emit_signal("building_placement_completed", current_building_type, position)
         
         # Stop placement mode

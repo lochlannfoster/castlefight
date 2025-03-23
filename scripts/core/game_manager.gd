@@ -404,17 +404,36 @@ func ensure_core_systems() -> void:
 func _create_player_workers() -> void:
     debug_log("Initiating player worker creation process", "info", "GameManager")
     
-    # First get or create the Units container - find it at different possible paths
-    var units_container = null
+    # Get grid system for position calculations
+    var grid_system_ref = get_node_or_null("/root/GridSystem")
+    var base_width = 20 # Base width for each team's territory
+    var map_width = 120 # Should match grid_width
     
-    # Try to find units container in current scene
+    # Position workers near the HQ positions
+    var team_a_pos = Vector2(base_width / 2 + 3, grid_system_ref.grid_height / 2)
+    var team_b_pos = Vector2(map_width - base_width / 2 - 3, grid_system_ref.grid_height / 2)
+    
+    # Convert to world positions
+    if grid_system_ref:
+        team_a_pos = grid_system_ref.grid_to_world(team_a_pos)
+        team_b_pos = grid_system_ref.grid_to_world(team_b_pos)
+    else:
+        # Fallback if grid system not available
+        team_a_pos = Vector2(200, 300)
+        team_b_pos = Vector2(900, 300)
+    
+    debug_log("Creating workers at positions: " + str(team_a_pos) + " and " + str(team_b_pos), "info")
+    
+    # First get or create the Units container
+    var units_container = null
     var current_scene = get_tree().current_scene
+    
     if current_scene:
         units_container = current_scene.get_node_or_null("Units")
         if not units_container:
             units_container = current_scene.get_node_or_null("GameWorld/Units")
         
-        # If still not found, try to create at top level
+        # If still not found, create at top level
         if not units_container:
             debug_log("Creating Units container node at top level", "info", "GameManager")
             units_container = Node2D.new()
@@ -425,46 +444,23 @@ func _create_player_workers() -> void:
         debug_log("No current scene found!", "error", "GameManager")
         return
     
-    # Ensure the worker scene exists
+    # Create worker instances at the new positions
     var worker_scene_path = "res://scenes/units/worker.tscn"
-    var file = File.new()
-    if not file.file_exists(worker_scene_path):
-        debug_log("Worker scene doesn't exist at: " + worker_scene_path, "error", "GameManager")
-        return
-    
-    # Direct worker creation method
     var worker_scene = load(worker_scene_path)
     if worker_scene:
-        # Create worker for each team
-        var team_positions = [
-            Vector2(250, 300), # Team A position
-            Vector2(600, 300) # Team B position
-        ]
+        # Create Team A worker
+        var worker_a = worker_scene.instance()
+        worker_a.team = 0
+        worker_a.position = team_a_pos
+        units_container.add_child(worker_a)
         
-        for team_idx in range(2):
-            var spawn_position = team_positions[team_idx]
-            var worker = worker_scene.instance()
-            
-            # Set worker properties
-            worker.team = team_idx
-            worker.position = spawn_position
-            
-            # Add to scene
-            units_container.add_child(worker)
-            worker.owner = current_scene
-            
-            debug_log("Worker created for team " + str(team_idx) + " at position: " + str(spawn_position), "info", "GameManager")
-            
-            # Make worker visible
-            worker.visible = true
-            
-            # Add to proper group
-            if not worker.is_in_group("units"):
-                worker.add_to_group("units")
-            
-            # If we're in debug mode, store this worker for the corresponding player
-            if debug_mode and players.has(team_idx + 1):
-                players[team_idx + 1]["worker"] = worker
+        # Create Team B worker
+        var worker_b = worker_scene.instance()
+        worker_b.team = 1
+        worker_b.position = team_b_pos
+        units_container.add_child(worker_b)
+        
+        debug_log("Workers created for both teams", "info", "GameManager")
     else:
         debug_log("Failed to load worker scene", "error", "GameManager")
 
@@ -477,14 +473,24 @@ func safe_get_node(path):
 func _create_starting_buildings() -> void:
     debug_log("Creating starting buildings...", "info", "GameManager")
     
-    # Force creation of headquarters for debugging
-    var hq_position_team_a = Vector2(200, 300) # Fixed position for visibility
-    var hq_position_team_b = Vector2(600, 300) # Fixed position for visibility
+    # Get map dimensions and base sizes from map manager or grid system
+    var grid_system_ref = get_node_or_null("/root/GridSystem")
+    var map_width = 120 # Should match grid_width from grid_system
+    var base_width = 20 # Base width for each team's territory
+    
+    # Calculate HQ positions at the center of each team's buildable area
+    var hq_position_team_a = Vector2(base_width / 2, grid_system_ref.grid_height / 2)
+    var hq_position_team_b = Vector2(map_width - base_width / 2, grid_system_ref.grid_height / 2)
     
     # Add direct debug output
-    print("ATTEMPTING TO CREATE HQ AT: " + str(hq_position_team_a) + " and " + str(hq_position_team_b))
+    print("CREATING HQ AT: " + str(hq_position_team_a) + " and " + str(hq_position_team_b))
     
-    # Create Team A HQ directly with scene instantiation as fallback
+    # Convert grid positions to world positions
+    if grid_system_ref:
+        hq_position_team_a = grid_system_ref.grid_to_world(hq_position_team_a)
+        hq_position_team_b = grid_system_ref.grid_to_world(hq_position_team_b)
+    
+    # Create Team A HQ directly with scene instantiation
     var hq_scene = load("res://scenes/buildings/hq_building.tscn")
     if hq_scene:
         var hq_a = hq_scene.instance()
@@ -500,7 +506,7 @@ func _create_starting_buildings() -> void:
             
         buildings_container.add_child(hq_a)
         register_headquarters(hq_a, 0)
-        debug_log("Team A headquarters placed using direct instantiation", "info", "GameManager")
+        debug_log("Team A headquarters placed at " + str(hq_position_team_a), "info", "GameManager")
         
         # Do the same for Team B
         var hq_b = hq_scene.instance()
@@ -508,7 +514,7 @@ func _create_starting_buildings() -> void:
         hq_b.position = hq_position_team_b
         buildings_container.add_child(hq_b)
         register_headquarters(hq_b, 1)
-        debug_log("Team B headquarters placed using direct instantiation", "info", "GameManager")
+        debug_log("Team B headquarters placed at " + str(hq_position_team_b), "info", "GameManager")
     else:
         debug_log("Failed to load headquarters scene", "error", "GameManager")
 

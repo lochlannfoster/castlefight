@@ -103,8 +103,21 @@ func _ready() -> void:
         debug_log("CRITICAL: ServiceLocator not found! Check Project Settings.", "error")
         return
     
+ # Add fullscreen toggle input action
+    if not InputMap.has_action("ui_fullscreen"):
+        InputMap.add_action("ui_fullscreen")
+        var event = InputEventKey.new()
+        event.scancode = KEY_F11
+        event.pressed = true
+        InputMap.action_add_event("ui_fullscreen", event)
+    
+    # Setup mouse locking
+    _setup_mouse_locking()
+        
     # Initialize services
     service_locator.initialize_all_services()
+    
+    # Rest of your existing _ready function...
     
     # Retrieve services with precise logging
     var services_to_retrieve = {
@@ -643,3 +656,40 @@ func _draw() -> void:
         # Draw selection rectangle with green outline
         draw_rect(rect, Color(0, 1, 0, 0.2), true) # Fill
         draw_rect(rect, Color(0, 1, 0, 0.8), false) # Border
+
+func _setup_mouse_locking() -> void:
+    debug_log("Setting up mouse locking for fullscreen mode", "info")
+    
+    # Set up mouse confinement based on current fullscreen state
+    if OS.window_fullscreen:
+        Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
+        debug_log("Game is fullscreen - confining mouse to window", "info")
+    else:
+        Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+        debug_log("Game is windowed - mouse is free to move", "info")
+    
+    # Since we can't connect to window_fullscreen_changed, we'll check in _process
+    set_process(true)
+
+func _on_fullscreen_changed(fullscreen: bool) -> void:
+    debug_log("Fullscreen mode changed to: " + str(fullscreen), "info")
+    
+    if fullscreen:
+        Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
+        debug_log("Confining mouse to window", "info")
+    else:
+        Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+        debug_log("Freeing mouse from window confinement", "info")
+
+func _process(_delta: float) -> void:
+    # Check for F11 key press to toggle fullscreen
+    if Input.is_action_just_pressed("ui_fullscreen") or Input.is_key_pressed(KEY_F11):
+        OS.window_fullscreen = !OS.window_fullscreen
+        
+        # Update mouse mode based on new fullscreen state
+        if OS.window_fullscreen:
+            Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
+            debug_log("Switched to fullscreen - confining mouse to window", "info")
+        else:
+            Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+            debug_log("Switched to windowed - freeing mouse", "info")

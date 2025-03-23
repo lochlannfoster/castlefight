@@ -4,9 +4,9 @@ extends GameService
 signal grid_initialized
 
 # Grid dimensions
-var grid_width: int = 40 # Number of cells horizontally
-var grid_height: int = 30 # Number of cells vertically
-var cell_size: Vector2 = Vector2(64, 32) # Size of each cell for isometric grid
+var grid_width: int = 120 # Increased from 40 to make the neutral zone larger
+var grid_height: int = 30 # Keep same height
+var cell_size: Vector2 = Vector2(64, 32) # Size of each cell for isometric gri
 
 # Grid data storage
 var grid_cells: Dictionary = {} # Stores information about each cell: position, occupancy, etc.

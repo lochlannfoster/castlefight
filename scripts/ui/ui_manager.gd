@@ -939,13 +939,12 @@ func set_current_team(team: int) -> void:
     update_resource_display()
     update_income_display()
 
-# Select a worker
 func select_worker(worker) -> void:
     if selected_worker == worker:
         return
         
     # Check if this worker should be selectable in non-debug mode
-    var network_manager = get_node_or_null("/root/GameManager/NetworkManager")
+    var network_manager = get_node_or_null("/root/NetworkManager")
     var is_debug_mode = network_manager and network_manager.debug_mode
     
     if not is_debug_mode:

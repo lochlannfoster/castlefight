@@ -61,26 +61,28 @@ func _initialize_impl() -> void:
     # Get grid system reference
     grid_system = get_dependency("GridSystem")
     
-    # Create map display node if needed
-    if is_instance_valid(map_node) and map_node.get_parent() != null:
-        # If map_node already has a parent, create a new one
-        map_node = Node2D.new()
-        map_node.name = "MapDisplay"
+    # Set expanded map dimensions
+    map_width = 120 # Increased for a longer neutral zone
+    map_height = 30 # Keep same height
     
+    # Create map display node only if it doesn't exist
     if not is_instance_valid(map_node):
         map_node = Node2D.new()
         map_node.name = "MapDisplay"
         
-    # Only add child if not already added to tree
-    if not map_node.is_inside_tree():
-        add_child(map_node)
+        # Only add child if not already added to tree
+        if not map_node.is_inside_tree() and is_inside_tree():
+            add_child(map_node)
     
-    # Connect grid signals
-    if grid_system:
+    # Connect grid signals only if not already connected
+    if grid_system and not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
         var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
     
     # Generate default map
     generate_map()
+    
+    # Apply ground textures
+    apply_ground_textures()
     
     debug_log("Map manager initialized", "info")
 
@@ -92,16 +94,21 @@ func generate_map() -> void:
     lanes.clear()
     map_obstacles.clear()
     
-    # Define team bases
-    team_a_base_rect = Rect2(0, 0, base_size, map_height)
-    team_b_base_rect = Rect2(map_width - base_size, 0, base_size, map_height)
-    neutral_zone_rect = Rect2(base_size, 0, map_width - 2 * base_size, map_height)
+    # Define team bases (keep their size the same)
+    var base_width = base_size # Original base width
+    team_a_base_rect = Rect2(0, 0, base_width, map_height)
+    team_b_base_rect = Rect2(map_width - base_width, 0, base_width, map_height)
     
-    # Define starting positions and HQ positions
-    team_a_start_pos = Vector2(float(base_size) / 2.0, float(map_height) / 2.0)
-    team_b_start_pos = Vector2(float(map_width) - float(base_size) / 2.0, float(map_height) / 2.0)
-    team_a_hq_pos = Vector2(float(base_size) / 4.0, float(map_height) / 2.0)
-    team_b_hq_pos = Vector2(float(map_width) - float(base_size) / 4.0, float(map_height) / 2.0)
+    # Extend the neutral zone to be 7 times larger
+    neutral_zone_rect = Rect2(base_width, 0, map_width - 2 * base_width, map_height)
+    
+    # Define HQ positions at the center of each team's base
+    team_a_hq_pos = Vector2(float(base_width) / 2.0, float(map_height) / 2.0)
+    team_b_hq_pos = Vector2(float(map_width) - float(base_width) / 2.0, float(map_height) / 2.0)
+    
+    # Define starting positions near the HQs
+    team_a_start_pos = team_a_hq_pos + Vector2(base_width / 4, 0)
+    team_b_start_pos = team_b_hq_pos - Vector2(base_width / 4, 0)
     
     # Define lanes
     _generate_lanes()
@@ -637,3 +644,53 @@ func _update_map_display() -> void:
     team_b_hq_marker.rect_position = team_b_hq_pos * 16 - Vector2(6, 6)
     team_b_hq_marker.color = Color(1, 1, 1) # White
     map_node.add_child(team_b_hq_marker)
+
+# Apply ground textures to the map
+func apply_ground_textures() -> void:
+    debug_log("Applying ground textures to map", "info")
+    
+    # Create or get the Ground node
+    var ground_node = get_node_or_null("Ground")
+    if ground_node:
+        # Clear existing children
+        for child in ground_node.get_children():
+            child.queue_free()
+    else:
+        ground_node = Node2D.new()
+        ground_node.name = "Ground"
+        add_child(ground_node)
+    
+    # Create colored rectangles for each territory
+    var team_a_rect = ColorRect.new()
+    team_a_rect.color = Color(0, 0, 0.8, 1.0) # Blue
+    team_a_rect.rect_size = Vector2(base_size * grid_system.cell_size.x,
+                                    map_height * grid_system.cell_size.y)
+    team_a_rect.rect_position = grid_system.grid_to_world(Vector2(0, 0))
+    ground_node.add_child(team_a_rect)
+    
+    var neutral_rect = ColorRect.new()
+    neutral_rect.color = Color(0.5, 0.5, 0.5, 1.0) # Gray
+    neutral_rect.rect_size = Vector2((map_width - 2 * base_size) * grid_system.cell_size.x,
+                                     map_height * grid_system.cell_size.y)
+    neutral_rect.rect_position = grid_system.grid_to_world(Vector2(base_size, 0))
+    ground_node.add_child(neutral_rect)
+    
+    var team_b_rect = ColorRect.new()
+    team_b_rect.color = Color(0.8, 0, 0, 1.0) # Red
+    team_b_rect.rect_size = Vector2(base_size * grid_system.cell_size.x,
+                                    map_height * grid_system.cell_size.y)
+    team_b_rect.rect_position = grid_system.grid_to_world(Vector2(map_width - base_size, 0))
+    ground_node.add_child(team_b_rect)
+    
+    debug_log("Ground textures applied", "info")
+
+# Helper function to create colored texture placeholders
+func _create_colored_texture(color: Color) -> ImageTexture:
+    var image = Image.new()
+    image.create(64, 64, false, Image.FORMAT_RGBA8)
+    image.fill(color)
+    
+    var texture = ImageTexture.new()
+    texture.create_from_image(image)
+    
+    return texture
