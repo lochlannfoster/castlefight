@@ -2,18 +2,18 @@
 extends Camera2D
 
 # Camera movement settings
-export var pan_speed: float = 500.0
-export var edge_size: int = 20
-export var zoom_speed: float = 0.1
-export var min_zoom: float = 0.5
-export var max_zoom: float = 2.0
-export var keyboard_pan_speed: float = 500.0
+@export var pan_speed: float = 500.0
+@export var edge_size: int = 20
+@export var zoom_speed: float = 0.1
+@export var min_zoom: float = 0.5
+@export var max_zoom: float = 2.0
+@export var keyboard_pan_speed: float = 500.0
 
 # Camera boundaries
-export var boundary_left: float = -1000.0
-export var boundary_right: float = 3000.0
-export var boundary_top: float = -1000.0
-export var boundary_bottom: float = 2000.0
+@export var boundary_left: float = -1000.0
+@export var boundary_right: float = 3000.0
+@export var boundary_top: float = -1000.0
+@export var boundary_bottom: float = 2000.0
 
 func _ready() -> void:
     # Make sure camera is set to current
@@ -46,7 +46,7 @@ func _process(delta: float) -> void:
         move_direction.y = -1
 
     if move_direction != Vector2.ZERO:
-        print("Camera moving: ", move_direction)
+        print("Camera3D moving: ", move_direction)
     
     # Apply movement with boundaries
     position += move_direction.normalized() * pan_speed * delta
@@ -63,7 +63,7 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
     # Handle zoom with scroll wheel
     if event is InputEventMouseButton:
-        if event.button_index == BUTTON_WHEEL_UP:
+        if event.button_index == MOUSE_MOUSE_BUTTON_WHEEL_UP:
             zoom = Vector2(max(zoom.x - zoom_speed, min_zoom), max(zoom.y - zoom_speed, min_zoom))
-        elif event.button_index == BUTTON_WHEEL_DOWN:
+        elif event.button_index == MOUSE_MOUSE_BUTTON_WHEEL_DOWN:
             zoom = Vector2(min(zoom.x + zoom_speed, max_zoom), min(zoom.y + zoom_speed, max_zoom))

@@ -102,23 +102,21 @@ func _initialize_impl() -> void:
 
 # Ensure all required directories exist
 func _ensure_directories_exist() -> void:
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     
     for directory in required_directories:
-        if not dir.dir_exists(directory):
+        if not DirAccess.dir_exists_absolute(directory):
             debug_log("Creating missing directory: " + directory)
-            var err = dir.make_dir_recursive(directory)
+            var err = DirAccess.make_dir_recursive_absolute(directory)
             if err != OK:
                 debug_log("Failed to create directory: " + directory, "error")
 
 # Ensure all required base scenes exist
-func _ensure_base_scenes_exist() -> void:
-    var file = File.new()
-    
+func _ensure_base_scenes_exist() -> void:    
     for scene_path in required_base_scenes.keys():
         var scene_info = required_base_scenes[scene_path]
         
-        if not file.file_exists(scene_path):
+        if not FileAccess.file_exists(scene_path):
             debug_log("Required scene not found: " + scene_path + ". Creating it...", "warning")
             _create_base_scene(scene_path, scene_info)
 
@@ -135,11 +133,11 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
     var root_node
     match scene_info.type:
         "Unit", "Worker":
-            root_node = KinematicBody2D.new()
+            root_node = CharacterBody2D.new()
             
             # Add required components for units
-            var sprite = Sprite.new()
-            sprite.name = "Sprite"
+            var sprite = Sprite2D.new()
+            sprite.name = "Sprite2D"
             root_node.add_child(sprite)
             
             var collision = CollisionShape2D.new()
@@ -153,8 +151,8 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
             root_node = StaticBody2D.new()
             
             # Add required components for buildings
-            var sprite = Sprite.new()
-            sprite.name = "Sprite"
+            var sprite = Sprite2D.new()
+            sprite.name = "Sprite2D"
             root_node.add_child(sprite)
             
             var collision = CollisionShape2D.new()
@@ -170,30 +168,30 @@ func _create_base_scene(scene_path: String, scene_info: Dictionary) -> void:
             # Add required components for building menu
             var panel = Panel.new()
             panel.name = "Panel"
-            panel.rect_position = Vector2(10, 10)
-            panel.rect_size = Vector2(400, 300)
+            panel.position = Vector2(10, 10)
+            panel.size = Vector2(400, 300)
             root_node.add_child(panel)
             
             var title = Label.new()
             title.name = "TitleLabel"
             title.text = "Building Menu"
-            title.rect_position = Vector2(10, 10)
-            title.rect_size = Vector2(380, 30)
-            title.align = Label.ALIGN_CENTER
+            title.position = Vector2(10, 10)
+            title.size = Vector2(380, 30)
+            title.horizontal_alignment = Label.ALIGNMENT_CENTER
             panel.add_child(title)
             
             var grid = GridContainer.new()
             grid.name = "BuildingGrid"
             grid.columns = 3
-            grid.rect_position = Vector2(10, 50)
-            grid.rect_size = Vector2(380, 230)
+            grid.position = Vector2(10, 50)
+            grid.size = Vector2(380, 230)
             panel.add_child(grid)
             
             var close_button = Button.new()
             close_button.name = "CloseButton"
             close_button.text = "X"
-            close_button.rect_position = Vector2(370, 10)
-            close_button.rect_size = Vector2(20, 20)
+            close_button.position = Vector2(370, 10)
+            close_button.size = Vector2(20, 20)
             panel.add_child(close_button)
             
         _:
@@ -251,7 +249,7 @@ func load_script(path: String) -> Script:
     return null
 
 # Load a texture
-func load_texture(path: String) -> Texture:
+func load_texture(path: String) -> Texture2D:
     if _textures.has(path):
         return _textures[path]
     
@@ -262,7 +260,7 @@ func load_texture(path: String) -> Texture:
         _textures[path] = texture
         return texture
     
-    _track_load_error(path, "Texture not found")
+    _track_load_error(path, "Texture2D not found")
     return null
 
 # Load JSON data
@@ -271,13 +269,11 @@ func load_json_data(path: String) -> Dictionary:
         return _json_data[path]
     
     _track_load_attempt(path)
-    
-    var file = File.new()
-    if not file.file_exists(path):
+        if not FileAccess.file_exists(path):
         _track_load_error(path, "JSON file not found")
         return {}
     
-    var error = file.open(path, File.READ)
+    var error = file.open(path, FileAccess.READ)
     if error != OK:
         _track_load_error(path, "Could not open JSON file: " + str(error))
         return {}
@@ -285,33 +281,33 @@ func load_json_data(path: String) -> Dictionary:
     var text = file.get_as_text()
     file.close()
     
-    var parse_result = JSON.parse(text)
+    var test_json_conv = JSON.new()
+    test_json_conv.parse(text)
+    var parse_result = test_json_conv.get_data()
     if parse_result.error != OK:
         _track_load_error(path, "JSON parse error: " + parse_result.error_string)
         return {}
     
-    var data = parse_result.result
+    var data = json.data
     _json_data[path] = data
     return data
 
 # Create default JSON data
-func create_default_json(path: String, default_data: Dictionary) -> Dictionary:
-    var file = File.new()
-    
+func create_default_json(path: String, default_data: Dictionary) -> Dictionary:    
     # Ensure directory exists
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     var directory = path.get_base_dir()
-    if not dir.dir_exists(directory):
-        dir.make_dir_recursive(directory)
+    if not DirAccess.dir_exists_absolute(directory):
+        DirAccess.make_dir_recursive_absolute(directory)
     
     # If file doesn't exist, create it with default data
-    if not file.file_exists(path):
-        var error = file.open(path, File.WRITE)
+    if not FileAccess.file_exists(path):
+        var error = file.open(path, FileAccess.WRITE)
         if error != OK:
             debug_log("Could not create default JSON file: " + path, "error")
             return {}
         
-        var json_text = JSON.print(default_data, "  ")
+        var json_text = JSON.stringify(default_data, "  ")
         file.store_string(json_text)
         file.close()
         

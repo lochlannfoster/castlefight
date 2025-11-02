@@ -34,16 +34,16 @@ func _ready() -> void:
     # Connect signals
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        game_manager.connect("game_started", self, "_on_game_started")
-        game_manager.connect("game_ended", self, "_on_game_ended")
+        game_manager.connect("game_started", Callable(self, "_on_game_started"))
+        game_manager.connect("game_ended", Callable(self, "_on_game_ended"))
 
 # Load all tech tree data from files
 func _load_tech_trees() -> void:
     var data_path = "res://data/tech_trees/"
     
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -56,15 +56,17 @@ func _load_tech_trees() -> void:
         push_error("Error: Could not open tech tree data directory")
 
 # Load a single tech tree file
-func _load_tech_tree_file(race_id: String, file_path: String) -> void:
-    var file = File.new()
-    if file.open(file_path, File.READ) == OK:
+func _load_tech_tree_file(race_id: String, file_path: String) -> void:    file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
         var text = file.get_as_text()
         file.close()
         
-        var parse_result = JSON.parse(text)
-        if parse_result.error == OK:
-            var data = parse_result.result
+        var test_json_conv = JSON.new()
+        test_json_conv.parse(text)
+        var parse_result = test_json_conv.get_data()
+        if parse_result == OK:
+            var data = json.data
             tech_trees[race_id] = data
             print("Loaded tech tree: " + race_id)
             emit_signal("tech_tree_loaded", race_id)
@@ -85,7 +87,7 @@ func set_team_tech_tree(team: int, race: String) -> void:
 # Initialize a team's tech tree with starting buildings
 func _initialize_team_tech(team: int) -> void:
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return
     
     var race_data = tech_trees[race]
@@ -117,7 +119,7 @@ func unlock_building(team: int, building_id: String) -> void:
         return
     
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return
     
     var race_data = tech_trees[race]
@@ -178,7 +180,7 @@ func research_upgrade(team: int, upgrade_id: String) -> bool:
         return false
     
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return false
     
     var race_data = tech_trees[race]
@@ -210,7 +212,7 @@ func get_available_buildings(team: int) -> Array:
     var available = []
     
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return available
     
     var race_data = tech_trees[race]
@@ -242,7 +244,7 @@ func get_available_upgrades(team: int) -> Array:
     var available = []
     
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return available
     
     var race_data = tech_trees[race]
@@ -271,7 +273,7 @@ func get_available_units(team: int) -> Array:
 # Apply upgrade effects to a unit
 func apply_upgrade_effects(team: int, unit) -> void:
     var race = team_tech_trees[team]
-    if race.empty() or not tech_trees.has(race):
+    if race.is_empty() or not tech_trees.has(race):
         return
     
     var race_data = tech_trees[race]
@@ -448,9 +450,9 @@ func initialize() -> void:
     # Connect signals (with check for existing connections)
     var game_manager = get_node_or_null("/root/GameManager")
     if game_manager:
-        if not game_manager.is_connected("game_started", self, "_on_game_started"):
-            game_manager.connect("game_started", self, "_on_game_started")
-        if not game_manager.is_connected("game_ended", self, "_on_game_ended"):
-            game_manager.connect("game_ended", self, "_on_game_ended")
+        if not game_manager.is_connected("game_started", Callable(self, "_on_game_started")):
+            game_manager.connect("game_started", Callable(self, "_on_game_started"))
+        if not game_manager.is_connected("game_ended", Callable(self, "_on_game_ended")):
+            game_manager.connect("game_ended", Callable(self, "_on_game_ended"))
     
     print("TechTreeManager: Initialization complete with " + str(tech_trees.size()) + " tech trees loaded")

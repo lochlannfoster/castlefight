@@ -1,6 +1,6 @@
 # Worker Unit - The player-controlled builder unit
 # Path: scripts/worker/worker.gd
-extends KinematicBody2D
+extends CharacterBody2D
 
 # Signals
 signal building_placement_started(building_type, size)
@@ -9,11 +9,11 @@ signal building_placement_cancelled
 signal auto_repair_toggled(enabled)
 
 # Movement properties
-export var speed: float = 200.0
-export var team: int = 0 # 0 = Team A, 1 = Team B
-export var acceleration: float = 800.0
-export var friction: float = 600.0
-export var collision_radius: float = 16.0 # Add this line
+@export var speed: float = 200.0
+@export var team: int = 0 # 0 = Team A, 1 = Team B
+@export var acceleration: float = 800.0
+@export var friction: float = 600.0
+@export var collision_radius: float = 16.0 # Add this line
 
 # Building placement properties
 var is_placing_building: bool = false
@@ -60,7 +60,7 @@ var selection_start: Vector2 = Vector2.ZERO
 var is_selecting: bool = false
 var draw_selection: bool = false
 
-export var debug_mode: bool = false
+@export var debug_mode: bool = false
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
     var logger = get_node_or_null("/root/UnifiedLogger")
@@ -123,8 +123,8 @@ func _ready() -> void:
     if not InputMap.has_action("select"):
         InputMap.add_action("select")
         var event = InputEventMouseButton.new()
-        event.button_index = BUTTON_LEFT
-        event.pressed = true
+        event.button_index = MOUSE_MOUSE_BUTTON_LEFT
+        event.button_pressed = true
         InputMap.action_add_event("select", event)
     
     # Setup debug logging
@@ -201,8 +201,8 @@ func _setup_building_ghost() -> void:
     
     var ghost_visual = ColorRect.new()
     ghost_visual.name = "GhostVisual"
-    ghost_visual.rect_size = Vector2(64, 64) # Default size, will be updated
-    ghost_visual.rect_position = Vector2(-32, -32)
+    ghost_visual.size = Vector2(64, 64) # Default size, will be updated
+    ghost_visual.position = Vector2(-32, -32)
     ghost_visual.color = Color(0, 1, 0, 0.5) # Green transparent
     building_ghost.add_child(ghost_visual)
     
@@ -216,11 +216,11 @@ func _input(event: InputEvent) -> void:
         
     # Handle mouse buttons for building placement
     if event is InputEventMouseButton and event.pressed:
-        if event.button_index == BUTTON_LEFT:
+        if event.button_index == MOUSE_MOUSE_BUTTON_LEFT:
             # Left click - try to place the building
             var mouse_pos = get_global_mouse_position()
             _try_place_building(mouse_pos)
-        elif event.button_index == BUTTON_RIGHT:
+        elif event.button_index == MOUSE_MOUSE_BUTTON_RIGHT:
             # Right click - cancel building placement
             cancel_building_placement()
             emit_signal("building_placement_cancelled")
@@ -231,7 +231,7 @@ func _input(event: InputEvent) -> void:
 
     # Mouse button handling
     if event is InputEventMouseButton:
-        if event.button_index == BUTTON_LEFT:
+        if event.button_index == MOUSE_MOUSE_BUTTON_LEFT:
             if event.pressed:
                 # Start selection
                 selection_start = event.position
@@ -260,8 +260,8 @@ func _input(event: InputEvent) -> void:
                         if camera and camera is Camera2D:
                             # Convert screen space to world space
                             var transform = get_viewport().get_canvas_transform()
-                            var world_top_left = transform.affine_inverse().xform(rect.position)
-                            var world_bottom_right = transform.affine_inverse().xform(rect.position + rect.size)
+                            var world_top_left = transform.affine_inverse() * (rect.position)
+                            var world_bottom_right = transform.affine_inverse() * (rect.position + rect.size)
                             var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
                             
                             # Select units in this world rectangle
@@ -279,7 +279,7 @@ func _input(event: InputEvent) -> void:
                 update() # Redraw to clear selection box
         
         # Right-click handling for context-sensitive action
-        elif event.button_index == BUTTON_RIGHT and event.pressed:
+        elif event.button_index == MOUSE_MOUSE_BUTTON_RIGHT and event.pressed:
             # Only process if this worker is selected
             var current_ui_manager = get_node_or_null("/root/UIManager")
             if current_ui_manager and current_ui_manager.selected_worker == self:
@@ -374,16 +374,20 @@ func _handle_movement(_delta: float) -> void:
     
     # Apply movement
     var previous_position = global_position
-    velocity = move_and_slide(velocity)
+    set_velocity(velocity)
+    move_and_slide()
+    velocity = velocity
     
     # If we didn't move but should have, we might be stuck - try to unstick
     if is_moving_to_target and previous_position.distance_to(global_position) < 0.1 and velocity.length() > 0:
         debug_log("Worker seems stuck, attempting to unstick", "debug")
         # Try slight variations in direction
-        var perturbed_direction = global_position.direction_to(target_position).rotated(rand_range(-0.5, 0.5))
+        var perturbed_direction = global_position.direction_to(target_position).rotated(randf_range(-0.5, 0.5))
         velocity = perturbed_direction * speed
         # Try the new direction
-        velocity = move_and_slide(velocity)
+        set_velocity(velocity)
+        move_and_slide()
+        velocity = velocity
 
 func _update_building_preview() -> void:
     if not is_placing_building or not building_ghost:
@@ -420,8 +424,8 @@ func start_building_placement(building_type: String, size: Vector2) -> void:
     # Update ghost size
     var ghost_visual = building_ghost.get_node("GhostVisual")
     if ghost_visual:
-        ghost_visual.rect_size = size * grid_system.cell_size if grid_system else Vector2(64, 64) * size
-        ghost_visual.rect_position = - ghost_visual.rect_size / 2
+        ghost_visual.size = size * grid_system.cell_size if grid_system else Vector2(64, 64) * size
+        ghost_visual.position = - ghost_visual.size / 2
     
     building_ghost.visible = true
     
@@ -557,8 +561,8 @@ func select() -> void:
         
         # Create visual indicator (a simple colored rectangle)
         var rect = ColorRect.new()
-        rect.rect_size = Vector2(32, 32)
-        rect.rect_position = Vector2(-16, -16)
+        rect.size = Vector2(32, 32)
+        rect.position = Vector2(-16, -16)
         rect.color = Color(0, 1, 0, 0.3) # Semi-transparent green
         selection_indicator.add_child(rect)
     
@@ -610,11 +614,11 @@ func _setup_visuals() -> void:
     debug_log("Setting up worker visuals for team " + str(team), "debug")
     
     # Create or get sprite
-    var sprite = get_node_or_null("Sprite")
+    var sprite = get_node_or_null("Sprite2D")
     if not sprite:
-        debug_log("Creating new Sprite node", "debug")
-        sprite = Sprite.new()
-        sprite.name = "Sprite"
+        debug_log("Creating new Sprite2D node", "debug")
+        sprite = Sprite2D.new()
+        sprite.name = "Sprite2D"
         add_child(sprite)
     
     # Try to load texture from path
@@ -684,7 +688,7 @@ func _handle_context_sensitive_action() -> void:
     var mouse_pos = get_global_mouse_position()
     
     var space_state = get_world_2d().direct_space_state
-    var query = Physics2DShapeQueryParameters.new()
+    var query = PhysicsShapeQueryParameters2D.new()
     var shape = CircleShape2D.new()
     shape.radius = 50 # Detection radius
     query.set_shape(shape)

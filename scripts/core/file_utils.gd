@@ -3,21 +3,19 @@ extends Node
 
 # Ensure a directory exists
 func ensure_directory(path: String) -> bool:
-    var dir = Directory.new()
-    if dir.dir_exists(path):
+    var dir = DirAccess.new()
+    if DirAccess.dir_exists_absolute(path):
         return true
         
-    var error = dir.make_dir_recursive(path)
+    var error = DirAccess.make_dir_recursive_absolute(path)
     return error == OK
 
 # Load a JSON file
-func load_json(path: String, default_data: Dictionary = {}) -> Dictionary:
-    var file = File.new()
-    
-    if not file.file_exists(path):
+func load_json(path: String, default_data: Dictionary = {}) -> Dictionary:    
+    if not FileAccess.file_exists(path):
         return default_data
     
-    var error = file.open(path, File.READ)
+    var error = file.open(path, FileAccess.READ)
     if error != OK:
         print("Error opening file: " + path)
         return default_data
@@ -25,12 +23,14 @@ func load_json(path: String, default_data: Dictionary = {}) -> Dictionary:
     var text = file.get_as_text()
     file.close()
     
-    var parse_result = JSON.parse(text)
+    var test_json_conv = JSON.new()
+    test_json_conv.parse(text)
+    var parse_result = test_json_conv.get_data()
     if parse_result.error != OK:
         print("Error parsing JSON: " + path)
         return default_data
     
-    return parse_result.result
+    return json.data
 
 # Save a Dictionary as a JSON file
 func save_json(path: String, data: Dictionary, pretty: bool = true) -> bool:
@@ -38,15 +38,13 @@ func save_json(path: String, data: Dictionary, pretty: bool = true) -> bool:
     var dir_path = path.get_base_dir()
     var _result = ensure_directory(dir_path)
     
-    # Save file
-    var file = File.new()
-    var error = file.open(path, File.WRITE)
+    # Save file    var error = file.open(path, FileAccess.WRITE)
     
     if error != OK:
         print("Error opening file for writing: " + path)
         return false
     
-    file.store_string(JSON.print(data, "  " if pretty else ""))
+    file.store_string(JSON.stringify(data, "  " if pretty else ""))
     file.close()
     
     return true

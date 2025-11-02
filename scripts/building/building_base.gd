@@ -15,27 +15,27 @@ signal construction_progress_changed(progress)
 signal construction_completed
 
 # Building properties
-export var building_id: String = "base_building"
-export var display_name: String = "Building"
-export var health: float = 100.0
-export var max_health: float = 100.0
-export var armor: float = 0.0
-export var armor_type: String = "normal" # normal, heavy, light, fortified, etc.
-export var team: int = 0 # 0 = Team A, 1 = Team B
-export var size: Vector2 = Vector2(1, 1) # Size in grid cells
-export var construction_time: float = 5.0 # Time in seconds to construct
+@export var building_id: String = "base_building"
+@export var display_name: String = "Building"
+@export var health: float = 100.0
+@export var max_health: float = 100.0
+@export var armor: float = 0.0
+@export var armor_type: String = "normal" # normal, heavy, light, fortified, etc.
+@export var team: int = 0 # 0 = Team A, 1 = Team B
+@export var size: Vector2 = Vector2(1, 1) # Size in grid cells
+@export var construction_time: float = 5.0 # Time in seconds to construct
 
 # Spawning properties
-export var can_spawn_units: bool = false
-export var spawn_interval: float = 10.0 # Time between unit spawns
-export var spawn_point_offset: Vector2 = Vector2(0, 32) # Offset from building center
-export var unit_types: Array = [] # Array of unit IDs this building can spawn
+@export var can_spawn_units: bool = false
+@export var spawn_interval: float = 10.0 # Time between unit spawns
+@export var spawn_point_offset: Vector2 = Vector2(0, 32) # Offset from building center
+@export var unit_types: Array = [] # Array of unit IDs this building can spawn
 
 # Visual properties
-export var construction_texture: Texture
-export var completed_texture: Texture
-export var damaged_texture: Texture
-export var destroyed_texture: Texture
+@export var construction_texture: Texture2D
+@export var completed_texture: Texture2D
+@export var damaged_texture: Texture2D
+@export var destroyed_texture: Texture2D
 
 # State tracking
 var is_constructed: bool = false
@@ -48,7 +48,7 @@ var is_destroyed: bool = false
 var grid_system
 var unit_factory
 
-var sprite: Sprite
+var sprite: Sprite2D
 var animation_player: AnimationPlayer
 var construction_progress_bar: ProgressBar
 var selection_indicator: Node2D
@@ -67,7 +67,7 @@ func _ready() -> void:
         unit_factory = get_node_or_null("/root/UnitFactory")
     
     # Setup components
-    sprite = $Sprite
+    sprite = $Sprite2D
     animation_player = $AnimationPlayer if has_node("AnimationPlayer") else null
 
 func _physics_process(delta: float) -> void:
@@ -128,8 +128,8 @@ func complete_construction() -> void:
         _logger.log_warning("Failed to load building texture for " + building_id, "Building")
         # Use a colored rectangle as fallback
         var placeholder = ColorRect.new()
-        placeholder.rect_size = Vector2(64, 64)
-        placeholder.rect_position = Vector2(-32, -32)
+        placeholder.size = Vector2(64, 64)
+        placeholder.position = Vector2(-32, -32)
         placeholder.color = Color(0, 0, 1) if team == 0 else Color(1, 0, 0)
         add_child(placeholder)
     
@@ -147,8 +147,8 @@ func complete_construction() -> void:
 # Setup construction progress bar
 func _setup_progress_bar() -> void:
     construction_progress_bar = ProgressBar.new()
-    construction_progress_bar.rect_size = Vector2(50, 10)
-    construction_progress_bar.rect_position = Vector2(-25, -40) # Position above building
+    construction_progress_bar.size = Vector2(50, 10)
+    construction_progress_bar.position = Vector2(-25, -40) # Position above building
     construction_progress_bar.min_value = 0
     construction_progress_bar.max_value = 100
     construction_progress_bar.percent_visible = false
@@ -163,9 +163,9 @@ func _setup_selection_indicator() -> void:
     
     # Create outline or other visual to indicate selection
     var outline = ColorRect.new()
-    outline.rect_size = Vector2(size.x * grid_system.cell_size.x + 4,
+    outline.size = Vector2(size.x * grid_system.cell_size.x + 4,
                                 size.y * grid_system.cell_size.y + 4)
-    outline.rect_position = Vector2(-outline.rect_size.x / 2 - 2, -outline.rect_size.y / 2 - 2)
+    outline.position = Vector2(-outline.size.x / 2 - 2, -outline.size.y / 2 - 2)
     outline.color = Color(0, 1, 1, 0.3) # Cyan semi-transparent
     selection_indicator.add_child(outline)
     
@@ -183,7 +183,7 @@ func deselect() -> void:
 # Setup spawn points for units
 func _setup_spawn_points() -> void:
     # Default implementation creates a single spawn point
-    var spawn_point = Position2D.new()
+    var spawn_point = Marker2D.new()
     spawn_point.position = spawn_point_offset
     spawn_point.name = "SpawnPoint"
     add_child(spawn_point)
@@ -193,7 +193,7 @@ func _setup_spawn_points() -> void:
 
 # Handle unit spawning logic
 func _handle_spawning(delta: float) -> void:
-    if not is_spawning or unit_types.empty():
+    if not is_spawning or unit_types.is_empty():
         return
         
     spawn_timer += delta
@@ -204,7 +204,7 @@ func _handle_spawning(delta: float) -> void:
 
 # Spawn a unit
 func _spawn_unit() -> void:
-    if unit_types.empty() or spawn_points.empty():
+    if unit_types.is_empty() or spawn_points.is_empty():
         return
         
     # Get unit type to spawn (could be random or based on some strategy)
@@ -280,7 +280,7 @@ func destroy() -> void:
     
     # Queue for removal (with delay if showing destruction animation)
     if animation_player and animation_player.has_animation("destroyed"):
-        yield (animation_player, "animation_finished")
+        await animation_player.animation_finished
     
     queue_free()
 

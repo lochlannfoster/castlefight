@@ -52,10 +52,10 @@ var is_creating_ui: bool = false
 
 func _ready() -> void:
     # Set pause mode to ensure UI can be managed during game state changes
-    pause_mode = Node.PAUSE_MODE_PROCESS
+    process_mode = Node.PROCESS_MODE_ALWAYS
     
     # Connect to the scene change signal
-    var _scene_change_connection = get_tree().connect("tree_changed", self, "_on_scene_changed")
+    var _scene_change_connection = get_tree().connect("tree_changed", Callable(self, "_on_scene_changed"))
     if _scene_change_connection != OK:
         push_warning("Failed to connect tree_changed signal")
     
@@ -92,7 +92,7 @@ func _ready() -> void:
         _ui_created = true
     
     # Connect our own signals
-    var _worker_command_connection = connect("worker_command_issued", self, "_emit_worker_command")
+    var _worker_command_connection = connect("worker_command_issued", Callable(self, "_emit_worker_command"))
     if _worker_command_connection != OK:
         push_warning("Failed to connect worker_command_issued signal")
 
@@ -196,11 +196,11 @@ func _create_debug_indicator() -> void:
     debug_indicator.name = "DebugIndicator"
     debug_indicator.text = "DEBUG MODE ACTIVE - All workers controllable"
     debug_indicator.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    debug_indicator.margin_left = 10
-    debug_indicator.margin_top = 150
-    debug_indicator.margin_right = 300
-    debug_indicator.margin_bottom = 170
-    debug_indicator.add_color_override("font_color", Color(1, 0.5, 0, 1)) # Orange color
+    debug_indicator.offset_left = 10
+    debug_indicator.offset_top = 150
+    debug_indicator.offset_right = 300
+    debug_indicator.offset_bottom = 170
+    debug_indicator.add_theme_color_override("font_color", Color(1, 0.5, 0, 1)) # Orange color
     debug_indicator.visible = false
     add_child(debug_indicator)
     
@@ -218,16 +218,16 @@ func _create_resource_display() -> void:
     resource_display = Control.new()
     resource_display.name = "ResourceDisplay"
     resource_display.set_anchors_preset(Control.PRESET_TOP_LEFT)
-    resource_display.margin_left = 10
-    resource_display.margin_top = 10
-    resource_display.margin_right = 200
-    resource_display.margin_bottom = 50
+    resource_display.offset_left = 10
+    resource_display.offset_top = 10
+    resource_display.offset_right = 200
+    resource_display.offset_bottom = 50
     add_child(resource_display)
     
     # Add background panel for better visibility
     var background = ColorRect.new()
     background.name = "Background"
-    background.rect_size = Vector2(190, 120)
+    background.size = Vector2(190, 120)
     background.color = Color(0, 0, 0, 0.5)
     background.show_behind_parent = true
     resource_display.add_child(background)
@@ -239,7 +239,7 @@ func _create_resource_display() -> void:
     
     var gold_icon = TextureRect.new()
     gold_icon.texture = load("res://assets/ui/icons/gold_icon.png")
-    gold_icon.rect_min_size = Vector2(24, 24)
+    gold_icon.custom_minimum_size = Vector2(24, 24)
     gold_container.add_child(gold_icon)
     
     var gold_label = Label.new()
@@ -250,12 +250,12 @@ func _create_resource_display() -> void:
     # Wood display
     var wood_container = HBoxContainer.new()
     wood_container.name = "WoodContainer"
-    wood_container.rect_position.y = 30
+    wood_container.position.y = 30
     resource_display.add_child(wood_container)
     
     var wood_icon = TextureRect.new()
     wood_icon.texture = load("res://assets/ui/icons/wood_icon.png")
-    wood_icon.rect_min_size = Vector2(24, 24)
+    wood_icon.custom_minimum_size = Vector2(24, 24)
     wood_container.add_child(wood_icon)
     
     var wood_label = Label.new()
@@ -266,12 +266,12 @@ func _create_resource_display() -> void:
     # Supply display
     var supply_container = HBoxContainer.new()
     supply_container.name = "SupplyContainer"
-    supply_container.rect_position.y = 60
+    supply_container.position.y = 60
     resource_display.add_child(supply_container)
     
     var supply_icon = TextureRect.new()
     supply_icon.texture = load("res://assets/ui/icons/supply_icon.png")
-    supply_icon.rect_min_size = Vector2(24, 24)
+    supply_icon.custom_minimum_size = Vector2(24, 24)
     supply_container.add_child(supply_icon)
     
     var supply_label = Label.new()
@@ -282,12 +282,12 @@ func _create_resource_display() -> void:
     # Income display
     var income_container = HBoxContainer.new()
     income_container.name = "IncomeContainer"
-    income_container.rect_position.y = 90
+    income_container.position.y = 90
     resource_display.add_child(income_container)
     
     var income_icon = TextureRect.new()
     income_icon.texture = load("res://assets/ui/icons/income_icon.png")
-    income_icon.rect_min_size = Vector2(24, 24)
+    income_icon.custom_minimum_size = Vector2(24, 24)
     income_container.add_child(income_icon)
     
     var income_label = Label.new()
@@ -305,13 +305,13 @@ func _create_building_menu() -> void:
     # Load building menu scene
     var building_menu_scene = load("res://scenes/ui/building_menu.tscn")
     if building_menu_scene:
-        building_menu = building_menu_scene.instance()
+        building_menu = building_menu_scene.instantiate()
         add_child(building_menu)
         
         # Connect close button signal with error handling
         var close_button = building_menu.get_node_or_null("Panel/CloseButton")
         if close_button:
-            var _close_button_result = close_button.connect("pressed", self, "_on_building_menu_close")
+            var _close_button_result = close_button.connect("pressed", Callable(self, "_on_building_menu_close"))
             if _close_button_result != OK:
                 debug_log("Failed to connect building menu close button", "warning")
         
@@ -327,32 +327,32 @@ func _create_unit_info_panel() -> void:
     unit_info_panel = Control.new()
     unit_info_panel.name = "UnitInfoPanel"
     unit_info_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-    unit_info_panel.margin_left = -210
-    unit_info_panel.margin_top = -110
-    unit_info_panel.margin_right = -10
-    unit_info_panel.margin_bottom = -10
+    unit_info_panel.offset_left = -210
+    unit_info_panel.offset_top = -110
+    unit_info_panel.offset_right = -10
+    unit_info_panel.offset_bottom = -10
     unit_info_panel.visible = false
     add_child(unit_info_panel)
     
     # Create background panel
     var panel = Panel.new()
     panel.name = "Panel"
-    panel.rect_min_size = Vector2(200, 100)
+    panel.custom_minimum_size = Vector2(200, 100)
     unit_info_panel.add_child(panel)
     
     # Unit name
     var name_label = Label.new()
     name_label.name = "NameLabel"
-    name_label.rect_position = Vector2(10, 10)
-    name_label.rect_size = Vector2(180, 20)
+    name_label.position = Vector2(10, 10)
+    name_label.size = Vector2(180, 20)
     name_label.text = "Unit Name"
     panel.add_child(name_label)
     
     # Unit stats
     var stats_container = VBoxContainer.new()
     stats_container.name = "StatsContainer"
-    stats_container.rect_position = Vector2(10, 35)
-    stats_container.rect_size = Vector2(180, 65)
+    stats_container.position = Vector2(10, 35)
+    stats_container.size = Vector2(180, 65)
     panel.add_child(stats_container)
     
     var health_label = Label.new()
@@ -380,33 +380,33 @@ func _create_game_status_panel() -> void:
     game_status_panel = Control.new()
     game_status_panel.name = "GameStatusPanel"
     game_status_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    game_status_panel.margin_left = -210
-    game_status_panel.margin_top = 10
-    game_status_panel.margin_right = -10
-    game_status_panel.margin_bottom = 50
+    game_status_panel.offset_left = -210
+    game_status_panel.offset_top = 10
+    game_status_panel.offset_right = -10
+    game_status_panel.offset_bottom = 50
     add_child(game_status_panel)
     
     # Create background panel
     var panel = Panel.new()
     panel.name = "Panel"
-    panel.rect_min_size = Vector2(200, 40)
+    panel.custom_minimum_size = Vector2(200, 40)
     game_status_panel.add_child(panel)
     
     # Game time
     var time_label = Label.new()
     time_label.name = "TimeLabel"
-    time_label.rect_position = Vector2(10, 10)
-    time_label.rect_size = Vector2(180, 20)
+    time_label.position = Vector2(10, 10)
+    time_label.size = Vector2(180, 20)
     time_label.text = "Time: 00:00"
     panel.add_child(time_label)
     
     # Pause button
     var pause_button = Button.new()
     pause_button.name = "PauseButton"
-    pause_button.rect_position = Vector2(150, 5)
-    pause_button.rect_size = Vector2(40, 30)
+    pause_button.position = Vector2(150, 5)
+    pause_button.size = Vector2(40, 30)
     pause_button.text = "II"
-    pause_button.connect("pressed", self, "_on_pause_button_pressed")
+    pause_button.connect("pressed", Callable(self, "_on_pause_button_pressed"))
     panel.add_child(pause_button)
     
     debug_log("Game status panel created successfully", "info")
@@ -416,25 +416,25 @@ func _create_minimap() -> void:
     minimap = Control.new()
     minimap.name = "Minimap"
     minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-    minimap.margin_left = -210
-    minimap.margin_top = -220
-    minimap.margin_right = -10
-    minimap.margin_bottom = -120
+    minimap.offset_left = -210
+    minimap.offset_top = -220
+    minimap.offset_right = -10
+    minimap.offset_bottom = -120
     add_child(minimap)
     
     # Create background panel
     var panel = Panel.new()
     panel.name = "Panel"
-    panel.rect_min_size = Vector2(200, 100)
+    panel.custom_minimum_size = Vector2(200, 100)
     minimap.add_child(panel)
     
     # Minimap viewport - will show a scaled-down version of the actual game map
-    var minimap_viewport = Viewport.new()
+    var minimap_viewport = SubViewport.new()
     minimap_viewport.name = "MinimapViewport"
     minimap_viewport.size = Vector2(180, 80)
     minimap_viewport.transparent_bg = true
     minimap_viewport.render_target_v_flip = true
-    minimap_viewport.render_target_update_mode = Viewport.UPDATE_WHEN_VISIBLE
+    minimap_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
     minimap.add_child(minimap_viewport)
     
     # Setup minimap camera
@@ -451,14 +451,14 @@ func _create_minimap() -> void:
     # Create texture rect to display minimap
     var minimap_rect = TextureRect.new()
     minimap_rect.name = "MinimapRect"
-    minimap_rect.rect_position = Vector2(10, 10)
-    minimap_rect.rect_size = Vector2(180, 80)
+    minimap_rect.position = Vector2(10, 10)
+    minimap_rect.size = Vector2(180, 80)
     minimap_rect.expand = true
     minimap_rect.texture = minimap_texture
     panel.add_child(minimap_rect)
     
     # Add click handler to enable map navigation
-    minimap_rect.connect("gui_input", self, "_on_minimap_clicked")
+    minimap_rect.connect("gui_input", Callable(self, "_on_minimap_clicked"))
     
 
 # Create tooltip
@@ -477,13 +477,13 @@ func _create_tooltip() -> void:
     
     var panel = Panel.new()
     panel.name = "Panel"
-    panel.rect_min_size = Vector2(200, 80)
+    panel.custom_minimum_size = Vector2(200, 80)
     tooltip.add_child(panel)
     
     var label = Label.new()
     label.name = "Label"
-    label.rect_position = Vector2(10, 10)
-    label.rect_size = Vector2(180, 60)
+    label.position = Vector2(10, 10)
+    label.size = Vector2(180, 60)
     label.autowrap = true
     panel.add_child(label)
 
@@ -503,10 +503,10 @@ func _create_debug_overlay() -> void:
     
     var vbox = VBoxContainer.new()
     vbox.name = "Stats"
-    vbox.margin_left = 10
-    vbox.margin_top = 10
-    vbox.margin_right = 300
-    vbox.margin_bottom = 300
+    vbox.offset_left = 10
+    vbox.offset_top = 10
+    vbox.offset_right = 300
+    vbox.offset_bottom = 300
     panel.add_child(vbox)
     
     # Add labels for different stat types
@@ -542,87 +542,87 @@ func _create_debug_overlay() -> void:
 func _connect_signals() -> void:
     # Connect to Economy Manager
     if economy_manager:
-        if not economy_manager.is_connected("resources_changed", self, "_on_resources_changed"):
-            var _resources_connect_result = economy_manager.connect("resources_changed", self, "_on_resources_changed")
+        if not economy_manager.is_connected("resources_changed", Callable(self, "_on_resources_changed")):
+            var _resources_connect_result = economy_manager.connect("resources_changed", Callable(self, "_on_resources_changed"))
             if _resources_connect_result != OK and _resources_connect_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect resources_changed signal", "warning")
         
-        if not economy_manager.is_connected("income_changed", self, "_on_income_changed"):
-            var _income_connect_result = economy_manager.connect("income_changed", self, "_on_income_changed")
+        if not economy_manager.is_connected("income_changed", Callable(self, "_on_income_changed")):
+            var _income_connect_result = economy_manager.connect("income_changed", Callable(self, "_on_income_changed"))
             if _income_connect_result != OK and _income_connect_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect income_changed signal", "warning")
         
-        if not economy_manager.is_connected("income_tick", self, "_on_income_tick"):
-            var _income_tick_result = economy_manager.connect("income_tick", self, "_on_income_tick")
+        if not economy_manager.is_connected("income_tick", Callable(self, "_on_income_tick")):
+            var _income_tick_result = economy_manager.connect("income_tick", Callable(self, "_on_income_tick"))
             if _income_tick_result != OK and _income_tick_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect income_tick signal", "warning")
         
-        if not economy_manager.is_connected("bounty_earned", self, "_on_bounty_earned"):
-            var _bounty_result = economy_manager.connect("bounty_earned", self, "_on_bounty_earned")
+        if not economy_manager.is_connected("bounty_earned", Callable(self, "_on_bounty_earned")):
+            var _bounty_result = economy_manager.connect("bounty_earned", Callable(self, "_on_bounty_earned"))
             if _bounty_result != OK and _bounty_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect bounty_earned signal", "warning")
     
     # Connect to Building Manager
     if building_manager:
-        if not building_manager.is_connected("building_placed", self, "_on_building_placed"):
-            var _building_placed_result = building_manager.connect("building_placed", self, "_on_building_placed")
+        if not building_manager.is_connected("building_placed", Callable(self, "_on_building_placed")):
+            var _building_placed_result = building_manager.connect("building_placed", Callable(self, "_on_building_placed"))
             if _building_placed_result != OK and _building_placed_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect building_placed signal", "warning")
         
-        if not building_manager.is_connected("building_constructed", self, "_on_building_constructed"):
-            var _building_constructed_result = building_manager.connect("building_constructed", self, "_on_building_constructed")
+        if not building_manager.is_connected("building_constructed", Callable(self, "_on_building_constructed")):
+            var _building_constructed_result = building_manager.connect("building_constructed", Callable(self, "_on_building_constructed"))
             if _building_constructed_result != OK and _building_constructed_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect building_constructed signal", "warning")
         
-        if not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
-            var _building_destroyed_result = building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+        if not building_manager.is_connected("building_destroyed", Callable(self, "_on_building_destroyed")):
+            var _building_destroyed_result = building_manager.connect("building_destroyed", Callable(self, "_on_building_destroyed"))
             if _building_destroyed_result != OK and _building_destroyed_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect building_destroyed signal", "warning")
         
-        if not building_manager.is_connected("building_selected", self, "_on_building_selected"):
-            var _building_selected_result = building_manager.connect("building_selected", self, "_on_building_selected")
+        if not building_manager.is_connected("building_selected", Callable(self, "_on_building_selected")):
+            var _building_selected_result = building_manager.connect("building_selected", Callable(self, "_on_building_selected"))
             if _building_selected_result != OK and _building_selected_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect building_selected signal", "warning")
         
-        if not building_manager.is_connected("building_deselected", self, "_on_building_deselected"):
-            var _building_deselected_result = building_manager.connect("building_deselected", self, "_on_building_deselected")
+        if not building_manager.is_connected("building_deselected", Callable(self, "_on_building_deselected")):
+            var _building_deselected_result = building_manager.connect("building_deselected", Callable(self, "_on_building_deselected"))
             if _building_deselected_result != OK and _building_deselected_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect building_deselected signal", "warning")
     
     # Connect Game Manager signals
     var current_game_manager = get_node_or_null("/root/GameManager")
     if current_game_manager:
-        if not current_game_manager.is_connected("game_started", self, "_on_game_started"):
-            var _game_started_result = current_game_manager.connect("game_started", self, "_on_game_started")
+        if not current_game_manager.is_connected("game_started", Callable(self, "_on_game_started")):
+            var _game_started_result = current_game_manager.connect("game_started", Callable(self, "_on_game_started"))
             if _game_started_result != OK and _game_started_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect game_started signal", "warning")
         
-        if not current_game_manager.is_connected("game_ended", self, "_on_game_ended"):
-            var _game_ended_result = current_game_manager.connect("game_ended", self, "_on_game_ended")
+        if not current_game_manager.is_connected("game_ended", Callable(self, "_on_game_ended")):
+            var _game_ended_result = current_game_manager.connect("game_ended", Callable(self, "_on_game_ended"))
             if _game_ended_result != OK and _game_ended_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect game_ended signal", "warning")
         
-        if not current_game_manager.is_connected("match_countdown_updated", self, "_on_match_countdown_updated"):
-            var _countdown_result = current_game_manager.connect("match_countdown_updated", self, "_on_match_countdown_updated")
+        if not current_game_manager.is_connected("match_countdown_updated", Callable(self, "_on_match_countdown_updated")):
+            var _countdown_result = current_game_manager.connect("match_countdown_updated", Callable(self, "_on_match_countdown_updated"))
             if _countdown_result != OK and _countdown_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect match_countdown_updated signal", "warning")
     
     # Connect Network Manager signals
     var network_manager = get_node_or_null("/root/NetworkManager")
     if network_manager:
-        if not network_manager.is_connected("client_connected", self, "_on_client_connected"):
-            var _client_connect_result = network_manager.connect("client_connected", self, "_on_client_connected")
+        if not network_manager.is_connected("client_connected", Callable(self, "_on_client_connected")):
+            var _client_connect_result = network_manager.connect("client_connected", Callable(self, "_on_client_connected"))
             if _client_connect_result != OK and _client_connect_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect client_connected signal", "warning")
         
-        if not network_manager.is_connected("client_disconnected", self, "_on_client_disconnected"):
-            var _client_disconnect_result = network_manager.connect("client_disconnected", self, "_on_client_disconnected")
+        if not network_manager.is_connected("client_disconnected", Callable(self, "_on_client_disconnected")):
+            var _client_disconnect_result = network_manager.connect("client_disconnected", Callable(self, "_on_client_disconnected"))
             if _client_disconnect_result != OK and _client_disconnect_result != ERR_INVALID_PARAMETER:
                 debug_log("Failed to connect client_disconnected signal", "warning")
     
     # Connect our own worker command signal only if not already connected
-    if not is_connected("worker_command_issued", self, "_emit_worker_command"):
-        var _worker_command_result = connect("worker_command_issued", self, "_emit_worker_command")
+    if not is_connected("worker_command_issued", Callable(self, "_emit_worker_command")):
+        var _worker_command_result = connect("worker_command_issued", Callable(self, "_emit_worker_command"))
         if _worker_command_result != OK:
             debug_log("Failed to connect worker_command_issued signal", "warning")
 
@@ -637,7 +637,7 @@ func _input(event) -> void:
     # Handle key shortcuts
     if event is InputEventKey and event.pressed:
         # F3 debug overlay toggle
-        if event.scancode == KEY_F3:
+        if event.keycode == KEY_F3:
             is_debug_overlay_visible = !is_debug_overlay_visible
             
             if debug_overlay != null:
@@ -645,7 +645,7 @@ func _input(event) -> void:
             else:
                 print("Debug overlay not initialized")
 
-        match event.scancode:
+        match event.keycode:
             KEY_ESCAPE:
                 if is_building_menu_open:
                     _on_building_menu_close()
@@ -660,11 +660,11 @@ func _input(event) -> void:
     # Tooltip positioning
     if event is InputEventMouseMotion:
         if tooltip != null and tooltip.visible:
-            tooltip.rect_position = event.position + Vector2(15, 15)
+            tooltip.position = event.position + Vector2(15, 15)
 
     # Right-click to cancel building placement
     if event is InputEventMouseButton and event.pressed:
-        if event.button_index == BUTTON_RIGHT:
+        if event.button_index == MOUSE_MOUSE_BUTTON_RIGHT:
             if selected_worker and selected_worker.is_placing_building:
                 selected_worker.cancel_building_placement()
                 emit_signal("building_placement_cancelled")
@@ -674,13 +674,13 @@ func _input(event) -> void:
         # Add null check for tooltip
         if tooltip != null and tooltip.has_method("is_visible"):
             if tooltip.visible:
-                tooltip.rect_position = event.position + Vector2(15, 15)
+                tooltip.position = event.position + Vector2(15, 15)
         else:
             print("Tooltip not initialized")
 
     # Handle mouse button clicks
     if event is InputEventMouseButton and event.pressed:
-        if event.button_index == BUTTON_RIGHT:
+        if event.button_index == MOUSE_MOUSE_BUTTON_RIGHT:
             # Right-click to cancel building placement
             if selected_worker and selected_worker.is_placing_building:
                 selected_worker.cancel_building_placement()
@@ -690,7 +690,7 @@ func _input(event) -> void:
         # Safe tooltip position update
         if tooltip != null and tooltip.has_method("is_visible"):
             if tooltip.visible:
-                tooltip.rect_position = event.position + Vector2(15, 15)
+                tooltip.position = event.position + Vector2(15, 15)
 
 # Process function to update game time and debug info
 func _process(_delta: float) -> void:
@@ -748,11 +748,11 @@ func _populate_building_menu() -> void:
     for building_data in available_buildings:
         var button = Button.new()
         button.text = building_data.name
-        button.hint_tooltip = "%s\nCost: %d gold" % [building_data.description, building_data.cost]
-        button.rect_min_size = Vector2(70, 70)
+        button.tooltip_text = "%s\nCost: %d gold" % [building_data.description, building_data.cost]
+        button.custom_minimum_size = Vector2(70, 70)
         
         # Connect button press
-        button.connect("pressed", self, "_on_building_button_pressed", [building_data.id])
+        button.connect("pressed", Callable(self, "_on_building_button_pressed").bind(building_data.id))
         
         grid.add_child(button)
 
@@ -863,7 +863,7 @@ func show_income_popup(team: int, amount: float) -> void:
     var popup = Label.new()
     popup.text = "+%d gold" % int(amount)
     popup.modulate = Color(1, 0.843, 0) # Gold color
-    popup.rect_position = Vector2(150, 300)
+    popup.position = Vector2(150, 300)
     
     floating_text_container.add_child(popup)
     
@@ -871,8 +871,8 @@ func show_income_popup(team: int, amount: float) -> void:
     var tween = Tween.new()
     popup.add_child(tween)
     
-    tween.interpolate_property(popup, "rect_position",
-        popup.rect_position, popup.rect_position + Vector2(0, -50),
+    tween.interpolate_property(popup, "position",
+        popup.position, popup.position + Vector2(0, -50),
         1.5, Tween.TRANS_CUBIC, Tween.EASE_OUT)
     
     tween.interpolate_property(popup, "modulate",
@@ -882,7 +882,7 @@ func show_income_popup(team: int, amount: float) -> void:
     tween.start()
     
     # Remove after animation
-    yield (tween, "tween_all_completed")
+    await tween.finished
     popup.queue_free()
 
 # Show bounty popup
@@ -895,7 +895,7 @@ func show_bounty_popup(team: int, amount: float, source: String) -> void:
     popup.modulate = Color(1, 0.843, 0) # Gold color
     
     # Position near center screen
-    popup.rect_position = Vector2(get_viewport().size.x / 2, get_viewport().size.y / 2)
+    popup.position = Vector2(get_viewport().size.x / 2, get_viewport().size.y / 2)
     
     floating_text_container.add_child(popup)
     
@@ -903,8 +903,8 @@ func show_bounty_popup(team: int, amount: float, source: String) -> void:
     var tween = Tween.new()
     popup.add_child(tween)
     
-    tween.interpolate_property(popup, "rect_position",
-        popup.rect_position, popup.rect_position + Vector2(0, -50),
+    tween.interpolate_property(popup, "position",
+        popup.position, popup.position + Vector2(0, -50),
         1.5, Tween.TRANS_CUBIC, Tween.EASE_OUT)
     
     tween.interpolate_property(popup, "modulate",
@@ -914,7 +914,7 @@ func show_bounty_popup(team: int, amount: float, source: String) -> void:
     tween.start()
     
     # Remove after animation
-    yield (tween, "tween_all_completed")
+    await tween.finished
     popup.queue_free()
 
 # Show tooltip
@@ -924,7 +924,7 @@ func show_tooltip(text: String, position: Vector2) -> void:
     if label:
         label.text = text
     
-    tooltip.rect_position = position + Vector2(15, 15)
+    tooltip.position = position + Vector2(15, 15)
     tooltip.visible = true
 
 # Hide tooltip
@@ -983,9 +983,9 @@ func show_match_preparation() -> void:
     title.name = "Title"
     title.text = "PREPARING MATCH"
     title.set_anchors_preset(Control.PRESET_TOP_WIDE)
-    title.margin_top = 100
-    title.margin_bottom = 150
-    title.align = Label.ALIGN_CENTER
+    title.offset_top = 100
+    title.offset_bottom = 150
+    title.horizontal_alignment = Label.ALIGNMENT_CENTER
     title.valign = Label.VALIGN_CENTER
     prep_container.add_child(title)
     
@@ -1007,36 +1007,36 @@ func show_match_preparation() -> void:
     var team_container = HBoxContainer.new()
     team_container.name = "TeamContainer"
     team_container.set_anchors_preset(Control.PRESET_CENTER)
-    team_container.margin_left = -400
-    team_container.margin_right = 400
-    team_container.margin_top = -100
-    team_container.margin_bottom = 100
-    team_container.alignment = BoxContainer.ALIGN_CENTER
+    team_container.offset_left = -400
+    team_container.offset_right = 400
+    team_container.offset_top = -100
+    team_container.offset_bottom = 100
+    team_container.alignment = BoxContainer.ALIGNMENT_CENTER
     prep_container.add_child(team_container)
     
     # Create Team A panel
     var team_a_panel = Panel.new()
     team_a_panel.name = "TeamAPanel"
-    team_a_panel.rect_min_size = Vector2(350, 200)
+    team_a_panel.custom_minimum_size = Vector2(350, 200)
     team_container.add_child(team_a_panel)
     
     var team_a_label = Label.new()
     team_a_label.name = "TeamALabel"
     team_a_label.text = "TEAM A (BLUE)"
     team_a_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-    team_a_label.margin_top = 10
-    team_a_label.margin_bottom = 40
-    team_a_label.align = Label.ALIGN_CENTER
-    team_a_label.add_color_override("font_color", Color(0, 0.5, 1))
+    team_a_label.offset_top = 10
+    team_a_label.offset_bottom = 40
+    team_a_label.horizontal_alignment = Label.ALIGNMENT_CENTER
+    team_a_label.add_theme_color_override("font_color", Color(0, 0.5, 1))
     team_a_panel.add_child(team_a_label)
     
     var team_a_players_list = VBoxContainer.new()
     team_a_players_list.name = "PlayersList"
     team_a_players_list.set_anchors_preset(Control.PRESET_FULL_RECT)
-    team_a_players_list.margin_left = 20
-    team_a_players_list.margin_top = 50
-    team_a_players_list.margin_right = -20
-    team_a_players_list.margin_bottom = -20
+    team_a_players_list.offset_left = 20
+    team_a_players_list.offset_top = 50
+    team_a_players_list.offset_right = -20
+    team_a_players_list.offset_bottom = -20
     team_a_panel.add_child(team_a_players_list)
     
     for player_name in team_a_players:
@@ -1046,32 +1046,32 @@ func show_match_preparation() -> void:
     
     # Add spacer between teams
     var spacer = Control.new()
-    spacer.rect_min_size = Vector2(50, 0)
+    spacer.custom_minimum_size = Vector2(50, 0)
     team_container.add_child(spacer)
     
     # Create Team B panel (similar to Team A)
     var team_b_panel = Panel.new()
     team_b_panel.name = "TeamBPanel"
-    team_b_panel.rect_min_size = Vector2(350, 200)
+    team_b_panel.custom_minimum_size = Vector2(350, 200)
     team_container.add_child(team_b_panel)
     
     var team_b_label = Label.new()
     team_b_label.name = "TeamBLabel"
     team_b_label.text = "TEAM B (RED)"
     team_b_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
-    team_b_label.margin_top = 10
-    team_b_label.margin_bottom = 40
-    team_b_label.align = Label.ALIGN_CENTER
-    team_b_label.add_color_override("font_color", Color(1, 0, 0))
+    team_b_label.offset_top = 10
+    team_b_label.offset_bottom = 40
+    team_b_label.horizontal_alignment = Label.ALIGNMENT_CENTER
+    team_b_label.add_theme_color_override("font_color", Color(1, 0, 0))
     team_b_panel.add_child(team_b_label)
     
     var team_b_players_list = VBoxContainer.new()
     team_b_players_list.name = "PlayersList"
     team_b_players_list.set_anchors_preset(Control.PRESET_FULL_RECT)
-    team_b_players_list.margin_left = 20
-    team_b_players_list.margin_top = 50
-    team_b_players_list.margin_right = -20
-    team_b_players_list.margin_bottom = -20
+    team_b_players_list.offset_left = 20
+    team_b_players_list.offset_top = 50
+    team_b_players_list.offset_right = -20
+    team_b_players_list.offset_bottom = -20
     team_b_panel.add_child(team_b_players_list)
     
     for player_name in team_b_players:
@@ -1083,20 +1083,20 @@ func show_match_preparation() -> void:
     var loading_container = VBoxContainer.new()
     loading_container.name = "LoadingContainer"
     loading_container.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-    loading_container.margin_top = -100
-    loading_container.margin_bottom = -50
+    loading_container.offset_top = -100
+    loading_container.offset_bottom = -50
     prep_container.add_child(loading_container)
     
     var loading_label = Label.new()
     loading_label.name = "LoadingLabel"
     loading_label.text = "Loading match..."
-    loading_label.align = Label.ALIGN_CENTER
+    loading_label.horizontal_alignment = Label.ALIGNMENT_CENTER
     loading_container.add_child(loading_label)
     
     var loading_bar = ProgressBar.new()
     loading_bar.name = "LoadingBar"
-    loading_bar.rect_size = Vector2(400, 20)
-    loading_bar.rect_min_size = Vector2(400, 20)
+    loading_bar.size = Vector2(400, 20)
+    loading_bar.custom_minimum_size = Vector2(400, 20)
     loading_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
     loading_bar.max_value = 100
     loading_bar.value = 0
@@ -1115,7 +1115,7 @@ func show_match_preparation() -> void:
     var timer = Timer.new()
     timer.one_shot = true
     timer.wait_time = 5.0
-    timer.connect("timeout", self, "_on_prep_screen_timeout", [prep_container])
+    timer.connect("timeout", Callable(self, "_on_prep_screen_timeout").bind(prep_container))
     prep_container.add_child(timer)
     timer.start()
 
@@ -1135,43 +1135,43 @@ func _on_prep_screen_timeout(prep_container: Node) -> void:
     tween.start()
     
     # Remove when done
-    yield (tween, "tween_all_completed")
+    await tween.finished
     prep_container.queue_free()
     
 # Show end game screen
 func show_end_game_screen(winner: int, reason: String) -> void:
     var panel = Panel.new()
-    panel.rect_size = Vector2(300, 200)
+    panel.size = Vector2(300, 200)
     
     var viewport_rect = get_viewport().get_visible_rect()
-    panel.rect_position = Vector2(viewport_rect.size.x / 2 - 150, viewport_rect.size.y / 2 - 100)
+    panel.position = Vector2(viewport_rect.size.x / 2 - 150, viewport_rect.size.y / 2 - 100)
     
     var vbox = VBoxContainer.new()
     vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-    vbox.margin_left = 20
-    vbox.margin_top = 20
-    vbox.margin_right = -20
-    vbox.margin_bottom = -20
+    vbox.offset_left = 20
+    vbox.offset_top = 20
+    vbox.offset_right = -20
+    vbox.offset_bottom = -20
     panel.add_child(vbox)
     
     var title = Label.new()
     title.text = "Game Over"
-    title.align = Label.ALIGN_CENTER
+    title.horizontal_alignment = Label.ALIGNMENT_CENTER
     vbox.add_child(title)
     
     var winner_label = Label.new()
     winner_label.text = "Team " + ("A" if winner == 0 else "B") + " Wins!"
-    winner_label.align = Label.ALIGN_CENTER
+    winner_label.horizontal_alignment = Label.ALIGNMENT_CENTER
     vbox.add_child(winner_label)
     
     var reason_label = Label.new()
     reason_label.text = "Reason: " + reason
-    reason_label.align = Label.ALIGN_CENTER
+    reason_label.horizontal_alignment = Label.ALIGNMENT_CENTER
     vbox.add_child(reason_label)
     
     var button = Button.new()
     button.text = "Continue"
-    button.connect("pressed", self, "_on_end_game_continue")
+    button.connect("pressed", Callable(self, "_on_end_game_continue"))
     vbox.add_child(button)
     
     floating_text_container.add_child(panel)
@@ -1180,11 +1180,11 @@ func show_end_game_screen(winner: int, reason: String) -> void:
 func _on_end_game_continue() -> void:
     # Switch back to lobby scene
     var _current_game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    if game_manager and game_manager.has_method("change_scene_to_file"):
+        game_manager.change_scene_to_file("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene_to_file("res://scenes/lobby/lobby.tscn")
 
 # Signal handlers
 func _on_resources_changed(team: int, _resource_type: int, _amount: float) -> void:
@@ -1267,13 +1267,13 @@ func _on_game_ended(winning_team: int) -> void:
     # Show game over screen
     var game_over = Label.new()
     game_over.text = "Game Over\nTeam %d Wins!" % winning_team
-    game_over.align = Label.ALIGN_CENTER
+    game_over.horizontal_alignment = Label.ALIGNMENT_CENTER
     game_over.valign = Label.VALIGN_CENTER
-    game_over.rect_min_size = Vector2(300, 100)
+    game_over.custom_minimum_size = Vector2(300, 100)
     game_over.set_anchors_preset(Control.PRESET_CENTER)
     
     var panel = Panel.new()
-    panel.rect_min_size = Vector2(300, 100)
+    panel.custom_minimum_size = Vector2(300, 100)
     panel.set_anchors_preset(Control.PRESET_CENTER)
     panel.add_child(game_over)
     
@@ -1283,9 +1283,9 @@ func _on_match_countdown_updated(time_remaining: float) -> void:
     # Update countdown display
     var countdown = Label.new()
     countdown.text = "Match starting in: %d" % int(time_remaining)
-    countdown.align = Label.ALIGN_CENTER
+    countdown.horizontal_alignment = Label.ALIGNMENT_CENTER
     countdown.valign = Label.VALIGN_CENTER
-    countdown.rect_min_size = Vector2(300, 100)
+    countdown.custom_minimum_size = Vector2(300, 100)
     countdown.set_anchors_preset(Control.PRESET_CENTER)
     
     # Replace existing countdown label if any
@@ -1405,8 +1405,8 @@ func set_ui_visibility(is_visible: bool) -> void:
 
 func _exit_tree() -> void:
     # Disconnect from signals when leaving the tree
-    if get_tree() and get_tree().is_connected("tree_changed", self, "_on_scene_changed"):
-        get_tree().disconnect("tree_changed", self, "_on_scene_changed")
+    if get_tree() and get_tree().is_connected("tree_changed", Callable(self, "_on_scene_changed")):
+        get_tree().disconnect("tree_changed", Callable(self, "_on_scene_changed"))
 
 func _initialize_ui_once() -> void:
     if _ui_initialized:

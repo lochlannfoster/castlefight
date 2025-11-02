@@ -2,18 +2,18 @@
 extends Control
 
 # Configuration
-export var max_log_entries = 100
-export var auto_scroll = true
-export var show_debug_levels = true
-export var default_visible = false
+@export var max_log_entries = 100
+@export var auto_scroll = true
+@export var show_debug_levels = true
+@export var default_visible = false
 
 # References
-onready var log_container = $VBoxContainer/ScrollContainer/LogContainer
-onready var scroll_container = $VBoxContainer/ScrollContainer
-onready var level_filter = $VBoxContainer/FilterContainer/LevelFilter
-onready var category_filter = $VBoxContainer/FilterContainer/CategoryFilter
-onready var search_box = $VBoxContainer/FilterContainer/SearchBox
-onready var clear_button = $VBoxContainer/FilterContainer/ClearButton
+@onready var log_container = $VBoxContainer/ScrollContainer/LogContainer
+@onready var scroll_container = $VBoxContainer/ScrollContainer
+@onready var level_filter = $VBoxContainer/FilterContainer/LevelFilter
+@onready var category_filter = $VBoxContainer/FilterContainer/CategoryFilter
+@onready var search_box = $VBoxContainer/FilterContainer/SearchBox
+@onready var clear_button = $VBoxContainer/FilterContainer/ClearButton
 
 # State tracking
 var log_entries = []
@@ -34,10 +34,10 @@ func _ready():
         return
     
     # Connect signals
-    clear_button.connect("pressed", self, "_on_clear_button_pressed")
-    level_filter.connect("item_selected", self, "_on_level_filter_changed")
-    category_filter.connect("item_selected", self, "_on_category_filter_changed")
-    search_box.connect("text_changed", self, "_on_search_changed")
+    clear_button.connect("pressed", Callable(self, "_on_clear_button_pressed"))
+    level_filter.connect("item_selected", Callable(self, "_on_level_filter_changed"))
+    category_filter.connect("item_selected", Callable(self, "_on_category_filter_changed"))
+    search_box.connect("text_changed", Callable(self, "_on_search_changed"))
     
     # Populate filter dropdown options
     _populate_level_filter()
@@ -47,7 +47,7 @@ func _ready():
     _setup_log_collection()
 
 func _input(event):
-    if event is InputEventKey and event.pressed and event.scancode == KEY_F2:
+    if event is InputEventKey and event.pressed and event.keycode == KEY_F2:
         # Toggle visibility
         visible = !visible
 
@@ -57,7 +57,7 @@ func _setup_log_collection():
     # we'll use a timer to poll the logger's buffer
     var timer = Timer.new()
     timer.wait_time = 0.5 # Check for new logs every half second
-    timer.connect("timeout", self, "_check_for_new_logs")
+    timer.connect("timeout", Callable(self, "_check_for_new_logs"))
     add_child(timer)
     timer.start()
 
@@ -75,8 +75,8 @@ func _check_for_new_logs():
         var sample_log = {
             "level": levels[randi() % levels.size()],
             "category": categories[randi() % categories.size()],
-            "message": "Sample log message " + str(OS.get_ticks_msec()),
-            "timestamp": OS.get_datetime()
+            "message": "Sample log message " + str(Time.get_ticks_msec()),
+            "timestamp": Time.get_datetime_dict_from_system()
         }
         
         _add_log_entry(sample_log)
@@ -142,15 +142,15 @@ func _update_log_display():
         
         # Set text and color
         label.text = text
-        label.add_color_override("font_color", _get_level_color(entry.level))
+        label.add_theme_color_override("font_color", _get_level_color(entry.level))
         
         # Add to container
         log_container.add_child(label)
     
     # Auto-scroll if enabled
     if auto_scroll:
-        yield (get_tree(), "idle_frame") # Wait for UI update
-        scroll_container.scroll_vertical = log_container.rect_size.y
+        await get_tree().process_frame # Wait for UI update
+        scroll_container.scroll_vertical = log_container.size.y
 
 # Populate level filter dropdown
 func _populate_level_filter():

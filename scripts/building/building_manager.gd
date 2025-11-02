@@ -76,9 +76,9 @@ func _load_building_data() -> void:
     var data_path = "res://data/buildings/"
     
     # Use Directory to list all files
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -91,15 +91,17 @@ func _load_building_data() -> void:
         push_error("Error: Could not open building data directory")
 
 # Load a single building configuration file
-func _load_building_file(building_id: String, file_path: String) -> void:
-    var file = File.new()
-    if file.open(file_path, File.READ) == OK:
+func _load_building_file(building_id: String, file_path: String) -> void:    file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
         var text = file.get_as_text()
         file.close()
         
-        var parse_result = JSON.parse(text)
-        if parse_result.error == OK:
-            var data = parse_result.result
+        var test_json_conv = JSON.new()
+        test_json_conv.parse(text)
+        var parse_result = test_json_conv.get_data()
+        if parse_result == OK:
+            var data = json.data
             building_data[building_id] = data
             print("Loaded building data: ", building_id)
         else:
@@ -111,7 +113,7 @@ func _load_building_file(building_id: String, file_path: String) -> void:
 func _create_building_instance(building_type: String, position: Vector2, team: int) -> Building:
     # Get building data
     var data = building_data.get(building_type, {})
-    if data.empty():
+    if data.is_empty():
         debug_log("Unknown building type: " + building_type, "error", "BuildingManager")
         return null
     
@@ -153,7 +155,7 @@ func _create_building_instance(building_type: String, position: Vector2, team: i
         return null
     
     # Create building instance
-    var building = building_scene.instance()
+    var building = building_scene.instantiate()
     
     # Configure the building
     _configure_building(building, building_type, data, team)
@@ -182,11 +184,11 @@ func _create_building_instance(building_type: String, position: Vector2, team: i
         add_child(building)
     
     # Connect signals
-    if not building.is_connected("building_destroyed", self, "_on_building_destroyed"):
-        building.connect("building_destroyed", self, "_on_building_destroyed")
+    if not building.is_connected("building_destroyed", Callable(self, "_on_building_destroyed")):
+        building.connect("building_destroyed", Callable(self, "_on_building_destroyed"))
     
-    if not building.is_connected("construction_completed", self, "_on_building_construction_completed"):
-        building.connect("construction_completed", self, "_on_building_construction_completed")
+    if not building.is_connected("construction_completed", Callable(self, "_on_building_construction_completed")):
+        building.connect("construction_completed", Callable(self, "_on_building_construction_completed"))
     
     # Start construction
     if building.has_method("start_construction"):
@@ -273,7 +275,7 @@ func _handle_selection() -> void:
     var space_state = viewport.get_world_2d().direct_space_state
     var result = space_state.intersect_point(mouse_pos, 1, [], 2) # Layer 2 for buildings
     
-    if not result.empty():
+    if not result.is_empty():
         var selected = result[0].collider
         if selected is Building:
             selected_building = selected

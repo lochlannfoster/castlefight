@@ -3,11 +3,11 @@
 extends Control
 
 # References to UI elements
-onready var win_message = $VBoxContainer/WinMessage
-onready var match_stats = $VBoxContainer/StatsPanel/VBoxContainer/MatchStats
-onready var team_a_stats = $VBoxContainer/StatsPanel/VBoxContainer/TeamAStats
-onready var team_b_stats = $VBoxContainer/StatsPanel/VBoxContainer/TeamBStats
-onready var continue_button = $VBoxContainer/ContinueButton
+@onready var win_message = $VBoxContainer/WinMessage
+@onready var match_stats = $VBoxContainer/StatsPanel/VBoxContainer/MatchStats
+@onready var team_a_stats = $VBoxContainer/StatsPanel/VBoxContainer/TeamAStats
+@onready var team_b_stats = $VBoxContainer/StatsPanel/VBoxContainer/TeamBStats
+@onready var continue_button = $VBoxContainer/ContinueButton
 
 # Network manager reference
 var network_manager
@@ -20,7 +20,7 @@ func _ready():
         network_manager = get_node_or_null("/root/GameManager/NetworkManager")
     
     # Connect button signals
-    continue_button.connect("pressed", self, "_on_continue_button_pressed")
+    continue_button.connect("pressed", Callable(self, "_on_continue_button_pressed"))
     
     # Display match results
     _display_match_results()
@@ -35,10 +35,10 @@ func _display_match_results():
     var winner = network_manager.match_winner
     if winner == 0:
         win_message.text = "Team A Wins!"
-        win_message.add_color_override("font_color", Color(0, 0, 1)) # Blue
+        win_message.add_theme_color_override("font_color", Color(0, 0, 1)) # Blue
     elif winner == 1:
         win_message.text = "Team B Wins!"
-        win_message.add_color_override("font_color", Color(1, 0, 0)) # Red
+        win_message.add_theme_color_override("font_color", Color(1, 0, 0)) # Red
     else:
         win_message.text = "Match Ended"
     
@@ -87,8 +87,8 @@ func _display_match_results():
 func _on_continue_button_pressed():
     # Return to lobby
     var game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    if game_manager and game_manager.has_method("change_scene_to_file"):
+        game_manager.change_scene_to_file("res://scenes/lobby/lobby.tscn")
     else:
     # Fallback if not available
-        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene_to_file("res://scenes/lobby/lobby.tscn")

@@ -165,11 +165,11 @@ func initialize_all_services() -> void:
             
             if has_initialization_signals:
                 # Connect to the signals if not already connected
-                if not service.is_connected("initialization_completed", self, "_on_service_initialized"):
-                    service.connect("initialization_completed", self, "_on_service_initialized", [service_name])
+                if not service.is_connected("initialization_completed", Callable(self, "_on_service_initialized")):
+                    service.connect("initialization_completed", Callable(self, "_on_service_initialized").bind(service_name))
                     
-                if not service.is_connected("initialization_failed", self, "_on_service_initialization_failed"):
-                    service.connect("initialization_failed", self, "_on_service_initialization_failed", [service_name])
+                if not service.is_connected("initialization_failed", Callable(self, "_on_service_initialization_failed")):
+                    service.connect("initialization_failed", Callable(self, "_on_service_initialization_failed").bind(service_name))
                     
                 # Add to pending initializations
                 if not _pending_initializations.has(service_name):
@@ -187,7 +187,7 @@ func initialize_all_services() -> void:
     call_deferred("resolve_circular_dependencies")
     
     # Check if any services need to be waited on
-    if _pending_initializations.empty():
+    if _pending_initializations.is_empty():
         debug_log("All services initialized immediately.")
         _initializing = false
     else:
@@ -235,7 +235,7 @@ func _on_service_initialized(service_name: String) -> void:
         _pending_initializations.erase(service_name)
     
     # Check if all services are initialized
-    if _pending_initializations.empty():
+    if _pending_initializations.is_empty():
         debug_log("All services initialized successfully")
         _initializing = false
         
@@ -247,7 +247,7 @@ func _on_service_initialization_failed(error_message: String, service_name: Stri
         _pending_initializations.erase(service_name)
     
     # Even if a service fails, we continue with others
-    if _pending_initializations.empty():
+    if _pending_initializations.is_empty():
         debug_log("All service initializations completed, but some failed", "warning")
         _initializing = false
 

@@ -37,15 +37,15 @@ func _ready() -> void:
         if not panel:
             panel = Panel.new()
             panel.name = "Panel"
-            panel.rect_size = Vector2(200, 250)
-            panel.rect_position = Vector2(10, get_viewport_rect().size.y - 260) # Bottom left
+            panel.size = Vector2(200, 250)
+            panel.position = Vector2(10, get_viewport_rect().size.y - 260) # Bottom left
             add_child(panel)
         
         building_grid = GridContainer.new()
         building_grid.name = "BuildingGrid"
         building_grid.columns = 3
-        building_grid.rect_position = Vector2(10, 50)
-        building_grid.rect_size = Vector2(180, 180)
+        building_grid.position = Vector2(10, 50)
+        building_grid.size = Vector2(180, 180)
         panel.add_child(building_grid)
     
     if not close_button:
@@ -54,8 +54,8 @@ func _ready() -> void:
         close_button = Button.new()
         close_button.name = "CloseButton"
         close_button.text = "X"
-        close_button.rect_position = Vector2(180, 10)
-        close_button.rect_size = Vector2(20, 20)
+        close_button.position = Vector2(180, 10)
+        close_button.size = Vector2(20, 20)
         panel.add_child(close_button)
     
     if not title_label:
@@ -63,16 +63,16 @@ func _ready() -> void:
         var panel = get_node_or_null("Panel")
         title_label = Label.new()
         title_label.name = "TitleLabel"
-        title_label.rect_position = Vector2(10, 10)
-        title_label.rect_size = Vector2(170, 30)
+        title_label.position = Vector2(10, 10)
+        title_label.size = Vector2(170, 30)
         title_label.text = "Available Buildings"
-        title_label.align = Label.ALIGN_CENTER
+        title_label.horizontal_alignment = Label.ALIGNMENT_CENTER
         panel.add_child(title_label)
     
     # Connect button signals
     if close_button:
-        if not close_button.is_connected("pressed", self, "_on_close_button_pressed"):
-            close_button.connect("pressed", self, "_on_close_button_pressed")
+        if not close_button.is_connected("pressed", Callable(self, "_on_close_button_pressed")):
+            close_button.connect("pressed", Callable(self, "_on_close_button_pressed"))
     
     # Get references to managers
     var game_manager = get_node_or_null("/root/GameManager")
@@ -130,7 +130,7 @@ func populate_buildings(team: int) -> void:
         tooltip += "\nCost: " + str(cost) + " gold"
         tooltip += "\nSize: " + str(size_x) + "x" + str(size_y)
         
-        button.hint_tooltip = tooltip
+        button.tooltip_text = tooltip
         
         # Add cost indicator
         var can_afford = economy_manager.can_afford_building(team, building_data.id)
@@ -142,7 +142,7 @@ func populate_buildings(team: int) -> void:
             button.modulate = Color(1, 1, 1) # Full color in debug mode
         
         # Connect button press
-        button.connect("pressed", self, "_on_building_button_pressed", [i])
+        button.connect("pressed", Callable(self, "_on_building_button_pressed").bind(i))
         
         building_grid.add_child(button)
 
@@ -171,7 +171,7 @@ func populate_upgrades(team: int) -> void:
         var tooltip = upgrade_data.description if upgrade_data.has("description") else ""
         tooltip += "\nBuilding: " + upgrade_data.building
         
-        button.hint_tooltip = tooltip
+        button.tooltip_text = tooltip
         
         # Add indicator for research status
         var is_researchable = tech_tree_manager.can_research_upgrade(team, upgrade_data.id)
@@ -179,7 +179,7 @@ func populate_upgrades(team: int) -> void:
             button.modulate = Color(0.5, 0.5, 0.5) # Gray out if not researchable
         
         # Connect button press
-        button.connect("pressed", self, "_on_upgrade_button_pressed", [i])
+        button.connect("pressed", Callable(self, "_on_upgrade_button_pressed").bind(i))
         
         building_grid.add_child(button)
 
@@ -204,18 +204,18 @@ func _on_close_button_pressed() -> void:
 # Input handling
 func _input(event: InputEvent) -> void:
     if visible and event is InputEventKey:
-        if event.pressed and event.scancode == KEY_ESCAPE:
+        if event.pressed and event.keycode == KEY_ESCAPE:
             hide_menu()
 
 # Additional input handlers
 func _unhandled_input(event: InputEvent) -> void:
     # Right-click to close menu
     if visible and event is InputEventMouseButton:
-        if event.button_index == BUTTON_RIGHT and event.pressed:
+        if event.button_index == MOUSE_MOUSE_BUTTON_RIGHT and event.pressed:
             hide_menu()
 
 # Debugging and error handling
-func _get_configuration_warning() -> String:
+func _get_configuration_warnings() -> String:
     if not building_manager:
         return "No BuildingManager found. Menu may not function correctly."
     return ""

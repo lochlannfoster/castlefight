@@ -60,17 +60,19 @@ func _initialize_impl() -> void:
 
 # Load custom damage tables from configuration
 func _load_damage_tables() -> void:
-    var config_path = "res://data/combat/damage_table.json"
-    var file = File.new()
-    
-    if file.file_exists(config_path):
-        if file.open(config_path, File.READ) == OK:
+    var config_path = "res://data/combat/damage_table.json"    
+    if FileAccess.file_exists(config_path):
+        file = FileAccess.open(config_path, FileAccess.READ)
+
+    if file != null:
             var text = file.get_as_text()
             file.close()
             
-            var parse_result = JSON.parse(text)
-            if parse_result.error == OK:
-                var data = parse_result.result
+            var test_json_conv = JSON.new()
+            test_json_conv.parse(text)
+            var parse_result = test_json_conv.get_data()
+            if parse_result == OK:
+                var data = json.data
                 
                 # Merge with existing table
                 for attack_type in data.keys():
@@ -248,7 +250,7 @@ func initialize() -> void:
             var _unit_factory = game_manager.get_system("UnitFactory")
             
             # Connect signals if needed
-            if building_manager and not building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
-                building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+            if building_manager and not building_manager.is_connected("building_destroyed", Callable(self, "_on_building_destroyed")):
+                building_manager.connect("building_destroyed", Callable(self, "_on_building_destroyed"))
     
     print("CombatSystem: Initialization complete")

@@ -1,7 +1,7 @@
 # Base class for all combat units
 # Path: scripts/unit/unit_base.gd
 class_name Unit
-extends KinematicBody2D
+extends CharacterBody2D
 
 # Unit signals
 signal unit_spawned
@@ -12,25 +12,25 @@ signal attack_performed(target, damage)
 signal ability_used(ability_name, target)
 
 # Unit properties
-export var unit_id: String = "base_unit"
-export var display_name: String = "Unit"
-export var health: float = 100.0
-export var max_health: float = 100.0
-export var armor: float = 0.0
-export var armor_type: String = "medium" # light, medium, heavy, etc.
-export var attack_damage: float = 10.0
-export var attack_type: String = "normal" # normal, piercing, siege, etc.
-export var attack_range: float = 60.0
-export var attack_speed: float = 1.0 # Attacks per second
-export var movement_speed: float = 100.0
-export var team: int = 0 # 0 = Team A, 1 = Team B
-export var collision_radius: float = 16.0
-export var vision_range: float = 300.0
-export var health_regen: float = 0.25 # Health per second
-export var mana_regen: float = 0.25 # Mana per second
-export var has_mana: bool = false
-export var mana: float = 50.0
-export var max_mana: float = 100.0
+@export var unit_id: String = "base_unit"
+@export var display_name: String = "Unit"
+@export var health: float = 100.0
+@export var max_health: float = 100.0
+@export var armor: float = 0.0
+@export var armor_type: String = "medium" # light, medium, heavy, etc.
+@export var attack_damage: float = 10.0
+@export var attack_type: String = "normal" # normal, piercing, siege, etc.
+@export var attack_range: float = 60.0
+@export var attack_speed: float = 1.0 # Attacks per second
+@export var movement_speed: float = 100.0
+@export var team: int = 0 # 0 = Team A, 1 = Team B
+@export var collision_radius: float = 16.0
+@export var vision_range: float = 300.0
+@export var health_regen: float = 0.25 # Health per second
+@export var mana_regen: float = 0.25 # Mana per second
+@export var has_mana: bool = false
+@export var mana: float = 50.0
+@export var max_mana: float = 100.0
 
 # State tracking
 enum UnitState {IDLE, MOVING, ATTACKING, CASTING, STUNNED, DEAD}
@@ -51,7 +51,7 @@ var navigation_node
 var should_attack_move: bool = true
 
 # Visual and effects
-var sprite: Sprite
+var sprite: Sprite2D
 var animation_player: AnimationPlayer
 var health_bar: ProgressBar
 var effects_node: Node2D # For visual effects
@@ -122,8 +122,8 @@ func _physics_process(delta: float) -> void:
 # Setup health bar
 func _setup_health_bar() -> void:
     health_bar = ProgressBar.new()
-    health_bar.rect_size = Vector2(32, 5)
-    health_bar.rect_position = Vector2(-16, -25) # Position above unit
+    health_bar.size = Vector2(32, 5)
+    health_bar.position = Vector2(-16, -25) # Position above unit
     health_bar.min_value = 0
     health_bar.max_value = max_health
     health_bar.value = health
@@ -165,7 +165,7 @@ func _process_idle(_delta: float) -> void:
 
 # Process movement state
 func _process_movement(_delta: float) -> void:
-    if path.empty():
+    if path.is_empty():
         current_state = UnitState.IDLE
         return
     
@@ -175,7 +175,7 @@ func _process_movement(_delta: float) -> void:
     if distance_to_next < 10:
         path.remove(0)
         
-        if path.empty():
+        if path.is_empty():
             current_state = UnitState.IDLE
             return
         
@@ -186,7 +186,9 @@ func _process_movement(_delta: float) -> void:
     var modified_speed = movement_speed * _get_speed_modifier()
     
     velocity = direction * modified_speed
-    velocity = move_and_slide(velocity)
+    set_velocity(velocity)
+    move_and_slide()
+    velocity = velocity
 
 # Process attacking state
 func _process_attacking(delta: float) -> void:
@@ -404,7 +406,7 @@ func _die(killer = null) -> void:
     
     # Queue for removal (with delay if showing death animation)
     if animation_player and animation_player.has_animation("death"):
-        yield (animation_player, "animation_finished")
+        await animation_player.animation_finished
     
     queue_free()
 
@@ -592,7 +594,7 @@ func apply_buff(buff_name: String, buff_data: Dictionary) -> void:
     if buff_data.has("visual_effect"):
         var effect_scene = load(buff_data.visual_effect)
         if effect_scene:
-            var effect = effect_scene.instance()
+            var effect = effect_scene.instantiate()
             effects_node.add_child(effect)
 
 # Apply a debuff to the unit
@@ -619,7 +621,7 @@ func apply_debuff(debuff_name: String, debuff_data: Dictionary) -> void:
     if debuff_data.has("visual_effect"):
         var effect_scene = load(debuff_data.visual_effect)
         if effect_scene:
-            var effect = effect_scene.instance()
+            var effect = effect_scene.instantiate()
             effects_node.add_child(effect)
 
 # Add to unit_base.gd
@@ -634,12 +636,12 @@ func _setup_core_components() -> void:
         add_child(collision)
     
     # Set up sprite
-    if not has_node("Sprite"):
-        sprite = Sprite.new()
-        sprite.name = "Sprite"
+    if not has_node("Sprite2D"):
+        sprite = Sprite2D.new()
+        sprite.name = "Sprite2D"
         add_child(sprite)
     else:
-        sprite = get_node("Sprite")
+        sprite = get_node("Sprite2D")
     
     # Set up health bar
     _setup_health_bar()

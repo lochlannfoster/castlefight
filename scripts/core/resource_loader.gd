@@ -1,4 +1,4 @@
-extends Reference
+extends RefCounted
 
 # Load a resource with a fallback option
 static func load_resource_with_fallback(primary_path: String, fallback_path: String, error_message: String = "") -> Resource:
@@ -16,7 +16,7 @@ static func load_resource_with_fallback(primary_path: String, fallback_path: Str
     
     # Both primary and fallback failed
     var error_text = "Failed to load resource: " + primary_path + " or fallback: " + fallback_path
-    if !error_message.empty():
+    if !error_message.is_empty():
         error_text += " - " + error_message
         
     push_error(error_text)

@@ -280,7 +280,7 @@ func draw_debug_grid() -> void:
         add_child(debug_draw)
         
         # Connect draw signal
-        debug_draw.connect("draw", self, "_on_debug_draw")
+        debug_draw.connect("draw", Callable(self, "_on_debug_draw"))
     
     # Force update
     var debug_visualizer = get_node("DebugGridVisualizer")

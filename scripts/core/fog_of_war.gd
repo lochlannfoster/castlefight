@@ -9,10 +9,10 @@ signal fog_unit_revealed(unit, team)
 signal fog_building_revealed(building, team)
 
 # Fog of War settings
-export var cell_size: Vector2 = Vector2(32, 32) # Size of visibility grid cells
-export var map_width: int = 80 # Width in grid cells
-export var map_height: int = 60 # Height in grid cells
-export var update_interval: float = 0.25 # Time between visibility updates (seconds)
+@export var cell_size: Vector2 = Vector2(32, 32) # Size of visibility grid cells
+@export var map_width: int = 80 # Width in grid cells
+@export var map_height: int = 60 # Height in grid cells
+@export var update_interval: float = 0.25 # Time between visibility updates (seconds)
 
 # Visibility grid for each team
 # Format: {team_id -> {grid_x_y -> visibility_level}}
@@ -51,7 +51,7 @@ func _init() -> void:
 # Called when the node is added to the scene tree
 func _ready() -> void:
     # Call parent _ready
-    ._ready()
+    super._ready()
     
     # Create map display node if needed
     if !map_node:
@@ -76,10 +76,10 @@ func _initialize_impl() -> void:
         building_manager = game_manager.get_node_or_null("BuildingManager")
     
     if building_manager:
-        if !building_manager.is_connected("building_placed", self, "_on_building_placed"):
-            building_manager.connect("building_placed", self, "_on_building_placed")
-        if !building_manager.is_connected("building_destroyed", self, "_on_building_destroyed"):
-            building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+        if !building_manager.is_connected("building_placed", Callable(self, "_on_building_placed")):
+            building_manager.connect("building_placed", Callable(self, "_on_building_placed"))
+        if !building_manager.is_connected("building_destroyed", Callable(self, "_on_building_destroyed")):
+            building_manager.connect("building_destroyed", Callable(self, "_on_building_destroyed"))
     
     # Setup fog rendering
     setup_fog_rendering()
@@ -123,32 +123,32 @@ func _initialize_grids() -> void:
 # Setup fog rendering using a shader
 func setup_fog_rendering() -> void:
     # Load our existing shader
-    var shader_path = "res://shaders/fog_of_war.shader"
+    var shader_path = "res://shaders/fog_of_war.gdshader"
     
     # Create shader material
     fog_material = ShaderMaterial.new()
     
     # Check if shader exists
-    var dir = Directory.new()
-    if dir.file_exists(shader_path):
+    var dir = DirAccess.new()
+    if FileAccess.file_exists(shader_path):
         # Load shader
         var shader_file = load(shader_path)
         if shader_file:
-            fog_material.shader = shader_file
+            fog_material.gdshader = shader_file
             debug_log("Loaded fog of war shader: " + shader_path, "info")
         else:
             debug_log("Failed to load shader: " + shader_path, "error")
             # Use a very simple fallback shader
             var shader = Shader.new()
             shader.code = "shader_type canvas_item;\nvoid fragment() {\n    COLOR = vec4(0.0, 0.0, 0.0, 0.3);\n}"
-            fog_material.shader = shader
+            fog_material.gdshader = shader
     else:
         debug_log("Shader file does not exist: " + shader_path, "warning")
         # Set up a default material instead
         fog_material = ShaderMaterial.new()
         var shader = Shader.new()
         shader.code = "shader_type canvas_item;\nvoid fragment() {\n    COLOR = vec4(0.0, 0.0, 0.0, 0.3);\n}"
-        fog_material.shader = shader
+        fog_material.gdshader = shader
     
     # Create fog textures for each team
     _create_fog_textures()
@@ -161,7 +161,7 @@ func setup_fog_rendering() -> void:
 func _create_fog_textures() -> void:
     # Create texture for Team A
     var team_a_image = Image.new()
-    team_a_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
+    Image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
     team_a_image.fill(Color(0, 0, 0, 1)) # Start with black (fog)
     
     var team_a_texture = ImageTexture.new()
@@ -169,30 +169,28 @@ func _create_fog_textures() -> void:
     
     # Create texture for Team B
     var team_b_image = Image.new()
-    team_b_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
+    Image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
     team_b_image.fill(Color(0, 0, 0, 1)) # Start with black (fog)
     
     var team_b_texture = ImageTexture.new()
     team_b_texture.create_from_image(team_b_image)
     
     # Store textures
-    fog_material.set_shader_param("team_a_fog", team_a_texture)
-    fog_material.set_shader_param("team_b_fog", team_b_texture)
+    fog_material.set_shader_parameter("team_a_fog", team_a_texture)
+    fog_material.set_shader_parameter("team_b_fog", team_b_texture)
 
 # Create fog sprites for visualization
 func _create_fog_sprites(alpha: float = 0.5) -> void:
     # Ensure fog texture directory exists
-    var dir = Directory.new()
-    if !dir.dir_exists("res://assets/fog_of_war"):
-        dir.make_dir_recursive("res://assets/fog_of_war")
+    var dir = DirAccess.new()
+    if !DirAccess.dir_exists_absolute("res://assets/fog_of_war"):
+        DirAccess.make_dir_recursive_absolute("res://assets/fog_of_war")
     
     # Create a placeholder fog texture if it doesn't exist
-    var fog_texture_path = "res://assets/fog_of_war/fog_texture.png"
-    var file = File.new()
-    
-    if !file.file_exists(fog_texture_path):
+    var fog_texture_path = "res://assets/fog_of_war/fog_texture.png"    
+    if !FileAccess.file_exists(fog_texture_path):
         var image = Image.new()
-        image.create(32, 32, false, Image.FORMAT_RGBA8)
+        Image.create(32, 32, false, Image.FORMAT_RGBA8)
         image.fill(Color(0, 0, 0, alpha)) # Use the alpha parameter
         image.save_png(fog_texture_path)
     
@@ -201,13 +199,13 @@ func _create_fog_sprites(alpha: float = 0.5) -> void:
     if !texture:
         # Create a fallback texture
         var image = Image.new()
-        image.create(32, 32, false, Image.FORMAT_RGBA8)
+        Image.create(32, 32, false, Image.FORMAT_RGBA8)
         image.fill(Color(0, 0, 0, alpha)) # Use the alpha parameter
         texture = ImageTexture.new()
         texture.create_from_image(image)
     
     # Create sprite for Team A fog (only visible to Team A)
-    var team_a_sprite = Sprite.new()
+    var team_a_sprite = Sprite2D.new()
     team_a_sprite.name = "TeamAFog"
     team_a_sprite.material = fog_material
     team_a_sprite.texture = texture
@@ -217,7 +215,7 @@ func _create_fog_sprites(alpha: float = 0.5) -> void:
     map_node.add_child(team_a_sprite)
     
     # Create sprite for Team B fog (only visible to Team B)
-    var team_b_sprite = Sprite.new()
+    var team_b_sprite = Sprite2D.new()
     team_b_sprite.name = "TeamBFog"
     team_b_sprite.material = fog_material
     team_b_sprite.texture = texture
@@ -251,15 +249,15 @@ func register_building(building) -> void:
 func _update_fog_textures() -> void:
     # Update Team A fog texture
     var team_a_image = Image.new()
-    team_a_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
+    Image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
     
     # Update Team B fog texture
     var team_b_image = Image.new()
-    team_b_image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
+    Image.create(map_width, map_height, false, Image.FORMAT_RGBA8)
     
     # Lock images before modifying
-    team_a_image.lock()
-    team_b_image.lock()
+    false # team_a_image.lock() # TODOConverter3To4, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed
+    false # team_b_image.lock() # TODOConverter3To4, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed
     
     # Fill images based on visibility grid
     for x in range(map_width):
@@ -279,8 +277,8 @@ func _update_fog_textures() -> void:
                 team_b_image.set_pixel(x, y, Color(0, 0, 0, 0.7)) # Partially visible
     
     # Unlock images after modifying
-    team_a_image.unlock()
-    team_b_image.unlock()
+    false # team_a_image.unlock() # TODOConverter3To4, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed
+    false # team_b_image.unlock() # TODOConverter3To4, Image no longer requires locking, `false` helps to not break one line if/else, so it can freely be removed
     
     # Update textures
     var team_a_texture = ImageTexture.new()
@@ -289,8 +287,8 @@ func _update_fog_textures() -> void:
     var team_b_texture = ImageTexture.new()
     team_b_texture.create_from_image(team_b_image)
     
-    fog_material.set_shader_param("team_a_fog", team_a_texture)
-    fog_material.set_shader_param("team_b_fog", team_b_texture)
+    fog_material.set_shader_parameter("team_a_fog", team_a_texture)
+    fog_material.set_shader_parameter("team_b_fog", team_b_texture)
 
 # Set current player team (for single-player or client-side view)
 func set_current_player_team(team: int) -> void:
@@ -317,7 +315,7 @@ func notify_building_revealed(building, team) -> void:
 # Update visibility based on unit and building positions
 func _update_visibility() -> void:
     # Skip if no teams are initialized
-    if visibility_grid.empty():
+    if visibility_grid.is_empty():
         return
     
     # Reset current visibility to "previously seen" (1)
@@ -401,15 +399,15 @@ func _on_building_destroyed(building) -> void:
 func initialize() -> void:
     # Call parent initialize which will ultimately call our _initialize_impl
     if _initialization_state != "completed":
-        .initialize()
+        super.initialize()
 
 # Add this function to scripts/core/fog_of_war.gd
 func set_fog_active(active: bool) -> void:
     if fog_material:
         # Check if the shader has the parameter first to avoid errors
-        if fog_material.shader:
-            if fog_material.shader.has_param("active"):
-                fog_material.set_shader_param("active", active)
+        if fog_material.gdshader:
+            if fog_material.gdshader.has_param("active"):
+                fog_material.set_shader_parameter("active", active)
             else:
                 # If the parameter doesn't exist yet, the shader may need updating
                 debug_log("Shader doesn't have 'active' parameter - shader update needed", "warning")

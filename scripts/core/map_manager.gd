@@ -6,13 +6,13 @@ signal map_generated
 signal lane_created(lane_id, lane_data)
 
 # Map properties
-export var map_width: int = 40 # Width in grid cells
-export var map_height: int = 30 # Height in grid cells
-export var lane_count: int = 3 # Number of lanes
-export var base_size: int = 8 # Size of team bases in grid cells
-export var team_a_color: Color = Color(0, 0, 1) # Blue
-export var team_b_color: Color = Color(1, 0, 0) # Red
-export var neutral_color: Color = Color(0.5, 0.5, 0.5) # Gray
+@export var map_width: int = 40 # Width in grid cells
+@export var map_height: int = 30 # Height in grid cells
+@export var lane_count: int = 3 # Number of lanes
+@export var base_size: int = 8 # Size of team bases in grid cells
+@export var team_a_color: Color = Color(0, 0, 1) # Blue
+@export var team_b_color: Color = Color(1, 0, 0) # Red
+@export var neutral_color: Color = Color(0.5, 0.5, 0.5) # Gray
 
 # Map data
 var map_data: Dictionary = {}
@@ -75,8 +75,8 @@ func _initialize_impl() -> void:
             add_child(map_node)
     
     # Connect grid signals only if not already connected
-    if grid_system and not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
-        var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+    if grid_system and not grid_system.is_connected("grid_initialized", Callable(self, "_on_grid_initialized")):
+        var _connect_result = grid_system.connect("grid_initialized", Callable(self, "_on_grid_initialized"))
     
     # Generate default map
     generate_map()
@@ -142,26 +142,26 @@ func generate_map() -> void:
 
 # Load an existing map from file
 func load_map(map_name: String) -> bool:
-    var file_path = "res://maps/" + map_name + ".json"
-    var file = File.new()
-    
-    if not file.file_exists(file_path):
+    var file_path = "res://maps/" + map_name + ".json"    
+    if not FileAccess.file_exists(file_path):
         print("Map file does not exist: " + file_path)
         return false
     
-    if file.open(file_path, File.READ) != OK:
+    if file.open(file_path, FileAccess.READ) != OK:
         print("Could not open map file: " + file_path)
         return false
     
     var json_text = file.get_as_text()
     file.close()
     
-    var json_result = JSON.parse(json_text)
+    var test_json_conv = JSON.new()
+    test_json_conv.parse(json_text)
+    var json_result = test_json_conv.get_data()
     if json_result.error != OK:
         print("Error parsing map data: " + json_result.error_string)
         return false
     
-    var data = json_result.result
+    var data = json.data
     
     # Load map properties
     map_width = data.map_width
@@ -209,10 +209,8 @@ func load_map(map_name: String) -> bool:
 
 # Save the current map to file
 func save_map(map_name: String) -> bool:
-    var file_path = "res://maps/" + map_name + ".json"
-    var file = File.new()
-    
-    if file.open(file_path, File.WRITE) != OK:
+    var file_path = "res://maps/" + map_name + ".json"    
+    if file.open(file_path, FileAccess.WRITE) != OK:
         print("Could not open map file for writing: " + file_path)
         return false
     
@@ -274,7 +272,7 @@ func save_map(map_name: String) -> bool:
             "buildable": cell.buildable
         })
     
-    var json_text = JSON.print(save_data, "  ")
+    var json_text = JSON.stringify(save_data, "  ")
     file.store_string(json_text)
     file.close()
     
@@ -291,7 +289,7 @@ func apply_map_to_grid() -> void:
     grid_system.grid_height = map_height
     
     # If grid is not initialized, do so now
-    if grid_system.grid_cells.empty():
+    if grid_system.grid_cells.is_empty():
         grid_system.initialize_grid()
         return # Grid initialization will call _on_grid_initialized
     
@@ -432,26 +430,26 @@ func _on_grid_initialized() -> void:
 func load_map_config(map_name: String = "default_map") -> bool:
     # Unused map_name parameter indicates this function might be intended to be more flexible
     # Let's modify to use the map_name for more specific configuration loading
-    var file_path = "res://data/defaults/maps/" + map_name + ".json"
-    var file = File.new()
-    
-    if not file.file_exists(file_path):
+    var file_path = "res://data/defaults/maps/" + map_name + ".json"    
+    if not FileAccess.file_exists(file_path):
         # If specific map config doesn't exist, fall back to default
         file_path = "res://data/defaults/maps/default_maps.json"
     
-    if file.open(file_path, File.READ) != OK:
+    if file.open(file_path, FileAccess.READ) != OK:
         push_error("Could not open map configuration file: " + file_path)
         return _create_default_map_config()
     
     var json_text = file.get_as_text()
     file.close()
     
-    var json_result = JSON.parse(json_text)
+    var test_json_conv = JSON.new()
+    test_json_conv.parse(json_text)
+    var json_result = test_json_conv.get_data()
     if json_result.error != OK:
         push_error("Error parsing map configuration: " + json_result.error_string)
         return _create_default_map_config()
     
-    var config = json_result.result
+    var config = json.data
     
     # Set map dimensions
     map_width = config.size.width
@@ -573,9 +571,9 @@ func initialize() -> void:
     
     # Connect grid signals
     if grid_system:
-        if not grid_system.is_connected("grid_initialized", self, "_on_grid_initialized"):
+        if not grid_system.is_connected("grid_initialized", Callable(self, "_on_grid_initialized")):
             # Store the connection result to avoid warning
-            var _connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+            var _connect_result = grid_system.connect("grid_initialized", Callable(self, "_on_grid_initialized"))
     
     # Try to load default map and store the result
     var _map_config_result = load_map_config()
@@ -589,7 +587,7 @@ func _update_map_display() -> void:
         child.queue_free()
     
     # Only show debug display in editor
-    if not Engine.editor_hint:
+    if not Engine.is_editor_hint():
         return
     
     # Create a visual representation of the map
@@ -598,8 +596,8 @@ func _update_map_display() -> void:
         var pos = cell_data.position
         
         var cell_rect = ColorRect.new()
-        cell_rect.rect_size = Vector2(16, 16)
-        cell_rect.rect_position = pos * 16
+        cell_rect.size = Vector2(16, 16)
+        cell_rect.position = pos * 16
         
         match cell_data.terrain_type:
             "team_a_base":
@@ -615,33 +613,33 @@ func _update_map_display() -> void:
     for lane in lanes:
         for waypoint in lane.waypoints:
             var marker = ColorRect.new()
-            marker.rect_size = Vector2(8, 8)
-            marker.rect_position = Vector2(waypoint.x, waypoint.y) * 16 - Vector2(4, 4)
+            marker.size = Vector2(8, 8)
+            marker.position = Vector2(waypoint.x, waypoint.y) * 16 - Vector2(4, 4)
             marker.color = Color(1, 1, 0) # Yellow
             map_node.add_child(marker)
     
     # Draw start and HQ positions
     var team_a_start_marker = ColorRect.new()
-    team_a_start_marker.rect_size = Vector2(10, 10)
-    team_a_start_marker.rect_position = team_a_start_pos * 16 - Vector2(5, 5)
+    team_a_start_marker.size = Vector2(10, 10)
+    team_a_start_marker.position = team_a_start_pos * 16 - Vector2(5, 5)
     team_a_start_marker.color = Color(0, 1, 0) # Green
     map_node.add_child(team_a_start_marker)
     
     var team_b_start_marker = ColorRect.new()
-    team_b_start_marker.rect_size = Vector2(10, 10)
-    team_b_start_marker.rect_position = team_b_start_pos * 16 - Vector2(5, 5)
+    team_b_start_marker.size = Vector2(10, 10)
+    team_b_start_marker.position = team_b_start_pos * 16 - Vector2(5, 5)
     team_b_start_marker.color = Color(0, 1, 0) # Green
     map_node.add_child(team_b_start_marker)
     
     var team_a_hq_marker = ColorRect.new()
-    team_a_hq_marker.rect_size = Vector2(12, 12)
-    team_a_hq_marker.rect_position = team_a_hq_pos * 16 - Vector2(6, 6)
+    team_a_hq_marker.size = Vector2(12, 12)
+    team_a_hq_marker.position = team_a_hq_pos * 16 - Vector2(6, 6)
     team_a_hq_marker.color = Color(1, 1, 1) # White
     map_node.add_child(team_a_hq_marker)
     
     var team_b_hq_marker = ColorRect.new()
-    team_b_hq_marker.rect_size = Vector2(12, 12)
-    team_b_hq_marker.rect_position = team_b_hq_pos * 16 - Vector2(6, 6)
+    team_b_hq_marker.size = Vector2(12, 12)
+    team_b_hq_marker.position = team_b_hq_pos * 16 - Vector2(6, 6)
     team_b_hq_marker.color = Color(1, 1, 1) # White
     map_node.add_child(team_b_hq_marker)
 
@@ -663,23 +661,23 @@ func apply_ground_textures() -> void:
     # Create colored rectangles for each territory
     var team_a_rect = ColorRect.new()
     team_a_rect.color = Color(0, 0, 0.8, 1.0) # Blue
-    team_a_rect.rect_size = Vector2(base_size * grid_system.cell_size.x,
+    team_a_rect.size = Vector2(base_size * grid_system.cell_size.x,
                                     map_height * grid_system.cell_size.y)
-    team_a_rect.rect_position = grid_system.grid_to_world(Vector2(0, 0))
+    team_a_rect.position = grid_system.grid_to_world(Vector2(0, 0))
     ground_node.add_child(team_a_rect)
     
     var neutral_rect = ColorRect.new()
     neutral_rect.color = Color(0.5, 0.5, 0.5, 1.0) # Gray
-    neutral_rect.rect_size = Vector2((map_width - 2 * base_size) * grid_system.cell_size.x,
+    neutral_rect.size = Vector2((map_width - 2 * base_size) * grid_system.cell_size.x,
                                      map_height * grid_system.cell_size.y)
-    neutral_rect.rect_position = grid_system.grid_to_world(Vector2(base_size, 0))
+    neutral_rect.position = grid_system.grid_to_world(Vector2(base_size, 0))
     ground_node.add_child(neutral_rect)
     
     var team_b_rect = ColorRect.new()
     team_b_rect.color = Color(0.8, 0, 0, 1.0) # Red
-    team_b_rect.rect_size = Vector2(base_size * grid_system.cell_size.x,
+    team_b_rect.size = Vector2(base_size * grid_system.cell_size.x,
                                     map_height * grid_system.cell_size.y)
-    team_b_rect.rect_position = grid_system.grid_to_world(Vector2(map_width - base_size, 0))
+    team_b_rect.position = grid_system.grid_to_world(Vector2(map_width - base_size, 0))
     ground_node.add_child(team_b_rect)
     
     debug_log("Ground textures applied", "info")
@@ -687,7 +685,7 @@ func apply_ground_textures() -> void:
 # Helper function to create colored texture placeholders
 func _create_colored_texture(color: Color) -> ImageTexture:
     var image = Image.new()
-    image.create(64, 64, false, Image.FORMAT_RGBA8)
+    Image.create(64, 64, false, Image.FORMAT_RGBA8)
     image.fill(color)
     
     var texture = ImageTexture.new()

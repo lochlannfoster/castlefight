@@ -43,9 +43,9 @@ class LogEntry:
 # Initialize logging system
 func _ready() -> void:
     # Ensure log directory exists
-    var dir = Directory.new()
-    if not dir.dir_exists("user://logs"):
-        dir.make_dir_recursive("user://logs")
+    var dir = DirAccess.new()
+    if not DirAccess.dir_exists_absolute("user://logs"):
+        DirAccess.make_dir_recursive_absolute("user://logs")
     
     # Rotate log files if needed
     _rotate_log_files()
@@ -60,7 +60,7 @@ func debug_log(level: int, message: String, category: String = "General", contex
         return
     
     var entry = LogEntry.new()
-    entry.timestamp = OS.get_unix_time()
+    entry.timestamp = Time.get_unix_time_from_system()
     entry.level = level
     entry.category = category
     entry.message = message
@@ -95,7 +95,7 @@ func info(message: String, category: String = "General", context: Dictionary = {
     debug_log(LogLevel.INFO, message, category)
     
     # Optionally log additional context if needed
-    if not context.empty():
+    if not context.is_empty():
         for key in context.keys():
             debug_log(LogLevel.VERBOSE, str(key) + ": " + str(context[key]), category)
 
@@ -110,7 +110,7 @@ func critical(message: String, category: String = "General") -> void:
 
 # Performance tracking and logging
 func track_performance(operation_name: String, start_time: int, start_memory: int) -> void:
-    var end_time = OS.get_ticks_msec()
+    var end_time = Time.get_ticks_msec()
     var end_memory = OS.get_static_memory_usage()
     
     var duration = end_time - start_time
@@ -142,7 +142,7 @@ func _log_to_file(entry: LogEntry) -> void:
         
     if _file_handle and _file_handle.is_open():
         # Format timestamp
-        var datetime = OS.get_datetime_from_unix_time(entry.timestamp)
+        var datetime = Time.get_datetime_dict_from_system_from_unix_time(entry.timestamp)
         var time_str = "%04d-%02d-%02d %02d:%02d:%02d" % [
             datetime.year, datetime.month, datetime.day,
             datetime.hour, datetime.minute, datetime.second
@@ -160,7 +160,7 @@ func _log_to_file(entry: LogEntry) -> void:
         _file_handle.store_string(log_line)
     
     # Check file size and rotate if needed
-    if _file_handle and _file_handle.get_len() > _config.max_file_size_mb * 1024 * 1024:
+    if _file_handle and _file_handle.get_length() > _config.max_file_size_mb * 1024 * 1024:
         _rotate_log_files()
 
 # Open log file method
@@ -170,8 +170,8 @@ func _open_log_file() -> void:
         _file_handle.close()
     
     # Create new file handle
-    _file_handle = File.new()
-    var err = _file_handle.open(_config.log_file_path, File.WRITE)
+    _file_handle = FileAccess
+    var err = _file_handle.open(_config.log_file_path, FileAccess.WRITE)
     
     if err != OK:
         print("ERROR: Failed to open log file: " + _config.log_file_path)
@@ -184,16 +184,16 @@ func _rotate_log_files() -> void:
         _file_handle.close()
     
     # Get list of existing log files
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     var log_dir = _config.log_file_path.get_base_dir()
     
-    if not dir.dir_exists(log_dir):
-        dir.make_dir_recursive(log_dir)
+    if not DirAccess.dir_exists_absolute(log_dir):
+        DirAccess.make_dir_recursive_absolute(log_dir)
         
     var log_files = []
     
     if dir.open(log_dir) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -204,7 +204,7 @@ func _rotate_log_files() -> void:
         dir.list_dir_end()
     
     # Sort files by modification time (oldest first)
-    log_files.sort_custom(self, "_sort_files_by_time")
+    log_files.sort_custom(Callable(self, "_sort_files_by_time"))
     
     # Remove oldest files if we have too many
     while log_files.size() >= _config.max_log_files:
@@ -213,7 +213,7 @@ func _rotate_log_files() -> void:
         log_files.remove(0)
     
     # Rename current log file with timestamp
-    var datetime = OS.get_datetime()
+    var datetime = Time.get_datetime_dict_from_system()
     var timestamp = "%04d%02d%02d_%02d%02d%02d" % [
         datetime.year, datetime.month, datetime.day,
         datetime.hour, datetime.minute, datetime.second
@@ -226,20 +226,18 @@ func _rotate_log_files() -> void:
     _open_log_file()
 
 func _sort_files_by_time(a: String, b: String) -> bool:
-    var _dir = Directory.new()
-    var file = File.new()
-    
+    var _dir = DirAccess.new()    
     # Safely get modification times
     var time_a = 0
     var time_b = 0
     
-    if file.file_exists(a):
-        file.open(a, File.READ)
+    if FileAccess.file_exists(a):
+        file.open(a, FileAccess.READ)
         time_a = file.get_modified_time(a)
         file.close()
     
-    if file.file_exists(b):
-        file.open(b, File.READ)
+    if FileAccess.file_exists(b):
+        file.open(b, FileAccess.READ)
         time_b = file.get_modified_time(b)
         file.close()
     

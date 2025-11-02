@@ -21,7 +21,7 @@ var required_scenes = {
                         "position": Vector2(10, 10),
                         "size": Vector2(380, 30),
                         "text": "Available Buildings",
-                        "align": Label.ALIGN_CENTER
+                        "align": Label.ALIGNMENT_CENTER
                     },
                     {
                         "type": "GridContainer",
@@ -42,13 +42,13 @@ var required_scenes = {
         ]
     },
     "res://scenes/units/worker.tscn": {
-        "root_type": "KinematicBody2D",
+        "root_type": "CharacterBody2D",
         "root_name": "Worker",
         "script_path": "res://scripts/worker/worker.gd",
         "children": [
             {
-                "type": "Sprite",
-                "name": "Sprite",
+                "type": "Sprite2D",
+                "name": "Sprite2D",
                 "position": Vector2(0, 0)
             },
             {
@@ -71,19 +71,17 @@ func _ready():
     queue_free()
 
 # Check if a scene exists and create it if not
-func ensure_scene_exists(scene_path: String) -> void:
-    var file = File.new()
-    if file.file_exists(scene_path):
+func ensure_scene_exists(scene_path: String) -> void:    if FileAccess.file_exists(scene_path):
         print("Scene exists: " + scene_path)
         return
     
     print("Scene doesn't exist, creating: " + scene_path)
     
     # Create directory structure if needed
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     var dir_path = scene_path.get_base_dir()
-    if not dir.dir_exists(dir_path):
-        dir.make_dir_recursive(dir_path)
+    if not DirAccess.dir_exists_absolute(dir_path):
+        DirAccess.make_dir_recursive_absolute(dir_path)
     
     # Get scene definition
     var scene_def = required_scenes[scene_path]
@@ -121,10 +119,10 @@ func create_node_from_def(node_def: Dictionary) -> Node:
             node = Button.new()
         "GridContainer":
             node = GridContainer.new()
-        "KinematicBody2D":
-            node = KinematicBody2D.new()
-        "Sprite":
-            node = Sprite.new()
+        "CharacterBody2D":
+            node = CharacterBody2D.new()
+        "Sprite2D":
+            node = Sprite2D.new()
         "CollisionShape2D":
             node = CollisionShape2D.new()
             # Create shape
@@ -151,18 +149,18 @@ func create_node_from_def(node_def: Dictionary) -> Node:
     # Apply properties
     if node_def.has("position"):
         if node is Control:
-            node.rect_position = node_def.position
+            node.position = node_def.position
         else:
             node.position = node_def.position
     
     if node_def.has("size") and node is Control:
-        node.rect_size = node_def.size
+        node.size = node_def.size
     
     if node_def.has("text") and node is Label or node is Button:
         node.text = node_def.text
     
     if node_def.has("align") and node is Label:
-        node.align = node_def.align
+        node.horizontal_alignment = node_def.align
     
     if node_def.has("columns") and node is GridContainer:
         node.columns = node_def.columns

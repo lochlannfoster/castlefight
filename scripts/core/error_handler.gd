@@ -60,14 +60,14 @@ func debug_log(message: String, level: String = "info", context: String = "") ->
 
 func _ready():
     # Ensure crash log directory exists
-    var dir = Directory.new()
-    if not dir.dir_exists(_crash_handling_config.crash_log_path):
-        dir.make_dir_recursive(_crash_handling_config.crash_log_path)
+    var dir = DirAccess.new()
+    if not DirAccess.dir_exists_absolute(_crash_handling_config.crash_log_path):
+        DirAccess.make_dir_recursive_absolute(_crash_handling_config.crash_log_path)
 
 # Report an error
 func report_error(type: int, message: String, context: Dictionary = {}) -> ErrorReport:
     var report = ErrorReport.new()
-    report.timestamp = OS.get_unix_time()
+    report.timestamp = Time.get_unix_time_from_system()
     report.type = type
     report.message = message
     report.context = context
@@ -94,11 +94,11 @@ func report_error(type: int, message: String, context: Dictionary = {}) -> Error
     return report
 
 # Log error to file
-func _log_error(report: ErrorReport):
-    var log_file = File.new()
-    var filename = _crash_handling_config.crash_log_path + "error_" + str(report.timestamp) + ".log"
+func _log_error(report: ErrorReport):    var filename = _crash_handling_config.crash_log_path + "error_" + str(report.timestamp) + ".log"
     
-    if log_file.open(filename, File.WRITE) == OK:
+    log_file = FileAccess.open(filename, FileAccess.WRITE)
+
+    if log_file != null:
         log_file.store_line("Timestamp: " + str(report.timestamp))
         log_file.store_line("Type: " + _get_error_type_name(report.type))
         log_file.store_line("Message: " + report.message)
@@ -126,13 +126,13 @@ func _log_error(report: ErrorReport):
 
 # Continuing Error Handler Implementation
 func _rotate_crash_logs():
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     var crash_log_path = _crash_handling_config.crash_log_path
     
     # Get all crash log files
     var crash_logs = []
     dir.open(crash_log_path)
-    dir.list_dir_begin()
+    dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
     
     var file_name = dir.get_next()
     while file_name != "":
@@ -142,7 +142,7 @@ func _rotate_crash_logs():
     dir.list_dir_end()
     
     # Sort logs by timestamp (newest first)
-    crash_logs.sort_custom(self, "_sort_crash_logs")
+    crash_logs.sort_custom(Callable(self, "_sort_crash_logs"))
     
     # Remove excess logs
     while crash_logs.size() > _crash_handling_config.max_crash_logs:
@@ -226,14 +226,14 @@ func safe_resource_load(path: String, expected_type: String = "") -> Resource:
 
 # Create a safe method for directory operations
 func safe_create_directory(path: String) -> bool:
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     
     # Check if directory exists
-    if dir.dir_exists(path):
+    if DirAccess.dir_exists_absolute(path):
         return true
     
     # Attempt to create directory
-    var error = dir.make_dir_recursive(path)
+    var error = DirAccess.make_dir_recursive_absolute(path)
     
     if error != OK:
         var _report = report_error(

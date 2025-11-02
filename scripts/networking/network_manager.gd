@@ -57,7 +57,7 @@ signal player_list_changed(players) # Add this signal
 signal match_ready # Add this signal
 
 # Core Networking Properties
-var network: NetworkedMultiplayerENet = null
+var network: ENetMultiplayerPeer = null
 var local_player_id: int = 0
 var connection_state: int = ConnectionState.DISCONNECTED
 var game_phase: int = GamePhase.LOBBY
@@ -172,9 +172,7 @@ func _verify_required_scenes() -> void:
         "res://scenes/game/map.tscn"
     ]
     
-    for scene_path in required_scenes:
-        var file = File.new()
-        if file.file_exists(scene_path):
+    for scene_path in required_scenes:        if FileAccess.file_exists(scene_path):
             print("Scene exists: " + scene_path)
         else:
             print("WARNING: Required scene does not exist: " + scene_path)
@@ -183,10 +181,10 @@ func _verify_required_scenes() -> void:
 
 func _create_minimal_scene(scene_path: String) -> void:
     var dir_path = scene_path.get_base_dir()
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     # Create directory if needed
-    if not dir.dir_exists(dir_path):
-        dir.make_dir_recursive(dir_path)
+    if not DirAccess.dir_exists_absolute(dir_path):
+        DirAccess.make_dir_recursive_absolute(dir_path)
     
     # Create a basic scene based on the scene type
     if scene_path.ends_with("game.tscn"):
@@ -281,11 +279,11 @@ func _initialize_game_references() -> void:
         print("Game system references initialized")
         
 func _setup_network_signals() -> void:
-    var _err1 = get_tree().connect("network_peer_connected", self, "_on_player_connected")
-    var _err2 = get_tree().connect("network_peer_disconnected", self, "_on_player_disconnected")
-    var _err3 = get_tree().connect("connected_to_server", self, "_on_connected_to_server")
-    var _err4 = get_tree().connect("connection_failed", self, "_on_connection_failed")
-    var _err5 = get_tree().connect("server_disconnected", self, "_on_server_disconnected")
+    var _err1 = get_tree().connect("peer_connected", Callable(self, "_on_player_connected"))
+    var _err2 = get_tree().connect("peer_disconnected", Callable(self, "_on_player_disconnected"))
+    var _err3 = get_tree().connect("connected_to_server", Callable(self, "_on_connected_to_server"))
+    var _err4 = get_tree().connect("connection_failed", Callable(self, "_on_connection_failed"))
+    var _err5 = get_tree().connect("server_disconnected", Callable(self, "_on_server_disconnected"))
 
 func _generate_server_seed() -> void:
     var rng = RandomNumberGenerator.new()
@@ -304,11 +302,11 @@ func start_server(server_name: String = "Castle Fight Server",
         return false
     
     # Create network instance
-    network = NetworkedMultiplayerENet.new()
+    network = ENetMultiplayerPeer.new()
     
     # Configure network compression if enabled
     if network_compression_enabled:
-        network.set_compression_mode(NetworkedMultiplayerENet.COMPRESS_FASTLZ)
+        network.set_compression_mode(ENetMultiplayerPeer.COMPRESS_FASTLZ)
     
     # Attempt to create server
     var result = network.create_server(port, max_players)
@@ -364,11 +362,11 @@ func connect_to_server(ip: String,
         return false
     
     # Create network instance
-    network = NetworkedMultiplayerENet.new()
+    network = ENetMultiplayerPeer.new()
     
     # Configure network compression if enabled
     if network_compression_enabled:
-        network.set_compression_mode(NetworkedMultiplayerENet.COMPRESS_FASTLZ)
+        network.set_compression_mode(ENetMultiplayerPeer.COMPRESS_FASTLZ)
     
     # Attempt to connect to server
     var result = network.create_client(ip, port)
@@ -483,7 +481,7 @@ func _on_player_disconnected(player_id: int) -> void:
 func _on_connected_to_server() -> void:
     print("Successfully connected to server")
     connection_state = ConnectionState.CONNECTED
-    local_player_id = get_tree().get_network_unique_id()
+    local_player_id = get_tree().get_unique_id()
     
     # Transfer temporary player info
     if player_info.has(0):
@@ -513,7 +511,7 @@ func _on_server_disconnected() -> void:
         var reconnect_timer = Timer.new()
         reconnect_timer.one_shot = true
         reconnect_timer.wait_time = 5.0
-        reconnect_timer.connect("timeout", self, "_attempt_reconnect", [saved_state])
+        reconnect_timer.connect("timeout", Callable(self, "_attempt_reconnect").bind(saved_state))
         add_child(reconnect_timer)
         reconnect_timer.start()
         
@@ -594,11 +592,11 @@ func set_player_ready(player_id: int, is_ready: bool) -> void:
     _check_match_start_conditions()
 
 # Also add this to NetworkManager
-remote func _request_set_player_info(player_name: String, team: int) -> void:
+@rpc("any_peer") func _request_set_player_info(player_name: String, team: int) -> void:
     if not is_server:
         return
         
-    var player_id = get_tree().get_rpc_sender_id()
+    var player_id = get_tree().get_remote_sender_id()
     if player_info.has(player_id):
         player_info[player_id]["name"] = player_name
         player_info[player_id]["team"] = team
@@ -642,7 +640,7 @@ func _team_all_ready(team: int) -> bool:
         print("Team " + str(team) + " does not exist")
         return false
         
-    if players[team].empty():
+    if players[team].is_empty():
         return true # Empty team is considered "ready"
     
     for player_id in players[team]:
@@ -662,7 +660,7 @@ func _prepare_match_start() -> void:
     # Broadcast match preparation to all clients
     rpc("_begin_match_preparation")
 
-remote func _begin_match_preparation() -> void:
+@rpc("any_peer") func _begin_match_preparation() -> void:
     if is_server:
         return
     
@@ -719,7 +717,7 @@ func start_match() -> void:
             player_info[1]["team"] = 0
     
     # Set match start time and phase
-    match_start_time = OS.get_unix_time()
+    match_start_time = Time.get_unix_time_from_system()
     match_duration = 0.0
     game_phase = GamePhase.ACTIVE
     
@@ -735,7 +733,7 @@ func start_match() -> void:
     
     # Change to game scene
     debug_log("Server changing to game scene...", "info")
-    var error = get_tree().change_scene("res://scenes/game/game.tscn")
+    var error = get_tree().change_scene_to_file("res://scenes/game/game.tscn")
     if error != OK:
         debug_log("ERROR: Failed to change to game scene with error code: " + str(error), "error")
     emit_signal("match_started")
@@ -768,7 +766,7 @@ func _sync_player_data_to_game_manager() -> void:
     
     debug_log("Player sync complete. GameManager now has " + str(current_gm.players.size()) + " players", "info")
 
-remote func _match_started() -> void:
+@rpc("any_peer") func _match_started() -> void:
     if is_server:
         return
     
@@ -776,11 +774,11 @@ remote func _match_started() -> void:
     
     print("Client changing to game scene...")
     var _current_game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn")
+    if game_manager and game_manager.has_method("change_scene_to_file"):
+        game_manager.change_scene_to_file("res://scenes/lobby/lobby.tscn")
     else:
         # Fallback if not available
-        var _result = get_tree().change_scene("res://scenes/lobby/lobby.tscn")
+        var _result = get_tree().change_scene_to_file("res://scenes/lobby/lobby.tscn")
 
 func _client_match_start_setup() -> void:
     # Ensure game manager exists
@@ -847,7 +845,7 @@ func _spawn_initial_match_units() -> void:
         var worker_scene = load(worker_scene_path)
         if worker_scene:
             # Instance the worker
-            var worker = worker_scene.instance()
+            var worker = worker_scene.instantiate()
             
             # Configure worker properties
             worker.team = local_team
@@ -871,7 +869,7 @@ func _sync_initial_game_state() -> void:
     if is_server:
         # Server collects and broadcasts initial state
         var initial_state = {
-            "timestamp": OS.get_ticks_msec(),
+            "timestamp": Time.get_ticks_msec(),
             "match_config": match_config,
             "resources": {},
             "buildings": [],
@@ -908,12 +906,12 @@ func _sync_initial_game_state() -> void:
     var fallback_timer = Timer.new()
     fallback_timer.one_shot = true
     fallback_timer.wait_time = 5.0
-    fallback_timer.connect("timeout", self, "_on_sync_timeout")
+    fallback_timer.connect("timeout", Callable(self, "_on_sync_timeout"))
     add_child(fallback_timer)
     fallback_timer.start()
 
 # Remote function called when player list is updated
-remote func _update_player_list(updated_player_info: Dictionary) -> void:
+@rpc("any_peer") func _update_player_list(updated_player_info: Dictionary) -> void:
     # Update the local player info
     player_info = updated_player_info
     
@@ -921,13 +919,13 @@ remote func _update_player_list(updated_player_info: Dictionary) -> void:
     emit_signal("player_list_changed", player_info)
 
 # Request handler for initial state
-remote func _request_initial_state(requester_id: int) -> void:
+@rpc("any_peer") func _request_initial_state(requester_id: int) -> void:
     if not is_server:
         return
     
     # Same as in _sync_initial_game_state, but sending only to requester
     var initial_state = {
-        "timestamp": OS.get_ticks_msec(),
+        "timestamp": Time.get_ticks_msec(),
         "match_config": match_config,
         "resources": {},
         "buildings": [],
@@ -953,7 +951,7 @@ remote func _request_initial_state(requester_id: int) -> void:
     rpc_id(requester_id, "_receive_initial_state", initial_state)
 
 # Receiver for initial state
-remote func _receive_initial_state(state_data: Dictionary) -> void:
+@rpc("any_peer") func _receive_initial_state(state_data: Dictionary) -> void:
     print("Received initial game state")
     
     # Apply server seed for deterministic randomness
@@ -1019,7 +1017,7 @@ func _end_match(winning_team: int, reason: String = "standard") -> void:
     
     emit_signal("match_ended", winning_team, reason)
 
-remote func _match_concluded(winner: int, reason: String) -> void:
+@rpc("any_peer") func _match_concluded(winner: int, reason: String) -> void:
     if is_server:
         return
     
@@ -1051,8 +1049,8 @@ func _client_match_end_processing() -> void:
     
     # Transition to post-match lobby or menu
     var _current_game_manager = get_node_or_null("/root/GameManager")
-    if game_manager and game_manager.has_method("change_scene"):
-        game_manager.change_scene("res://scenes/lobby/lobby.tscn", true) # With transition
+    if game_manager and game_manager.has_method("change_scene_to_file"):
+        game_manager.change_scene_to_file("res://scenes/lobby/lobby.tscn", true) # With transition
 
 # Reset game systems to clean state after match
 func _reset_game_systems() -> void:
@@ -1111,8 +1109,8 @@ func _check_match_validity() -> void:
         players[1] = []
     
     # End match if either team is empty
-    if players[0].empty() or players[1].empty():
-        var winning_team = 0 if players[1].empty() else 1
+    if players[0].is_empty() or players[1].is_empty():
+        var winning_team = 0 if players[1].is_empty() else 1
         _end_match(winning_team, "team_eliminated")
 
 # Input Handling and Synchronization
@@ -1134,11 +1132,11 @@ func send_player_input(input_type: int, input_data: Dictionary) -> void:
         # Send to server
         rpc_id(1, "_receive_player_input", input_data)
 
-remote func _receive_player_input(input_data: Dictionary) -> void:
+@rpc("any_peer") func _receive_player_input(input_data: Dictionary) -> void:
     if not is_server:
         return
     
-    var player_id = get_tree().get_rpc_sender_id()
+    var player_id = get_tree().get_remote_sender_id()
     _process_player_input(player_id, input_data)
 
 func _process_player_input(player_id: int, input_data: Dictionary) -> void:
@@ -1240,7 +1238,7 @@ func _broadcast_input(_sender_id: int, _input_data: Dictionary) -> void:
         if player_id != _sender_id:
             rpc_id(player_id, "_apply_remote_input", _sender_id, _input_data)
 
-remote func _apply_remote_input(_player_id: int, _input_data: Dictionary) -> void:
+@rpc("any_peer") func _apply_remote_input(_player_id: int, _input_data: Dictionary) -> void:
     # Client-side input application
     if is_server:
         return
@@ -1275,7 +1273,7 @@ func _optimize_network_bandwidth() -> void:
     
     # Enable delta compression
     if network_compression_enabled:
-        network.set_compression_mode(NetworkedMultiplayerENet.COMPRESSION_RANGE)
+        network.set_compression_mode(ENetMultiplayerPeer.COMPRESSION_RANGE)
 
 func _process(delta: float) -> void:
     # Update game state
@@ -1288,11 +1286,11 @@ func _generate_network_checksum() -> int:
     var checksum_data = {
         "game_state": _capture_game_state_snapshot(),
         "player_actions": last_processed_inputs,
-        "timestamp": OS.get_unix_time()
+        "timestamp": Time.get_unix_time_from_system()
     }
     
     # Use a robust checksum generation method
-    var checksum = hash(JSON.print(checksum_data))
+    var checksum = hash(JSON.stringify(checksum_data))
     return int(abs(checksum)) % 100000 # Normalize to a smaller range
 
 func _validate_network_checksum(client_checksum: int) -> bool:
@@ -1305,17 +1303,17 @@ func _validate_network_checksum(client_checksum: int) -> bool:
 
 func _write_network_log_to_file(log_entry: Dictionary) -> void:
     var log_dir = "user://network_logs/"
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     
     # Create log directory if it doesn't exist
-    if not dir.dir_exists(log_dir):
-        dir.make_dir_recursive(log_dir)
+    if not DirAccess.dir_exists_absolute(log_dir):
+        DirAccess.make_dir_recursive_absolute(log_dir)
     
-    var log_file_path = log_dir + "network_log_" + str(OS.get_unix_time()) + ".json"
-    var file = File.new()
-    
-    if file.open(log_file_path, File.WRITE) == OK:
-        file.store_string(JSON.print(log_entry, "\t"))
+    var log_file_path = log_dir + "network_log_" + str(Time.get_unix_time_from_system()) + ".json"    
+    file = FileAccess.open(log_file_path, FileAccess.WRITE)
+
+        if file != null:
+        file.store_string(JSON.stringify(log_entry, "\t"))
         file.close()
 
 # Detailed Match Statistics Collection
@@ -1395,28 +1393,28 @@ func _collect_player_performance(player_id: int) -> Dictionary:
 
 func _connect_signals() -> void:
     if game_manager:
-        game_manager.connect("game_started", self, "_on_game_started")
-        game_manager.connect("game_ended", self, "_on_game_ended")
+        game_manager.connect("game_started", Callable(self, "_on_game_started"))
+        game_manager.connect("game_ended", Callable(self, "_on_game_ended"))
         
     if economy_manager:
-        economy_manager.connect("resources_changed", self, "_on_resources_changed")
+        economy_manager.connect("resources_changed", Callable(self, "_on_resources_changed"))
 
 # Network Replay System (Basic Implementation)
 func _save_match_replay(match_stats: Dictionary) -> void:
     var replay_dir = "user://replays/"
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     
     # Create replay directory if it doesn't exist
-    if not dir.dir_exists(replay_dir):
-        dir.make_dir_recursive(replay_dir)
+    if not DirAccess.dir_exists_absolute(replay_dir):
+        DirAccess.make_dir_recursive_absolute(replay_dir)
     
     # Generate unique replay filename
-    var replay_filename = "replay_" + str(OS.get_unix_time()) + ".json"
+    var replay_filename = "replay_" + str(Time.get_unix_time_from_system()) + ".json"
     var replay_path = replay_dir + replay_filename
-    
-    var file = File.new()
-    if file.open(replay_path, File.WRITE) == OK:
-        file.store_string(JSON.print({
+        file = FileAccess.open(replay_path, FileAccess.WRITE)
+
+        if file != null:
+        file.store_string(JSON.stringify({
             "match_stats": match_stats,
             "network_log": network_log,
             "server_seed": server_seed
@@ -1437,7 +1435,7 @@ func is_player_in_match(player_id: int) -> bool:
 # Capture a snapshot of the current game state for checksum generation
 func _capture_game_state_snapshot() -> Dictionary:
     var snapshot = {
-        "timestamp": OS.get_unix_time(),
+        "timestamp": Time.get_unix_time_from_system(),
         "game_phase": game_phase,
         "players": {},
         "team_resources": {}
@@ -1527,15 +1525,15 @@ func generate_debug_report() -> Dictionary:
 # Export debug report to file
 func export_debug_report() -> String:
     var report = generate_debug_report()
-    var export_path = "user://debug_reports/debug_report_" + str(OS.get_unix_time()) + ".json"
+    var export_path = "user://debug_reports/debug_report_" + str(Time.get_unix_time_from_system()) + ".json"
     
-    var dir = Directory.new()
-    if not dir.dir_exists("user://debug_reports"):
-        dir.make_dir_recursive("user://debug_reports")
-    
-    var file = File.new()
-    if file.open(export_path, File.WRITE) == OK:
-        file.store_string(JSON.print(report, "\t"))
+    var dir = DirAccess.new()
+    if not DirAccess.dir_exists_absolute("user://debug_reports"):
+        DirAccess.make_dir_recursive_absolute("user://debug_reports")
+        file = FileAccess.open(export_path, FileAccess.WRITE)
+
+        if file != null:
+        file.store_string(JSON.stringify(report, "\t"))
         file.close()
         print("Debug report exported to: " + export_path)
     
@@ -1582,7 +1580,7 @@ func _collect_unit_state(unit) -> Dictionary:
     }
 
 # Synchronize game state between clients
-remote func _sync_game_state(state_data: Dictionary) -> void:
+@rpc("any_peer") func _sync_game_state(state_data: Dictionary) -> void:
     if is_server:
         # Server shouldn't receive this
         return
@@ -1657,7 +1655,7 @@ func _broadcast_game_state() -> void:
     
     # Collect current game state
     var state_data = {
-        "timestamp": OS.get_ticks_msec(),
+        "timestamp": Time.get_ticks_msec(),
         "resources": {},
         "buildings": [],
         "units": []
@@ -1686,7 +1684,7 @@ func _broadcast_game_state() -> void:
     # Collect unit state
     # Find all units in the scene
     var units = get_tree().get_nodes_in_group("units")
-    if units.empty() and game_manager:
+    if units.is_empty() and game_manager:
         # If no units in group, try to find them in the scene
         var main_scene = get_tree().current_scene
         if main_scene:
@@ -1733,22 +1731,22 @@ func _update_pings() -> void:
         for player_id in player_info.keys():
             if player_id != 1: # Skip server
                 # Send ping request to client
-                rpc_id(player_id, "_ping_request", OS.get_ticks_msec())
+                rpc_id(player_id, "_ping_request", Time.get_ticks_msec())
     else:
         # Client measures ping to server
-        rpc_id(1, "_ping_request", OS.get_ticks_msec())
+        rpc_id(1, "_ping_request", Time.get_ticks_msec())
 
 # Ping request handler
-remote func _ping_request(timestamp: int) -> void:
+@rpc("any_peer") func _ping_request(timestamp: int) -> void:
     # Send ping response back to sender
-    var sender_id = get_tree().get_rpc_sender_id()
+    var sender_id = get_tree().get_remote_sender_id()
     rpc_id(sender_id, "_ping_response", timestamp)
 
 # Ping response handler
-remote func _ping_response(timestamp: int) -> void:
+@rpc("any_peer") func _ping_response(timestamp: int) -> void:
     # Calculate ping time
-    var ping_time = OS.get_ticks_msec() - timestamp
-    var sender_id = get_tree().get_rpc_sender_id()
+    var ping_time = Time.get_ticks_msec() - timestamp
+    var sender_id = get_tree().get_remote_sender_id()
     
     # Update player ping information
     if player_info.has(sender_id):
@@ -1791,11 +1789,11 @@ func change_team(new_team: int) -> bool:
         rpc_id(1, "_request_change_team", new_team)
         return true
 
-remote func _request_change_team(new_team: int) -> void:
+@rpc("any_peer") func _request_change_team(new_team: int) -> void:
     if not is_server:
         return
     
-    var player_id = get_tree().get_rpc_sender_id()
+    var player_id = get_tree().get_remote_sender_id()
     var _change_result = change_player_team(player_id, new_team)
 
 func get_player_info() -> Dictionary:

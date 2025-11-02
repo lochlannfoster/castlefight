@@ -12,8 +12,8 @@ signal bounty_earned(team, amount, source)
 enum ResourceType {GOLD, WOOD, SUPPLY}
 
 # Income settings
-export var base_income: float = 10.0 # Base income per tick
-export var income_interval: float = 10.0 # Seconds between income ticks
+@export var base_income: float = 10.0 # Base income per tick
+@export var income_interval: float = 10.0 # Seconds between income ticks
 
 var team_resources: Dictionary = {
     0: { # Team A
@@ -118,9 +118,9 @@ func _load_cost_data() -> void:
 func _load_building_costs() -> void:
     var data_path = "res://data/buildings/"
     
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -133,15 +133,17 @@ func _load_building_costs() -> void:
         push_error("Error: Could not open building data directory")
 
 # Load a single building cost file
-func _load_building_cost_file(building_id: String, file_path: String) -> void:
-    var file = File.new()
-    if file.open(file_path, File.READ) == OK:
+func _load_building_cost_file(building_id: String, file_path: String) -> void:    file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
         var text = file.get_as_text()
         file.close()
         
-        var parse_result = JSON.parse(text)
-        if parse_result.error == OK:
-            var data = parse_result.result
+        var test_json_conv = JSON.new()
+        test_json_conv.parse(text)
+        var parse_result = test_json_conv.get_data()
+        if parse_result == OK:
+            var data = json.data
             
             # Extract cost information
             var cost_data = {
@@ -161,9 +163,9 @@ func _load_building_cost_file(building_id: String, file_path: String) -> void:
 func _load_item_costs() -> void:
     var data_path = "res://data/items/"
     
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -177,15 +179,17 @@ func _load_item_costs() -> void:
         print("Warning: Could not open items data directory")
 
 # Load a single item cost file
-func _load_item_cost_file(item_id: String, file_path: String) -> void:
-    var file = File.new()
-    if file.open(file_path, File.READ) == OK:
+func _load_item_cost_file(item_id: String, file_path: String) -> void:    file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
         var text = file.get_as_text()
         file.close()
         
-        var parse_result = JSON.parse(text)
-        if parse_result.error == OK:
-            var data = parse_result.result
+        var test_json_conv = JSON.new()
+        test_json_conv.parse(text)
+        var parse_result = test_json_conv.get_data()
+        if parse_result == OK:
+            var data = json.data
             
             # Extract cost information
             var cost_data = {
@@ -358,7 +362,7 @@ func award_unit_kill_bounty(team: int, unit_type: String, _killer_unit = null) -
     # Find the building that spawns this unit type
     var spawning_building_type = _find_building_that_spawns_unit(unit_type)
     
-    if spawning_building_type.empty():
+    if spawning_building_type.is_empty():
         # Default bounty if we can't find the spawning building
         var default_bounty = 5.0
         _award_bounty(team, default_bounty, "Unit Kill: " + unit_type)
@@ -378,26 +382,27 @@ func award_unit_kill_bounty(team: int, unit_type: String, _killer_unit = null) -
 func _find_building_that_spawns_unit(unit_type: String) -> String:
     var data_path = "res://data/buildings/"
     
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) != OK:
         return ""
     
-    dir.list_dir_begin(true, true)
+    dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
     var file_name = dir.get_next()
     
     while file_name != "":
         if file_name.ends_with(".json"):
             var building_id = file_name.get_basename()
-            var file_path = data_path + file_name
-            
-            var file = File.new()
-            if file.open(file_path, File.READ) == OK:
+            var file_path = data_path + file_name            file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
                 var text = file.get_as_text()
                 file.close()
                 
-                var parse_result = JSON.parse(text)
-                if parse_result.error == OK:
-                    var data = parse_result.result
+                var test_json_conv = JSON.new()
+                test_json_conv.parse(text)
+                var parse_result = test_json_conv.get_data()
+                if parse_result == OK:
+                    var data = json.data
                     
                     # Check if this building spawns the unit
                     if data.has("unit_types") and data.unit_types is Array:

@@ -45,22 +45,22 @@ func set_config(category: String, key: String, value):
     _config[category][key] = value
 
 # Load configuration from file
-func load_config(path: String = "res://config.json") -> bool:
-    var file = File.new()
-    if not file.file_exists(path):
+func load_config(path: String = "res://config.json") -> bool:    if not FileAccess.file_exists(path):
         push_warning("Configuration file not found: " + path)
         return false
     
     var json_text = file.get_as_text()
     file.close()
     
-    var parse_result = JSON.parse(json_text)
+    var test_json_conv = JSON.new()
+    test_json_conv.parse(json_text)
+    var parse_result = test_json_conv.get_data()
     if parse_result.error != OK:
         push_error("JSON Parse Error: " + parse_result.error_string)
         return false
     
     # Merge loaded config with existing
-    var loaded_config = parse_result.result
+    var loaded_config = json.data
     for category in loaded_config:
         if not _config.has(category):
             _config[category] = {}
@@ -70,12 +70,10 @@ func load_config(path: String = "res://config.json") -> bool:
     return true
 
 # Save current configuration to file
-func save_config(path: String = "user://config.json") -> bool:
-    var file = File.new()
-    if file.open(path, File.WRITE) != OK:
+func save_config(path: String = "user://config.json") -> bool:    if file.open(path, FileAccess.WRITE) != OK:
         push_error("Could not open file for writing: " + path)
         return false
     
-    file.store_string(JSON.print(_config, "  "))
+    file.store_string(JSON.stringify(_config, "  "))
     file.close()
     return true

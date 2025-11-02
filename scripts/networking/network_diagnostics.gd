@@ -34,12 +34,12 @@ func _ready():
     
     if network_manager:
         # Connect to network manager signals
-        network_manager.connect("server_started", self, "_on_server_started")
-        network_manager.connect("client_connected", self, "_on_client_connected")
-        network_manager.connect("client_disconnected", self, "_on_client_disconnected")
-        network_manager.connect("connection_succeeded", self, "_on_connection_succeeded")
-        network_manager.connect("connection_failed", self, "_on_connection_failed")
-        network_manager.connect("ping_updated", self, "_on_ping_updated")
+        network_manager.connect("server_started", Callable(self, "_on_server_started"))
+        network_manager.connect("client_connected", Callable(self, "_on_client_connected"))
+        network_manager.connect("client_disconnected", Callable(self, "_on_client_disconnected"))
+        network_manager.connect("connection_succeeded", Callable(self, "_on_connection_succeeded"))
+        network_manager.connect("connection_failed", Callable(self, "_on_connection_failed"))
+        network_manager.connect("ping_updated", Callable(self, "_on_ping_updated"))
     
     print("Network diagnostics utility initialized")
 
@@ -53,7 +53,7 @@ func start_diagnostics() -> void:
     reset_stats()
     
     # Mark start time
-    diagnostic_start_time = OS.get_ticks_msec()
+    diagnostic_start_time = Time.get_ticks_msec()
     diagnostic_active = true
     
     # Start ping test if connected
@@ -93,7 +93,7 @@ func reset_stats() -> void:
 func _start_ping_test() -> void:
     # Send pings to measure latency
     if network_manager and network_manager.network:
-        last_ping_time = OS.get_ticks_msec()
+        last_ping_time = Time.get_ticks_msec()
         
         # If we're the server, ping all clients
         if network_manager.is_server:
@@ -106,19 +106,19 @@ func _start_ping_test() -> void:
 
 # Send ping to a specific client
 func _send_ping_to_client(client_id: int) -> void:
-    last_ping_time = OS.get_ticks_msec()
+    last_ping_time = Time.get_ticks_msec()
     network_manager.rpc_id(client_id, "_diagnostic_ping", last_ping_time)
     packets_sent += 1
 
 # Send ping to server
 func _send_ping_to_server() -> void:
-    last_ping_time = OS.get_ticks_msec()
+    last_ping_time = Time.get_ticks_msec()
     network_manager.rpc_id(1, "_diagnostic_ping", last_ping_time)
     packets_sent += 1
 
 # Remote function to receive ping and send pong response
-remote func _diagnostic_ping(timestamp: int) -> void:
-    var sender_id = get_tree().get_rpc_sender_id()
+@rpc("any_peer") func _diagnostic_ping(timestamp: int) -> void:
+    var sender_id = get_tree().get_remote_sender_id()
     
     # Send pong response
     network_manager.rpc_id(sender_id, "_diagnostic_pong", timestamp)
@@ -126,8 +126,8 @@ remote func _diagnostic_ping(timestamp: int) -> void:
     packets_sent += 1
 
 # Remote function to receive pong response and calculate latency
-remote func _diagnostic_pong(timestamp: int) -> void:
-    var current_time = OS.get_ticks_msec()
+@rpc("any_peer") func _diagnostic_pong(timestamp: int) -> void:
+    var current_time = Time.get_ticks_msec()
     var latency = current_time - timestamp
     
     # Update latency statistics
@@ -148,14 +148,14 @@ remote func _diagnostic_pong(timestamp: int) -> void:
     
     # Continue ping test if diagnostics still active
     if diagnostic_active:
-        yield(get_tree().create_timer(1.0), "timeout")
+        await get_tree().create_timer(1.0).timeout
         _start_ping_test()
 
 # Generate a comprehensive diagnostic report
 func generate_diagnostic_report() -> Dictionary:
     var report = {
-        "timestamp": OS.get_datetime(),
-        "duration_ms": OS.get_ticks_msec() - diagnostic_start_time,
+        "timestamp": Time.get_datetime_dict_from_system(),
+        "duration_ms": Time.get_ticks_msec() - diagnostic_start_time,
         "network_status": {
             "connected": network_manager && network_manager.network != null,
             "is_server": network_manager && network_manager.is_server,
@@ -197,7 +197,7 @@ func get_current_stats() -> Dictionary:
 
 # Calculate average latency from samples
 func _calculate_average_latency() -> float:
-    if latency_samples.empty():
+    if latency_samples.is_empty():
         return 0.0
     
     var sum = 0.0
@@ -283,22 +283,22 @@ func _generate_recommendations() -> Array:
         recommendations.append("Moderate packet loss detected (>2%). This may cause some gameplay interruptions.")
     
     # General recommendations if no specific issues
-    if recommendations.empty():
+    if recommendations.is_empty():
         recommendations.append("Network performance appears to be good.")
     
     return recommendations
 
 # Save diagnostic report to file
 func _save_report_to_file(report: Dictionary) -> void:
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     var path = "user://network_diagnostics"
     
     # Create directory if it doesn't exist
-    if !dir.dir_exists(path):
-        dir.make_dir_recursive(path)
+    if !DirAccess.dir_exists_absolute(path):
+        DirAccess.make_dir_recursive_absolute(path)
     
     # Generate filename with timestamp
-    var datetime = OS.get_datetime()
+    var datetime = Time.get_datetime_dict_from_system()
     var filename = "%s/network_report_%d-%02d-%02d_%02d-%02d-%02d.json" % [
         path,
         datetime.year,
@@ -309,10 +309,10 @@ func _save_report_to_file(report: Dictionary) -> void:
         datetime.second
     ]
     
-    # Save file
-    var file = File.new()
-    if file.open(filename, File.WRITE) == OK:
-        file.store_string(JSON.print(report, "  "))
+    # Save file    file = FileAccess.open(filename, FileAccess.WRITE)
+
+    if file != null:
+        file.store_string(JSON.stringify(report, "  "))
         file.close()
         print("Network diagnostic report saved to: " + filename)
     else:

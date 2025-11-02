@@ -28,7 +28,7 @@ var selection_rectangle = RectangleShape2D.new()
 var is_selecting = false
 var draw_selection = false
 
-export var debug_mode: bool = false
+@export var debug_mode: bool = false
 
 
 func debug_log(message: String, level: String = "info", context: String = "") -> void:
@@ -77,7 +77,7 @@ func initialize_game_systems() -> void:
     if map_manager:
             map_manager.generate_map()
     # Wait a frame for all systems to finish initializing
-    yield (get_tree(), "idle_frame")
+    await get_tree().process_frame
     
     # Connect signals after all systems are initialized
     _connect_signals()
@@ -91,8 +91,8 @@ func _ready() -> void:
     if not InputMap.has_action("select"):
         InputMap.add_action("select")
         var event = InputEventMouseButton.new()
-        event.button_index = BUTTON_LEFT
-        event.pressed = true
+        event.button_index = MOUSE_MOUSE_BUTTON_LEFT
+        event.button_pressed = true
         InputMap.action_add_event("select", event)
         
     debug_log("Game scene initialization STARTED", "info")
@@ -107,8 +107,8 @@ func _ready() -> void:
     if not InputMap.has_action("ui_fullscreen"):
         InputMap.add_action("ui_fullscreen")
         var event = InputEventKey.new()
-        event.scancode = KEY_F11
-        event.pressed = true
+        event.keycode = KEY_F11
+        event.button_pressed = true
         InputMap.action_add_event("ui_fullscreen", event)
     
     # Setup mouse locking
@@ -185,8 +185,8 @@ func _ensure_rendering_structure():
         # Add a background color to make it visible
         var background = ColorRect.new()
         background.name = "Background"
-        background.rect_min_size = Vector2(4000, 3000)
-        background.rect_position = Vector2(-2000, -1500)
+        background.custom_minimum_size = Vector2(4000, 3000)
+        background.position = Vector2(-2000, -1500)
         background.color = Color(0.2, 0.3, 0.2) # Dark green background
         ground.add_child(background)
         background.owner = self
@@ -252,13 +252,13 @@ func _setup_safe_camera() -> void:
     var camera_script = load("res://scripts/core/camera_controller.gd")
     if camera_script:
         camera.set_script(camera_script)
-        debug_log("Camera controller script successfully loaded", "debug")
+        debug_log("Camera3D controller script successfully loaded", "debug")
     else:
-        debug_log("Camera controller script not found! Check path.", "error")
+        debug_log("Camera3D controller script not found! Check path.", "error")
     
     # Use call_deferred to ensure proper scene tree integration
     call_deferred("add_child", camera)
-    debug_log("Camera added to scene", "debug")
+    debug_log("Camera3D added to scene", "debug")
 
 # Safely load game map
 func _load_map_safely() -> void:
@@ -302,7 +302,7 @@ func _validate_game_initialization() -> void:
 
 func _input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed:
-        match event.scancode:
+        match event.keycode:
             KEY_G: # Toggle grid visualization
                 var game_manager = get_node_or_null("/root/GameManager")
                 if game_manager and game_manager.has_method("toggle_grid_visualization"):
@@ -353,7 +353,7 @@ func _explicitly_draw_grid() -> void:
             debug_log("Created missing GridSystem")
             
             # We need to wait until it's added to the tree
-            yield (get_tree(), "idle_frame")
+            await get_tree().process_frame
         else:
             debug_log("Cannot create grid system - script not valid", "error")
             return
@@ -428,7 +428,7 @@ func _draw_grid_deferred(grid_sys) -> void:
         grid_sys.draw_debug_grid()
         
         # Make sure the grid visualizer is visible by default
-        yield (get_tree(), "idle_frame") # Wait for visualizer to be created
+        await get_tree().process_frame # Wait for visualizer to be created
         var visualizer = grid_sys.get_node_or_null("DebugGridVisualizer")
         if visualizer:
             visualizer.visible = true
@@ -442,23 +442,23 @@ func _draw_grid_deferred(grid_sys) -> void:
 func _connect_signals() -> void:
     # Connect grid system signals
     if grid_system:
-        var grid_connect_result = grid_system.connect("grid_initialized", self, "_on_grid_initialized")
+        var grid_connect_result = grid_system.connect("grid_initialized", Callable(self, "_on_grid_initialized"))
         if grid_connect_result != OK:
             debug_log("Failed to connect grid_initialized signal", "warning")
     
     # Connect combat system signals
     if combat_system:
-        var combat_connect_result = combat_system.connect("combat_event", self, "_on_combat_event")
+        var combat_connect_result = combat_system.connect("combat_event", Callable(self, "_on_combat_event"))
         if combat_connect_result != OK:
             debug_log("Failed to connect combat_event signal", "warning")
     
     # Connect building manager signals
     if building_manager:
-        var placed_connect_result = building_manager.connect("building_placed", self, "_on_building_placed")
+        var placed_connect_result = building_manager.connect("building_placed", Callable(self, "_on_building_placed"))
         if placed_connect_result != OK:
             debug_log("Failed to connect building_placed signal", "warning")
         
-        var destroyed_connect_result = building_manager.connect("building_destroyed", self, "_on_building_destroyed")
+        var destroyed_connect_result = building_manager.connect("building_destroyed", Callable(self, "_on_building_destroyed"))
         if destroyed_connect_result != OK:
             debug_log("Failed to connect building_destroyed signal", "warning")
 
@@ -557,7 +557,7 @@ func _select_unit_at_position(position: Vector2, use_debug_mode: bool = false) -
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventMouseButton:
-        if event.button_index == BUTTON_LEFT:
+        if event.button_index == MOUSE_MOUSE_BUTTON_LEFT:
             if event.pressed:
                 # Start selection
                 selection_start = event.position
@@ -586,8 +586,8 @@ func _unhandled_input(event: InputEvent) -> void:
                         if camera and camera is Camera2D:
                             # Convert screen space to world space
                             var transform = get_viewport().get_canvas_transform()
-                            var world_top_left = transform.affine_inverse().xform(rect.position)
-                            var world_bottom_right = transform.affine_inverse().xform(rect.position + rect.size)
+                            var world_top_left = transform.affine_inverse() * (rect.position)
+                            var world_bottom_right = transform.affine_inverse() * (rect.position + rect.size)
                             var world_rect = Rect2(world_top_left, world_bottom_right - world_top_left)
                             
                             # Select units in this world rectangle
@@ -605,7 +605,7 @@ func _unhandled_input(event: InputEvent) -> void:
                 update() # Redraw to clear selection box
         
         # Add right-click handling for movement
-        elif event.button_index == BUTTON_RIGHT and event.pressed:
+        elif event.button_index == MOUSE_MOUSE_BUTTON_RIGHT and event.pressed:
             # Get selected worker and issue move command
             var current_ui_manager = get_node_or_null("/root/UIManager")
             var selected_worker = null
@@ -642,8 +642,8 @@ func _draw() -> void:
         var current_mouse_pos = get_viewport().get_mouse_position()
         
         # Convert screen coordinates to local coordinates
-        var local_start = get_viewport_transform().affine_inverse().xform(selection_start)
-        var local_current = get_viewport_transform().affine_inverse().xform(current_mouse_pos)
+        var local_start = get_viewport_transform().affine_inverse() * (selection_start)
+        var local_current = get_viewport_transform().affine_inverse() * (current_mouse_pos)
         
         # Create rectangle in local coordinates
         var rect = Rect2(
@@ -661,7 +661,7 @@ func _setup_mouse_locking() -> void:
     debug_log("Setting up mouse locking for fullscreen mode", "info")
     
     # Set up mouse confinement based on current fullscreen state
-    if OS.window_fullscreen:
+    if ((get_window().mode == Window.MODE_EXCLUSIVE_FULLSCREEN) or (get_window().mode == Window.MODE_FULLSCREEN)):
         Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
         debug_log("Game is fullscreen - confining mouse to window", "info")
     else:
@@ -684,10 +684,10 @@ func _on_fullscreen_changed(fullscreen: bool) -> void:
 func _process(_delta: float) -> void:
     # Check for F11 key press to toggle fullscreen
     if Input.is_action_just_pressed("ui_fullscreen") or Input.is_key_pressed(KEY_F11):
-        OS.window_fullscreen = !OS.window_fullscreen
+        get_window().mode = Window.MODE_EXCLUSIVE_FULLSCREEN if (!((get_window().mode == Window.MODE_EXCLUSIVE_FULLSCREEN) or (get_window().mode == Window.MODE_FULLSCREEN))) else Window.MODE_WINDOWED
         
         # Update mouse mode based on new fullscreen state
-        if OS.window_fullscreen:
+        if ((get_window().mode == Window.MODE_EXCLUSIVE_FULLSCREEN) or (get_window().mode == Window.MODE_FULLSCREEN)):
             Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
             debug_log("Switched to fullscreen - confining mouse to window", "info")
         else:

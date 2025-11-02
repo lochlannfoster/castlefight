@@ -21,9 +21,9 @@ func _ready() -> void:
 func _load_unit_data() -> void:
     var data_path = "res://data/units/"
     
-    var dir = Directory.new()
+    var dir = DirAccess.new()
     if dir.open(data_path) == OK:
-        dir.list_dir_begin(true, true)
+        dir.list_dir_begin() # TODOConverter3To4 fill missing arguments https://github.com/godotengine/godot/pull/40547
         var file_name = dir.get_next()
         
         while file_name != "":
@@ -36,15 +36,17 @@ func _load_unit_data() -> void:
         print("Warning: Could not open units data directory")
 
 # Load a single unit data file
-func _load_unit_file(unit_id: String, file_path: String) -> void:
-    var file = File.new()
-    if file.open(file_path, File.READ) == OK:
+func _load_unit_file(unit_id: String, file_path: String) -> void:    file = FileAccess.open(file_path, FileAccess.READ)
+
+    if file != null:
         var text = file.get_as_text()
         file.close()
         
-        var parse_result = JSON.parse(text)
-        if parse_result.error == OK:
-            var data = parse_result.result
+        var test_json_conv = JSON.new()
+        test_json_conv.parse(text)
+        var parse_result = test_json_conv.get_data()
+        if parse_result == OK:
+            var data = json.data
             unit_data[unit_id] = data
             print("Loaded unit data: ", unit_id)
         else:
@@ -70,11 +72,11 @@ func create_unit(unit_type: String, position: Vector2, team: int):
         emit_signal("unit_creation_failed", unit_type, "Could not load base unit scene")
         return null
     
-    var unit = unit_scene.instance()
+    var unit = unit_scene.instantiate()
     
     # Create sprite for the unit
-    var unit_sprite = Sprite.new()
-    unit_sprite.name = "Sprite"
+    var unit_sprite = Sprite2D.new()
+    unit_sprite.name = "Sprite2D"
     unit.add_child(unit_sprite)
     
     # Add collision
@@ -219,17 +221,19 @@ func get_unit_effective_dps(unit_type: String, armor_type: String) -> float:
     return attack_damage * attack_speed
 
 func load_default_unit_data(unit_type: String) -> Dictionary:
-    var default_path = "res://data/defaults/units/default_unit.json"
-    var file = File.new()
-    
-    if file.file_exists(default_path):
-        if file.open(default_path, File.READ) == OK:
+    var default_path = "res://data/defaults/units/default_unit.json"    
+    if FileAccess.file_exists(default_path):
+        file = FileAccess.open(default_path, FileAccess.READ)
+
+    if file != null:
             var text = file.get_as_text()
             file.close()
             
-            var parse_result = JSON.parse(text)
-            if parse_result.error == OK:
-                var data = parse_result.result
+            var test_json_conv = JSON.new()
+            test_json_conv.parse(text)
+            var parse_result = test_json_conv.get_data()
+            if parse_result == OK:
+                var data = json.data
                 data["unit_id"] = unit_type
                 return data
     

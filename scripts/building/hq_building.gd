@@ -8,10 +8,10 @@ extends Building
 signal income_bonus_changed(new_bonus)
 
 # HQ properties
-export var base_income_bonus: float = 10.0 # Starting income for the team
-export var income_upgrade_cost: float = 100.0 # Cost to upgrade income
-export var income_upgrade_increment: float = 5.0 # Amount income increases per upgrade
-export var max_income_upgrades: int = 5 # Maximum number of income upgrades
+@export var base_income_bonus: float = 10.0 # Starting income for the team
+@export var income_upgrade_cost: float = 100.0 # Cost to upgrade income
+@export var income_upgrade_increment: float = 5.0 # Amount income increases per upgrade
+@export var max_income_upgrades: int = 5 # Maximum number of income upgrades
 
 # State tracking
 var current_income_bonus: float = 0.0
@@ -22,13 +22,13 @@ var attack_warning_cooldown: float = 10.0 # Time between "under attack" warnings
 
 func _ready() -> void:
     # Call parent ready function first
-    ._ready()
+    super._ready()
     
     # Initialize the sprite reference
-    sprite = $Sprite
+    sprite = $Sprite2D
     if not sprite:
-        sprite = Sprite.new()
-        sprite.name = "Sprite"
+        sprite = Sprite2D.new()
+        sprite.name = "Sprite2D"
         add_child(sprite)
     
     # Set up completed_texture properly
@@ -57,7 +57,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
     # Call parent process function
     if has_method("_physics_process"):
-        ._physics_process(delta)
+        super._physics_process(delta)
     
     # Check "under attack" status
     if is_under_attack:
@@ -69,7 +69,7 @@ func _process(delta: float) -> void:
 # Override take_damage to provide "under attack" warning
 func take_damage(amount: float, attacker = null) -> void:
     # Call parent take_damage
-    .take_damage(amount, attacker)
+    super.take_damage(amount, attacker)
     
     # Update "under attack" status
     if not is_under_attack and is_constructed:
@@ -134,7 +134,7 @@ func upgrade_income() -> bool:
 # Override complete_construction to add initial income
 func complete_construction() -> void:
     # Call parent complete_construction
-    .complete_construction()
+    super.complete_construction()
     
     # Apply income bonus if not already applied
     _apply_income_bonus()
@@ -154,10 +154,10 @@ func _notify_under_attack() -> void:
         # Create warning label
         var warning_label = Label.new()
         warning_label.text = "HQ UNDER ATTACK!"
-        warning_label.align = Label.ALIGN_CENTER
+        warning_label.horizontal_alignment = Label.ALIGNMENT_CENTER
         warning_label.valign = Label.VALIGN_CENTER
         warning_label.modulate = Color(1, 0, 0) # Red color
-        warning_label.rect_position = screen_pos - Vector2(100, 50)
+        warning_label.position = screen_pos - Vector2(100, 50)
         
         # Add to UI
         ui_manager.floating_text_container.add_child(warning_label)
@@ -166,7 +166,7 @@ func _notify_under_attack() -> void:
         var tween = Tween.new()
         warning_label.add_child(tween)
         
-        tween.interpolate_property(warning_label, "rect_scale",
+        tween.interpolate_property(warning_label, "scale",
             Vector2(1.5, 1.5), Vector2(1, 1),
             0.5, Tween.TRANS_ELASTIC, Tween.EASE_OUT)
         
@@ -177,7 +177,7 @@ func _notify_under_attack() -> void:
         tween.start()
         
         # Remove after animation
-        yield (tween, "tween_all_completed")
+        await tween.finished
         warning_label.queue_free()
         
 # Get income bonus
